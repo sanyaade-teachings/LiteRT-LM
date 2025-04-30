@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 #include "runtime/components/sentencepiece_tokenizer.h"
 #include "runtime/components/tokenizer.h"
+#include "runtime/engine/engine_settings.h"
 #include "runtime/engine/io_types.h"
 #include "runtime/executor/fake_llm_executor.h"
 #include "runtime/executor/llm_executor.h"
@@ -56,14 +57,14 @@ class SessionBasicTest : public testing::Test {
 TEST_F(SessionBasicTest, RunPrefill) {
   std::vector<int> stop_token_ids = {2294};
   auto session = SessionBasic::Create(executor_, tokenizer_, stop_token_ids,
-                                      sampler_params_);
+                                      SessionConfig(sampler_params_));
   EXPECT_OK((*session)->RunPrefill("Hello World!"));
 }
 
 TEST_F(SessionBasicTest, RunDecode) {
   std::vector<int> stop_token_ids = {2294};
   auto session = SessionBasic::Create(executor_, tokenizer_, stop_token_ids,
-                                      sampler_params_);
+                                      SessionConfig(sampler_params_));
   EXPECT_OK((*session)->RunPrefill("Hello World!"));
   auto responses = (*session)->RunDecode();
   EXPECT_OK(responses);

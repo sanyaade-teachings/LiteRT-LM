@@ -25,6 +25,7 @@
 #include "runtime/components/sampler.h"
 #include "runtime/components/tokenizer.h"
 #include "runtime/engine/engine.h"
+#include "runtime/engine/engine_settings.h"
 #include "runtime/engine/io_types.h"
 #include "runtime/executor/llm_executor.h"
 #include "runtime/proto/sampler_params.pb.h"
@@ -47,7 +48,7 @@ class SessionBasic : public Engine::Session {
       std::shared_ptr<LlmExecutor> executor,
       std::shared_ptr<Tokenizer> tokenizer,
       const std::vector<int>& stop_token_ids,
-      const proto::SamplerParameters& sampler_params);
+      const SessionConfig& session_config);
 
   virtual ~SessionBasic() = default;
 
@@ -60,11 +61,13 @@ class SessionBasic : public Engine::Session {
   explicit SessionBasic(std::shared_ptr<LlmExecutor> executor,
                         std::shared_ptr<Tokenizer> tokenizer,
                         const std::vector<int>& stop_token_ids,
-                        std::unique_ptr<Sampler> sampler)
+                        std::unique_ptr<Sampler> sampler,
+                        const SessionConfig& session_config)
       : executor_(executor),
         tokenizer_(tokenizer),
         stop_token_ids_(stop_token_ids),
-        sampler_(std::move(sampler)) {}
+        sampler_(std::move(sampler)),
+        session_config_(session_config) {}
 
   // The internal function to prefill the input prompt. It is used for both
   // RunPrefillSync and RunPrefillAsync.
@@ -80,8 +83,11 @@ class SessionBasic : public Engine::Session {
   // The stop token ids used for decoding.
   std::vector<int> stop_token_ids_;
 
-  // The sampler parameters used for decoding.
+  // The session config used for the session.
   std::unique_ptr<Sampler> sampler_;
+
+  // The session config used for the session.
+  SessionConfig session_config_;
 
   // The last token id of the prefill ids. It is used for the first decode
   // process to determine the token id to start from.

@@ -9,12 +9,12 @@
 
 #include "absl/flags/flag.h"  // from @com_google_absl
 #include "absl/flags/parse.h"  // from @com_google_absl
-#include "absl/log/absl_check.h"  // from @com_google_absl
 #include "absl/log/absl_log.h"  // from @com_google_absl
 #include "third_party/odml/infra/genai/inference/executor/llm_litert_npu_compiled_model_executor.h"
 #include "runtime/components/sentencepiece_tokenizer.h"
 #include "runtime/components/tokenizer.h"
 #include "runtime/core/session_basic.h"
+#include "runtime/engine/engine_settings.h"
 #include "runtime/proto/sampler_params.pb.h"
 #include "tensorflow/lite/profiling/time.h"  // from @org_tensorflow
 
@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
   std::vector<int> stop_token_ids = {kEndOfTurnTokenId};
   auto session = litert::lm::SessionBasic::Create(
       executor_shared, tokenizer, stop_token_ids,
-      litert::lm::proto::SamplerParameters());
+      litert::lm::SessionConfig::CreateDefault());
 
   // Run the session.
   start = tflite::profiling::time::NowMicros();

@@ -22,6 +22,16 @@ package(
 licenses(["notice"])
 
 proto_library(
+    name = "engine_proto",
+    srcs = ["engine.proto"],
+)
+
+cc_proto_library(
+    name = "engine_cc_proto",
+    deps = [":engine_proto"],
+)
+
+proto_library(
     name = "sampler_params_proto",
     srcs = ["sampler_params.proto"],
 )

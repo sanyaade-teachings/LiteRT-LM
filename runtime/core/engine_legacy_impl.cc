@@ -119,9 +119,10 @@ class EngineImpl : public Engine {
   }
 
   // Method to create the Session.
-  absl::StatusOr<std::unique_ptr<Session>> CreateSession() const override {
+  absl::StatusOr<std::unique_ptr<Session>> CreateSession(
+      const SessionConfig& session_config) const override {
     return InitializeSession(executor_, tokenizer_, stop_token_ids_,
-                             proto::SamplerParameters());
+                             session_config);
   }
 
  private:

@@ -23,6 +23,7 @@
 #include "runtime/engine/engine.h"
 #include "runtime/engine/engine_settings.h"
 #include "runtime/executor/llm_executor_settings.h"
+#include "runtime/proto/sampler_params.pb.h"
 #include "runtime/util/test_utils.h"  // NOLINT
 
 namespace litert::lm {
@@ -45,7 +46,7 @@ TEST(EngineTest, CreateEngine) {
   ABSL_CHECK_OK(llm);
 
   absl::StatusOr<std::unique_ptr<Engine::Session>> session =
-      (*llm)->CreateSession();
+      (*llm)->CreateSession(SessionConfig::CreateDefault());
   ABSL_CHECK_OK(session);
 
   absl::Status status = (*session)->RunPrefill("Hello world!");

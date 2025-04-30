@@ -15,6 +15,7 @@
 #include "runtime/components/tokenizer.h"
 #include "runtime/components/top_p_cpu_sampler.h"
 #include "runtime/core/pipeline.h"
+#include "runtime/engine/engine_settings.h"
 #include "runtime/engine/io_types.h"
 #include "runtime/executor/llm_executor.h"
 #include "runtime/proto/sampler_params.pb.h"
@@ -33,8 +34,9 @@ constexpr int kOutputBatchSize = 1;
 absl::StatusOr<std::unique_ptr<SessionBasic>> SessionBasic::Create(
     std::shared_ptr<LlmExecutor> executor, std::shared_ptr<Tokenizer> tokenizer,
     const std::vector<int>& stop_token_ids,
-    const proto::SamplerParameters& sampler_params) {
+    const SessionConfig& session_config) {
   std::unique_ptr<Sampler> sampler;
+  proto::SamplerParameters sampler_params = session_config.GetSamplerParams();
   // TODO(b/407086356): Add test or factor out the logic to create the sampler.
   switch (sampler_params.type()) {
     case proto::SamplerParameters::TYPE_UNSPECIFIED:
@@ -56,7 +58,7 @@ absl::StatusOr<std::unique_ptr<SessionBasic>> SessionBasic::Create(
           "Sampler type: ", sampler_params.type(), " not implemented yet."));
   }
   return absl::WrapUnique(new SessionBasic(executor, tokenizer, stop_token_ids,
-                                           std::move(sampler)));
+                                           std::move(sampler), session_config));
 }
 
 absl::Status SessionBasic::PrefillInternal(absl::string_view input,

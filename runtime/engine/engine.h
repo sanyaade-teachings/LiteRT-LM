@@ -57,7 +57,8 @@ class Engine {
       const EngineSettings& settings);
 
   // Method to create the Session.
-  virtual absl::StatusOr<std::unique_ptr<Session>> CreateSession() const = 0;
+  virtual absl::StatusOr<std::unique_ptr<Session>> CreateSession(
+      const SessionConfig& session_config) const = 0;
 };
 
 }  // namespace litert::lm

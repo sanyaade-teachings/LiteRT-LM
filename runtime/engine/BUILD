@@ -89,9 +89,12 @@ cc_binary(
 
 cc_library(
     name = "engine_settings",
+    srcs = ["engine_settings.cc"],
     hdrs = ["engine_settings.h"],
     deps = [
         "//runtime/executor:llm_executor_settings",
+        "//runtime/proto:engine_cc_proto",
+        "//runtime/proto:sampler_params_cc_proto",
     ],
 )
 

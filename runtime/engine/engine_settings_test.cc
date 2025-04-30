@@ -62,5 +62,23 @@ TEST_F(LlmModelSettingsTest, DefaultExecutorBackend) {
               Eq(Backend::CPU));
 }
 
+TEST(SessionConfigTest, CreateDefault) {
+  SessionConfig session_config = SessionConfig::CreateDefault();
+  EXPECT_EQ(session_config.GetSamplerParams().type(),
+            proto::SamplerParameters::TOP_P);
+  EXPECT_EQ(session_config.GetSamplerParams().k(), 1);
+  EXPECT_EQ(session_config.GetSamplerParams().p(), 0.95f);
+  EXPECT_EQ(session_config.GetSamplerParams().temperature(), 1.0f);
+  EXPECT_EQ(session_config.GetSamplerParams().seed(), 0);
+  EXPECT_FALSE(session_config.IsBenchmarkEnabled());
+}
+
+TEST(SessionConfigTest, IsBenchmarkEnabled) {
+  SessionConfig session_config = SessionConfig::CreateDefault();
+  EXPECT_FALSE(session_config.IsBenchmarkEnabled());
+  session_config.SetBenchmarkParams(proto::BenchmarkParams());
+  EXPECT_TRUE(session_config.IsBenchmarkEnabled());
+}
+
 }  // namespace
 }  // namespace litert::lm

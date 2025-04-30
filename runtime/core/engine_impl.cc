@@ -94,17 +94,13 @@ class EngineImpl : public Engine {
     AddStopTokenIds("<eos>");
     AddStopTokenIds("<end_of_turn>");
     // TODO(b/412390852): Add logics to initialize the sampler.
-    sampler_params_.set_type(proto::SamplerParameters::TOP_P);
-    sampler_params_.set_k(1);
-    sampler_params_.set_p(0.95f);
-    sampler_params_.set_temperature(1.0f);
-    sampler_params_.set_seed(0);
   }
 
   // Method to create the Session.
-  absl::StatusOr<std::unique_ptr<Session>> CreateSession() const override {
+  absl::StatusOr<std::unique_ptr<Session>> CreateSession(
+      const SessionConfig& session_config) const override {
     return InitializeSession(executor_, tokenizer_, stop_token_ids_,
-                             sampler_params_);
+                             session_config);
   }
 
  private:

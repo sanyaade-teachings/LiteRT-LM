@@ -9,6 +9,7 @@
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "runtime/components/tokenizer.h"
+#include "runtime/engine/engine_settings.h"
 #include "runtime/executor/fake_llm_executor.h"
 #include "runtime/executor/llm_executor.h"
 #include "runtime/util/test_utils.h"  // NOLINT
@@ -38,9 +39,8 @@ TEST(SessionFactoryTest, InitializeSession) {
   std::shared_ptr<LlmExecutor> executor =
       std::make_shared<FakeLlmExecutor>(256, dummy_tokens,
                                                       dummy_tokens);
-  proto::SamplerParameters sampler_params;
-  auto session =
-      InitializeSession(executor, tokenizer, stop_token_ids, sampler_params);
+  auto session = InitializeSession(executor, tokenizer, stop_token_ids,
+                                   SessionConfig::CreateDefault());
   EXPECT_OK(session);
 }
 

@@ -91,7 +91,7 @@ absl::Status MainHelper(int argc, char** argv) {
   ABSL_CHECK_OK(llm);
 
   absl::StatusOr<std::unique_ptr<litert::lm::Engine::Session>> session =
-      (*llm)->CreateSession();
+      (*llm)->CreateSession(litert::lm::SessionConfig::CreateDefault());
   ABSL_CHECK_OK(session);
 
   ABSL_LOG(INFO) << "Adding prompt: " << absl::GetFlag(FLAGS_input_prompt);

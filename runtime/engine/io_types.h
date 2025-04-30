@@ -15,12 +15,15 @@
 #ifndef THIRD_PARTY_ODML_LITERT_LM_RUNTIME_ENGINE_IO_TYPES_H_
 #define THIRD_PARTY_ODML_LITERT_LM_RUNTIME_ENGINE_IO_TYPES_H_
 
+#include <cstdint>
+#include <map>
 #include <ostream>
 #include <string>
 #include <vector>
 
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
+#include "absl/time/time.h"  // from @com_google_absl
 
 namespace litert::lm {
 
@@ -63,6 +66,43 @@ class Responses {
   std::vector<float> scores_;
 };
 std::ostream& operator<<(std::ostream& os, const Responses& responses);
+
+// Class to store the data for a single turn of the benchmark. A "turn" is
+// defined as a single RunPrefill or RunDecode call.
+struct BenchmarkTurnData {
+  absl::Duration duration;  // Duration of this entire operation/turn.
+  uint64_t num_tokens;      // The number of tokens processed in this turn.
+  BenchmarkTurnData(uint64_t tokens, absl::Duration dur);
+};
+
+// Class to store and manage comprehensive performance benchmark information for
+// LLMs.
+class BenchmarkInfo {
+ public:
+  BenchmarkInfo() = default;
+
+  // --- Methods to record data ---
+  void AddInitPhase(const std::string& phase_name, absl::Duration duration);
+  void AddPrefillTurn(uint64_t num_tokens, absl::Duration duration);
+  void AddDecodeTurn(uint64_t num_generated_tokens, absl::Duration duration);
+
+  // --- Getters for raw data ---
+  const std::map<std::string, absl::Duration>& GetInitPhases() const;
+
+  // --- Calculated Metrics for Prefill ---
+  uint64_t GetTotalPrefillTurns() const;
+  double GetPrefillTokensPerSec(int turn_index) const;
+
+  // --- Calculated Metrics for Decode ---
+  uint64_t GetTotalDecodeTurns() const;
+  double GetDecodeTokensPerSec(int turn_index) const;
+
+ private:
+  std::map<std::string, absl::Duration> init_phases_;
+  std::vector<BenchmarkTurnData> prefill_turns_;
+  std::vector<BenchmarkTurnData> decode_turns_;
+};
+std::ostream& operator<<(std::ostream& os, const BenchmarkInfo& info);
 
 }  // namespace litert::lm
 

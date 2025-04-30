@@ -1,6 +1,11 @@
 #include "runtime/engine/io_types.h"
 
+#include <cstddef>
+#include <cstdint>
+#include <iomanip>
+#include <ios>
 #include <limits>
+#include <map>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -9,6 +14,7 @@
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/str_cat.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
+#include "absl/time/time.h"  // from @com_google_absl
 
 namespace litert::lm {
 
@@ -77,6 +83,128 @@ std::ostream& operator<<(std::ostream& os, const Responses& responses) {
     }
   }
   return os;  // Return the ostream to allow chaining
+}
+
+// --- BenchmarkTurnData Method Definitions ---
+BenchmarkTurnData::BenchmarkTurnData(uint64_t tokens, absl::Duration dur)
+    : duration(dur), num_tokens(tokens) {}
+
+void BenchmarkInfo::AddInitPhase(const std::string& phase_name,
+                                 absl::Duration duration) {
+  init_phases_[phase_name] = duration;
+}
+
+void BenchmarkInfo::AddPrefillTurn(uint64_t num_tokens,
+                                   absl::Duration duration) {
+  prefill_turns_.emplace_back(num_tokens, duration);
+}
+
+void BenchmarkInfo::AddDecodeTurn(uint64_t num_generated_tokens,
+                                  absl::Duration duration) {
+  decode_turns_.emplace_back(num_generated_tokens, duration);
+}
+
+const std::map<std::string, absl::Duration>& BenchmarkInfo::GetInitPhases()
+    const {
+  return init_phases_;
+}
+
+uint64_t BenchmarkInfo::GetTotalPrefillTurns() const {
+  return prefill_turns_.size();
+}
+
+double BenchmarkInfo::GetPrefillTokensPerSec(int turn_index) const {
+  if (turn_index < 0 ||
+      static_cast<size_t>(turn_index) >= prefill_turns_.size()) {
+    return 0.0;
+  }
+  const auto& turn = prefill_turns_[turn_index];
+  if (turn.duration <= absl::ZeroDuration()) {
+    return 0.0;  // Avoid division by zero or negative duration
+  }
+  double turn_seconds = absl::ToDoubleSeconds(turn.duration);
+  if (turn_seconds <= 0.0) {  // Additional check for very small durations
+    return 0.0;
+  }
+  return static_cast<double>(turn.num_tokens) / turn_seconds;
+}
+
+uint64_t BenchmarkInfo::GetTotalDecodeTurns() const {
+  return decode_turns_.size();
+}
+
+// Interpreted as Generated Tokens Per Second for the specified turn_index.
+// The "Avg" in the name might be a misnomer if it's for a specific turn,
+// but implementing based on the header's declaration.
+double BenchmarkInfo::GetDecodeTokensPerSec(int turn_index) const {
+  if (turn_index < 0 ||
+      static_cast<size_t>(turn_index) >= decode_turns_.size()) {
+    // Consider logging an error or throwing std::out_of_range
+    return 0.0;
+  }
+  const auto& turn = decode_turns_[turn_index];
+  if (turn.duration <= absl::ZeroDuration()) {
+    return 0.0;  // Avoid division by zero or negative duration
+  }
+  double turn_seconds = absl::ToDoubleSeconds(turn.duration);
+  if (turn_seconds <= 0.0) {  // Additional check for very small durations
+    return 0.0;
+  }
+  // This calculates tokens/sec for the specific turn.
+  // If "turns/sec" for a specific turn was intended, the logic would be
+  // different (1.0 / turn_seconds). Given the name and typical metrics,
+  // tokens/sec for the turn seems more likely.
+  return static_cast<double>(turn.num_tokens) / turn_seconds;
+}
+
+// --- operator<< Definition ---
+std::ostream& operator<<(std::ostream& os, const BenchmarkInfo& info) {
+  os << std::fixed << std::setprecision(2);
+
+  os << "BenchmarkInfo:" << std::endl;
+  os << "  Init Phases (" << info.GetInitPhases().size() << "):" << std::endl;
+  if (info.GetInitPhases().empty()) {
+    os << "    No init phases recorded." << std::endl;
+  } else {
+    double total_time = 0.0;
+    for (const auto& phase : info.GetInitPhases()) {
+      total_time += absl::ToDoubleMilliseconds(phase.second);
+      os << "    - " << phase.first << ": "
+         << absl::ToDoubleMilliseconds(phase.second) << " ms" << std::endl;
+    }
+    os << "    Total init time: " << total_time << " ms" << std::endl;
+  }
+
+  os << "--------------------------------------------------" << std::endl;
+  os << "  Prefill Turns (Total: " << info.GetTotalPrefillTurns()
+     << "):" << std::endl;
+  if (info.GetTotalPrefillTurns() == 0) {
+    os << "    No prefill turns recorded." << std::endl;
+  } else {
+    for (uint64_t i = 0; i < info.GetTotalPrefillTurns(); ++i) {
+      os << "    Prefill Turn " << i + 1 << ":" << std::endl;
+      os << "      Prefill Speed: "
+         << info.GetPrefillTokensPerSec(static_cast<int>(i)) << " tokens/sec."
+         << std::endl;
+    }
+  }
+
+  os << "--------------------------------------------------" << std::endl;
+  os << "  Decode Turns (Total: " << info.GetTotalDecodeTurns()
+     << "):" << std::endl;
+  if (info.GetTotalDecodeTurns() == 0) {
+    os << "    No decode turns recorded." << std::endl;
+  } else {
+    for (uint64_t i = 0; i < info.GetTotalDecodeTurns(); ++i) {
+      os << "    Decode Turn " << i + 1 << ":" << std::endl;
+      os << "      Decode Speed: "
+         << info.GetDecodeTokensPerSec(static_cast<int>(i)) << " tokens/sec."
+         << std::endl;
+    }
+  }
+  os << "--------------------------------------------------" << std::endl;
+
+  return os;
 }
 
 }  // namespace litert::lm

@@ -204,14 +204,9 @@ http_archive(
 
 http_archive(
     name = "litert",
-    patch_cmds = [
-        # Update visibility to public for litert/*/BUILD.
-        "sed -i -e 's|//litert:litert_stable_abi_users|//visibility:public|g' litert/*/BUILD",
-    ],
-    sha256 = "1c5745dd56c968da23e48b8194914e5154a71d40d5aef6613e2d6ac9261f852a",
-    strip_prefix = "LiteRT-5a816dca891292a96e4562f879cd74c1e3dd851e",
-    # 2025-04-25. Tags don't include litert/.
-    url = "https://github.com/google-ai-edge/LiteRT/archive/5a816dca891292a96e4562f879cd74c1e3dd851e.tar.gz",
+    sha256 = "d3260b728e506e6ea0768c3710a6592c0a1e7c560c235cd897e4e4fc7d050787",
+    strip_prefix = "LiteRT-7cb0d4a2b82b90806316cf10c2f11a46abfed694",
+    url = "https://github.com/google-ai-edge/LiteRT/archive/7cb0d4a2b82b90806316cf10c2f11a46abfed694.tar.gz",  # 2025-05-02
 )
 
 # Android rules. Need latest rules_android_ndk to use NDK 26+.

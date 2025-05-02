@@ -115,6 +115,19 @@ absl::Status BenchmarkInfo::TimeInitPhaseEnd(const std::string& phase_name) {
   return absl::OkStatus();
 }
 
+absl::Status BenchmarkInfo::TimeMarkDelta(const std::string& mark_name) {
+  if (mark_time_map_.contains(mark_name)) {
+    mark_durations_[mark_name] = absl::Now() - mark_time_map_[mark_name];
+  }
+  mark_time_map_[mark_name] = absl::Now();
+  return absl::OkStatus();
+}
+
+const std::map<std::string, absl::Duration>& BenchmarkInfo::GetMarkDurations()
+    const {
+  return mark_durations_;
+}
+
 absl::Status BenchmarkInfo::TimePrefillTurnStart() {
   const std::string phase_name = absl::StrCat("prefill:", prefill_turn_index_);
   if (start_time_map_.contains(phase_name)) {

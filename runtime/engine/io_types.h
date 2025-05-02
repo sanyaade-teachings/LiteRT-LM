@@ -99,9 +99,20 @@ class BenchmarkInfo {
   absl::Status TimePrefillTurnEnd(uint64_t num_prefill_tokens);
   absl::Status TimeDecodeTurnStart();
   absl::Status TimeDecodeTurnEnd(uint64_t num_decode_tokens);
+  // Time the duration between two consecutive marks. Useful for profiling the
+  // pipeline at a specific point. For example:
+  //   RETURN_IF_ERROR(benchmark_info.TimeMarkDelta("sampling"));
+  //   ... actual sampling logics ...
+  //   RETURN_IF_ERROR(benchmark_info.TimeMarkDelta("sampling"));
+  //
+  // The method will return the duration as the time delta between the two
+  // TimeMarkDelta("sampling") calls. The duration will be stored / recorded for
+  // each unique mark name.
+  absl::Status TimeMarkDelta(const std::string& mark_name);
 
   // --- Getters for raw data ---
   const std::map<std::string, absl::Duration>& GetInitPhases() const;
+  const std::map<std::string, absl::Duration>& GetMarkDurations() const;
 
   // --- Calculated metrics and getters for Prefill ---
   uint64_t GetTotalPrefillTurns() const;
@@ -118,11 +129,13 @@ class BenchmarkInfo {
 
   // Map of phase names to start time.
   std::map<std::string, absl::Time> start_time_map_;
+  std::map<std::string, absl::Time> mark_time_map_;
   // The current index of the prefill / decode turn.
   int prefill_turn_index_ = 0;
   int decode_turn_index_ = 0;
 
   std::map<std::string, absl::Duration> init_phases_;
+  std::map<std::string, absl::Duration> mark_durations_;
   std::vector<BenchmarkTurnData> prefill_turns_;
   std::vector<BenchmarkTurnData> decode_turns_;
 };

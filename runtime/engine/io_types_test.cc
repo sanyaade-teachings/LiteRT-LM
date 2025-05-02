@@ -188,6 +188,43 @@ TEST(BenchmarkInfoTests, AddDecodeTurnError) {
               StatusIs(absl::StatusCode::kInternal));
 }
 
+TEST(BenchmarkInfoTests, AddMarks) {
+  BenchmarkInfo benchmark_info(GetBenchmarkParams());
+  EXPECT_OK(benchmark_info.TimeMarkDelta("sampling"));
+  absl::SleepFor(absl::Milliseconds(50));
+  EXPECT_OK(benchmark_info.TimeMarkDelta("sampling"));
+  absl::SleepFor(absl::Milliseconds(100));
+  EXPECT_OK(benchmark_info.TimeMarkDelta("sampling"));
+  EXPECT_EQ(benchmark_info.GetMarkDurations().size(), 1);
+
+  // The time should record the duration between the 2ne and 3rd calls, which
+  // should be slightly more than 100ms.
+  EXPECT_GT(benchmark_info.GetMarkDurations().at("sampling"),
+            absl::Milliseconds(100));
+  // Verify that the time doesn't record the duration between the 1st and 3nd
+  // calls, which is more than 150ms.
+  EXPECT_LT(benchmark_info.GetMarkDurations().at("sampling"),
+            absl::Milliseconds(150));
+}
+
+TEST(BenchmarkInfoTests, AddTwoMarks) {
+  BenchmarkInfo benchmark_info(GetBenchmarkParams());
+  EXPECT_OK(benchmark_info.TimeMarkDelta("tokenize"));
+  EXPECT_OK(benchmark_info.TimeMarkDelta("sampling"));
+  absl::SleepFor(absl::Milliseconds(50));
+  EXPECT_OK(benchmark_info.TimeMarkDelta("sampling"));
+  absl::SleepFor(absl::Milliseconds(50));
+  EXPECT_OK(benchmark_info.TimeMarkDelta("tokenize"));
+  EXPECT_EQ(benchmark_info.GetMarkDurations().size(), 2);
+
+  // Time between two sampling calls should be more than 50ms.
+  EXPECT_GT(benchmark_info.GetMarkDurations().at("sampling"),
+            absl::Milliseconds(50));
+  // Time between two tokenize calls should be more than 50ms + 50ms = 100ms.
+  EXPECT_GT(benchmark_info.GetMarkDurations().at("tokenize"),
+            absl::Milliseconds(100));
+}
+
 TEST(BenchmarkInfoTests, OperatorOutputWithData) {
   BenchmarkInfo benchmark_info(GetBenchmarkParams());
   EXPECT_OK(benchmark_info.TimeInitPhaseStart("Load Model"));

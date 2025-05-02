@@ -16,6 +16,7 @@
 #define THIRD_PARTY_ODML_LITERT_LM_RUNTIME_CORE_SESSION_BASIC_H_
 
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -48,7 +49,8 @@ class SessionBasic : public Engine::Session {
       std::shared_ptr<LlmExecutor> executor,
       std::shared_ptr<Tokenizer> tokenizer,
       const std::vector<int>& stop_token_ids,
-      const SessionConfig& session_config);
+      const SessionConfig& session_config,
+      std::optional<BenchmarkInfo> benchmark_info);
 
   virtual ~SessionBasic() = default;
 
@@ -57,17 +59,21 @@ class SessionBasic : public Engine::Session {
 
   absl::StatusOr<Responses> RunDecode() override;
 
+  absl::StatusOr<BenchmarkInfo> GetBenchmarkInfo() override;
+
  private:
   explicit SessionBasic(std::shared_ptr<LlmExecutor> executor,
                         std::shared_ptr<Tokenizer> tokenizer,
                         const std::vector<int>& stop_token_ids,
                         std::unique_ptr<Sampler> sampler,
-                        const SessionConfig& session_config)
+                        const SessionConfig& session_config,
+                        std::optional<BenchmarkInfo> benchmark_info)
       : executor_(executor),
         tokenizer_(tokenizer),
         stop_token_ids_(stop_token_ids),
         sampler_(std::move(sampler)),
-        session_config_(session_config) {}
+        session_config_(session_config),
+        benchmark_info_(benchmark_info) {}
 
   // The internal function to prefill the input prompt. It is used for both
   // RunPrefillSync and RunPrefillAsync.
@@ -92,6 +98,9 @@ class SessionBasic : public Engine::Session {
   // The last token id of the prefill ids. It is used for the first decode
   // process to determine the token id to start from.
   int last_prefill_token_id_;
+
+  // The benchmark info used for the session.
+  std::optional<BenchmarkInfo> benchmark_info_;
 };
 
 }  // namespace litert::lm

@@ -16,12 +16,14 @@
 #define THIRD_PARTY_ODML_LITERT_LM_RUNTIME_CORE_SESSION_FACTORY_H_
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "runtime/components/tokenizer.h"
 #include "runtime/engine/engine.h"
 #include "runtime/engine/engine_settings.h"
+#include "runtime/engine/io_types.h"
 #include "runtime/executor/llm_executor.h"
 
 namespace litert::lm {
@@ -30,10 +32,9 @@ namespace litert::lm {
 // settings. Note that this function should be updated to take in the
 // SessionConfig and be refactored with registry pattern.
 absl::StatusOr<std::unique_ptr<Engine::Session>> InitializeSession(
-    std::shared_ptr<LlmExecutor> executor,
-    std::shared_ptr<Tokenizer> tokenizer,
-    const std::vector<int>& stop_token_ids,
-    const SessionConfig& session_config);
+    std::shared_ptr<LlmExecutor> executor, std::shared_ptr<Tokenizer> tokenizer,
+    const std::vector<int>& stop_token_ids, const SessionConfig& session_config,
+    std::optional<BenchmarkInfo> benchmark_info);
 
 }  // namespace litert::lm
 

@@ -16,10 +16,11 @@
 #define THIRD_PARTY_ODML_LITERT_LM_RUNTIME_ENGINE_PIPELINE_H_
 
 #include <stdbool.h>
+
 #include <memory>
+#include <optional>
 #include <vector>
 
-#include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "litert/cc/litert_tensor_buffer.h"  // from @litert
@@ -42,7 +43,8 @@ namespace litert::lm {
 absl::StatusOr<int> Prefill(std::shared_ptr<LlmExecutor> executor,
                             std::shared_ptr<Tokenizer> tokenizer,
                             absl::string_view prompt, int bos_token_id,
-                            bool wait_for_completion = true);
+                            bool wait_for_completion,
+                            std::optional<BenchmarkInfo>& benchmark_info);
 
 // Runs the pipeline to decode the input prompt.
 // - executor: The initialized LLM Executor to call.
@@ -52,7 +54,8 @@ absl::StatusOr<int> Prefill(std::shared_ptr<LlmExecutor> executor,
 // detokenizing the stop tokens.
 absl::StatusOr<Responses> Decode(std::shared_ptr<LlmExecutor> executor,
                                  std::shared_ptr<Tokenizer> tokenizer,
-                                 const std::vector<int>& stop_token_ids);
+                                 const std::vector<int>& stop_token_ids,
+                                 std::optional<BenchmarkInfo>& benchmark_info);
 
 // Runs the pipeline to decode the input prompt.
 // - executor: The initialized LLM Executor to call.
@@ -64,7 +67,8 @@ absl::StatusOr<Responses> Decode(std::shared_ptr<LlmExecutor> executor,
 absl::StatusOr<Responses> DecodeCustomSampling(
     std::shared_ptr<LlmExecutor> executor, std::shared_ptr<Tokenizer> tokenizer,
     const std::vector<int>& stop_token_ids, int num_output_candidates,
-    Sampler& sampler, litert::TensorBuffer& decoded_ids);
+    Sampler& sampler, litert::TensorBuffer& decoded_ids,
+    std::optional<BenchmarkInfo>& benchmark_info);
 
 }  // namespace litert::lm
 

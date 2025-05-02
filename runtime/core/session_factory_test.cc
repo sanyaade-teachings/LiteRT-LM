@@ -1,6 +1,7 @@
 #include "runtime/core/session_factory.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -40,7 +41,8 @@ TEST(SessionFactoryTest, InitializeSession) {
       std::make_shared<FakeLlmExecutor>(256, dummy_tokens,
                                                       dummy_tokens);
   auto session = InitializeSession(executor, tokenizer, stop_token_ids,
-                                   SessionConfig::CreateDefault());
+                                   SessionConfig::CreateDefault(),
+                                   /*benchmark_info=*/std::nullopt);
   EXPECT_OK(session);
 }
 

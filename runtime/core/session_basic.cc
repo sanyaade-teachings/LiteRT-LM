@@ -1,6 +1,7 @@
 #include "runtime/core/session_basic.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -33,13 +34,17 @@ constexpr int kOutputBatchSize = 1;
 
 absl::StatusOr<std::unique_ptr<SessionBasic>> SessionBasic::Create(
     std::shared_ptr<LlmExecutor> executor, std::shared_ptr<Tokenizer> tokenizer,
-    const std::vector<int>& stop_token_ids,
-    const SessionConfig& session_config) {
-  proto::SamplerParameters sampler_params = session_config.GetSamplerParams();
-  ASSIGN_OR_RETURN(auto sampler, CreateSampler(Backend::CPU, kOutputBatchSize,
-                                               sampler_params));
+    const std::vector<int>& stop_token_ids, const SessionConfig& session_config,
+    std::optional<BenchmarkInfo> benchmark_info) {
+  ASSIGN_OR_RETURN(auto sampler,
+                   CreateSampler(Backend::CPU, kOutputBatchSize,
+                                 session_config.GetSamplerParams()));
+  if (benchmark_info.has_value()) {
+    ABSL_LOG(INFO) << "Benchmark is enabled.";
+  }
   return absl::WrapUnique(new SessionBasic(executor, tokenizer, stop_token_ids,
-                                           std::move(sampler), session_config));
+                                           std::move(sampler), session_config,
+                                           benchmark_info));
 }
 
 absl::Status SessionBasic::PrefillInternal(absl::string_view input,
@@ -51,7 +56,7 @@ absl::Status SessionBasic::PrefillInternal(absl::string_view input,
   ABSL_LOG(INFO) << "RunPrefillSync: " << prompt;
   ASSIGN_OR_RETURN(last_prefill_token_id_,
                    Prefill(executor_, tokenizer_, prompt, /*bos_token_id=*/2,
-                           wait_for_completion));
+                           wait_for_completion, benchmark_info_));
   ABSL_LOG(INFO) << "Prefill done";
   return absl::OkStatus();
 }
@@ -67,8 +72,8 @@ absl::Status SessionBasic::RunPrefillAsync(absl::string_view input) {
 absl::StatusOr<Responses> SessionBasic::RunDecode() {
   ABSL_LOG(INFO) << "RunDecodeSync";
   if (sampler_ == nullptr) {
-    ASSIGN_OR_RETURN(auto responses,
-                     Decode(executor_, tokenizer_, stop_token_ids_));
+    ASSIGN_OR_RETURN(auto responses, Decode(executor_, tokenizer_,
+                                            stop_token_ids_, benchmark_info_));
     return responses;
   } else {
     std::vector<int> decoded_ids(kOutputBatchSize, last_prefill_token_id_);
@@ -77,9 +82,18 @@ absl::StatusOr<Responses> SessionBasic::RunDecode() {
     ASSIGN_OR_RETURN(auto responses, DecodeCustomSampling(
                                          executor_, tokenizer_, stop_token_ids_,
                                          /*num_output_candidates=*/1, *sampler_,
-                                         *decoded_ids_buffer));
+                                         *decoded_ids_buffer, benchmark_info_));
     return responses;
   }
+}
+
+absl::StatusOr<BenchmarkInfo> SessionBasic::GetBenchmarkInfo() {
+  if (benchmark_info_.has_value()) {
+    return benchmark_info_.value();
+  }
+  return absl::InternalError(
+      "Benchmark is not enabled. Please make sure the BenchmarkParams is set "
+      "in the EngineSettings.");
 }
 
 }  // namespace litert::lm

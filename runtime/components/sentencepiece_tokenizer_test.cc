@@ -103,7 +103,10 @@ TEST(SentencePieceTokenizerTest, TextToTensorBuffer) {
   auto tokenizer = std::move(tokenizer_or.value());
 
   absl::string_view text = "Hello World!";
-  auto tensor_or = tokenizer->TextToTensorBuffer(text);
+  auto ids_or = tokenizer->TextToTokenIds(text);
+  EXPECT_TRUE(ids_or.ok());
+
+  auto tensor_or = tokenizer->TokenIdsToTensorBuffer(ids_or.value());
   auto tensor = std::move(tensor_or.value());
   LITERT_ASSERT_OK_AND_ASSIGN(auto tensor_type, tensor.TensorType());
   EXPECT_EQ(tensor_type.Layout().Dimensions(), ::litert::Dimensions({1, 7}));
@@ -112,24 +115,6 @@ TEST(SentencePieceTokenizerTest, TextToTensorBuffer) {
   EXPECT_TRUE(copied_data.HasValue());
   EXPECT_THAT((*copied_data)[0],
               ::testing::ElementsAre(90, 547, 58, 735, 210, 466, 2294));
-}
-
-TEST(SentencePieceTokenizerTest, TextToTensorBufferWithPrependAndPostpend) {
-  auto tokenizer_or =
-      SentencePieceTokenizer::CreateFromFile(GetSentencePieceModelPath());
-  EXPECT_TRUE(tokenizer_or.ok());
-  auto tokenizer = std::move(tokenizer_or.value());
-
-  absl::string_view text = "Hello World!";
-  auto tensor_or = tokenizer->TextToTensorBuffer(text, {2}, {100});
-  auto tensor = std::move(tensor_or.value());
-  LITERT_ASSERT_OK_AND_ASSIGN(auto tensor_type, tensor.TensorType());
-  EXPECT_EQ(tensor_type.Layout().Dimensions(), ::litert::Dimensions({1, 9}));
-
-  auto copied_data = CopyFromTensorBuffer2D<int>(tensor);
-  EXPECT_TRUE(copied_data.HasValue());
-  EXPECT_THAT((*copied_data)[0],
-              ::testing::ElementsAre(2, 90, 547, 58, 735, 210, 466, 2294, 100));
 }
 
 TEST(SentencePieceTokenizerTest, TokenIdsToText) {

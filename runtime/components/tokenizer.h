@@ -22,29 +22,14 @@ class Tokenizer {
   virtual absl::StatusOr<std::vector<int>> TextToTokenIds(
       absl::string_view text) = 0;
 
-  // Encodes the given text into a sequence of token ids stored in a 1D
+  // Helper function to convert a vector of token ids into a 1D
   // litert::TensorBuffer of shape [batch_size(==1), num_tokens].
-  // The prepend_token_ids and postpend_token_ids are appended to the beginning
-  // and end of the token ids respectively if provided.
-  absl::StatusOr<TensorBuffer> TextToTensorBuffer(
-      absl::string_view text, const std::vector<int>& prepend_token_ids = {},
-      const std::vector<int>& postpend_token_ids = {}) {
-    auto ids_or = this->TextToTokenIds(text);
-    if (!ids_or.ok()) {
-      return ids_or.status();
-    }
-    if (!prepend_token_ids.empty()) {
-      ids_or.value().insert(ids_or.value().begin(), prepend_token_ids.begin(),
-                            prepend_token_ids.end());
-    }
-    if (!postpend_token_ids.empty()) {
-      ids_or.value().insert(ids_or.value().end(), postpend_token_ids.begin(),
-                            postpend_token_ids.end());
-    }
+  absl::StatusOr<TensorBuffer> TokenIdsToTensorBuffer(
+      const std::vector<int>& token_ids) {
     LITERT_ASSIGN_OR_RETURN(auto tensor,
                             CopyToTensorBuffer<int>(
-                                absl::MakeConstSpan(ids_or.value()),
-                                {1, static_cast<int>(ids_or.value().size())}));
+                                absl::MakeConstSpan(token_ids),
+                                {1, static_cast<int>(token_ids.size())}));
     return tensor;
   }
 

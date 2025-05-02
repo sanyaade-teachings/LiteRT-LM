@@ -42,6 +42,16 @@ ABSL_FLAG(std::optional<std::string>, backend, "gpu",
 ABSL_FLAG(std::string, model_path, "", "Model path to use for LLM execution.");
 ABSL_FLAG(std::string, input_prompt, "What is the highest building in Paris?",
           "Input prompt to use for testing LLM execution.");
+ABSL_FLAG(bool, benchmark, false, "Benchmark the LLM execution.");
+ABSL_FLAG(
+    int, benchmark_prefill_tokens, 0,
+    "If benchmark is true and the value is larger than 0, the benchmark will "
+    "use this number to set the number of prefill tokens (regardless of the "
+    "input prompt).");
+ABSL_FLAG(int, benchmark_decode_tokens, 0,
+          "If benchmark is true and the value is larger than 0, the benchmark "
+          "will use this number to set the number of decode steps (regardless "
+          "of the input prompt).");
 
 namespace {
 
@@ -86,6 +96,15 @@ absl::Status MainHelper(int argc, char** argv) {
 
   EngineSettings model_settings(executor_settings);
 
+  if (absl::GetFlag(FLAGS_benchmark)) {
+    litert::lm::proto::BenchmarkParams benchmark_params;
+    benchmark_params.set_num_prefill_tokens(
+        absl::GetFlag(FLAGS_benchmark_prefill_tokens));
+    benchmark_params.set_num_decode_tokens(
+        absl::GetFlag(FLAGS_benchmark_decode_tokens));
+    model_settings.SetBenchmarkParams(benchmark_params);
+  }
+
   absl::StatusOr<std::unique_ptr<litert::lm::Engine>> llm =
       litert::lm::Engine::CreateEngine(model_settings);
   ABSL_CHECK_OK(llm);
@@ -103,6 +122,11 @@ absl::Status MainHelper(int argc, char** argv) {
 
   ABSL_CHECK_OK(responses);
   ABSL_LOG(INFO) << "Responses: " << *responses;
+
+  if (absl::GetFlag(FLAGS_benchmark)) {
+    auto benchmark_info = (*session)->GetBenchmarkInfo();
+    ABSL_LOG(INFO) << *benchmark_info;
+  }
   return absl::OkStatus();
 }
 

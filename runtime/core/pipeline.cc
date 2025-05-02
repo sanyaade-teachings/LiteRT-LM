@@ -47,10 +47,23 @@ constexpr int kMaxDecodeStop = 128;
 absl::StatusOr<int> Prefill(std::shared_ptr<LlmExecutor> executor,
                             std::shared_ptr<Tokenizer> tokenizer,
                             absl::string_view prompt, int bos_token_id,
-                            bool wait_for_completion) {
-  ASSIGN_OR_RETURN(auto ids_buffer,
-                   tokenizer->TextToTensorBuffer(
-                       prompt, /*prepend_token_ids=*/{bos_token_id}));
+                            bool wait_for_completion,
+                            std::optional<BenchmarkInfo>& benchmark_info) {
+  int benchmark_prefill_token_count = 0;
+  if (benchmark_info.has_value()) {
+    benchmark_prefill_token_count =
+        benchmark_info->GetBenchmarkParams().num_prefill_tokens();
+    RETURN_IF_ERROR(benchmark_info->TimePrefillTurnStart());
+  }
+  ASSIGN_OR_RETURN(std::vector<int> ids, tokenizer->TextToTokenIds(prompt));
+  if (benchmark_prefill_token_count > 0) {
+    // If benchmark is enabled, we will use the benchmark prefill token count
+    // to set the prefill token count.
+    ids.resize(benchmark_prefill_token_count);
+  } else {
+    ids.insert(ids.begin(), bos_token_id);
+  }
+  ASSIGN_OR_RETURN(auto ids_buffer, tokenizer->TokenIdsToTensorBuffer(ids));
   LITERT_ASSIGN_OR_RETURN_ABSL(auto ids_buffer_span,
                                ReferTensorBufferAsSpan<int>(ids_buffer));
   if (ids_buffer_span.empty()) {
@@ -63,13 +76,25 @@ absl::StatusOr<int> Prefill(std::shared_ptr<LlmExecutor> executor,
       executor->Prefill(ExecutorInputs(ExecutorTextData(std::move(ids_buffer)),
                                        std::nullopt, std::nullopt),
                         params));
+  if (benchmark_info.has_value()) {
+    RETURN_IF_ERROR(benchmark_info->TimePrefillTurnEnd(ids_buffer_span.size()));
+  }
   return last_token_id;
 }
 
 absl::StatusOr<Responses> Decode(std::shared_ptr<LlmExecutor> executor,
                                  std::shared_ptr<Tokenizer> tokenizer,
-                                 const std::vector<int>& stop_token_ids) {
-  Responses responses(/*num_output_candidates=*/1);
+                                 const std::vector<int>& stop_token_ids,
+                                 std::optional<BenchmarkInfo>& benchmark_info) {
+  int benchmark_decode_token_count = 0;
+  if (benchmark_info.has_value()) {
+    benchmark_decode_token_count =
+        benchmark_info->GetBenchmarkParams().num_decode_tokens();
+    RETURN_IF_ERROR(benchmark_info->TimeDecodeTurnStart());
+  }
+  // Hard code the number of output candidates to 1 for now.
+  const int num_output_candidates = 1;
+  Responses responses(num_output_candidates);
   LITERT_ASSIGN_OR_RETURN_ABSL(auto output_tokens,
                                CreateTensorBuffer<int>({1, 1}));
   std::vector<std::string>& response_texts =
@@ -77,7 +102,9 @@ absl::StatusOr<Responses> Decode(std::shared_ptr<LlmExecutor> executor,
   // TODO(b/397975034) LLM Executor should return error when reaching the
   // maximum number of kv-cache steps.
   std::vector<bool> stop_tokens_found(1, false);  // assuming batch size is 1.
-  for (int i = 0; i < kMaxDecodeStop; ++i) {
+  int num_decoded_steps = 0;
+  for (int i = 0; i < std::max(kMaxDecodeStop, benchmark_decode_token_count);
+       ++i) {
     RETURN_IF_ERROR(executor->Decode(output_tokens));
     LITERT_ASSIGN_OR_RETURN_ABSL(auto output_tokens_span,
                                  ReferTensorBufferAsSpan<int>(output_tokens));
@@ -89,13 +116,19 @@ absl::StatusOr<Responses> Decode(std::shared_ptr<LlmExecutor> executor,
                      tokenizer->TensorBufferToText(output_tokens));
     result_token[0] = absl::StrReplaceAll(result_token[0], {{"▁", " "}});
     response_texts[0] += result_token[0];
+    num_decoded_steps++;
 
     ASSIGN_OR_RETURN(
         bool should_stop,
         StopTokenFound(output_tokens_span, stop_token_ids, stop_tokens_found));
-    if (should_stop) {
+    if (should_stop && benchmark_decode_token_count == 0) {
+      // Only early stop if no decode step is requested by benchmark.
       break;
     }
+  }
+  if (benchmark_info.has_value()) {
+    RETURN_IF_ERROR(benchmark_info->TimeDecodeTurnEnd(num_decoded_steps *
+                                                      num_output_candidates));
   }
   return responses;
 }
@@ -103,7 +136,14 @@ absl::StatusOr<Responses> Decode(std::shared_ptr<LlmExecutor> executor,
 absl::StatusOr<Responses> DecodeCustomSampling(
     std::shared_ptr<LlmExecutor> executor, std::shared_ptr<Tokenizer> tokenizer,
     const std::vector<int>& stop_token_ids, int num_output_candidates,
-    Sampler& sampler, litert::TensorBuffer& decoded_ids) {
+    Sampler& sampler, litert::TensorBuffer& decoded_ids,
+    std::optional<BenchmarkInfo>& benchmark_info) {
+  int benchmark_decode_token_count = 0;
+  if (benchmark_info.has_value()) {
+    benchmark_decode_token_count =
+        benchmark_info->GetBenchmarkParams().num_decode_tokens();
+    RETURN_IF_ERROR(benchmark_info->TimeDecodeTurnStart());
+  }
   Responses responses(num_output_candidates);
   LITERT_ASSIGN_OR_RETURN_ABSL(
       auto output_logits,
@@ -117,7 +157,9 @@ absl::StatusOr<Responses> DecodeCustomSampling(
   std::vector<float>& scores = responses.GetMutableScores();
   std::fill(scores.begin(), scores.end(), 0.0f);
   std::vector<int> num_decoded_tokens(num_output_candidates, 0);
-  for (int i = 0; i < kMaxDecodeStop; ++i) {
+  int num_decode_steps = 0;
+  for (int i = 0; i < std::max(kMaxDecodeStop, benchmark_decode_token_count);
+       ++i) {
     LITERT_ASSIGN_OR_RETURN(auto duplicate_decoded_ids,
                             decoded_ids.Duplicate());
     ExecutorInputs inputs(ExecutorTextData(std::move(duplicate_decoded_ids)),
@@ -154,7 +196,9 @@ absl::StatusOr<Responses> DecodeCustomSampling(
         scores[j] += scores_span[j];
       }
     }
-    if (should_stop) {
+    num_decode_steps++;
+    if (should_stop && benchmark_decode_token_count == 0) {
+      // Only early stop if no decode step is requested by benchmark.
       break;
     }
   }
@@ -164,6 +208,10 @@ absl::StatusOr<Responses> DecodeCustomSampling(
     } else {
       scores[j] = -std::numeric_limits<float>::infinity();
     }
+  }
+  if (benchmark_info.has_value()) {
+    RETURN_IF_ERROR(benchmark_info->TimeDecodeTurnEnd(num_decode_steps *
+                                                      num_output_candidates));
   }
   return responses;
 }

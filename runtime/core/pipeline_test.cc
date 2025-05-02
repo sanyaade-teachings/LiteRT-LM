@@ -2,6 +2,7 @@
 
 #include <filesystem>  // NOLINT: Required for path manipulation.
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -36,7 +37,7 @@ class PipelineTest : public testing::Test {
     // time the Prefill function is called. The values are the token ids of the
     // input prompt "Hello World!" prepended with the bos token id (2).
     std::vector<std::vector<int>> prefill_tokens = {
-      {2, 90, 547, 58, 735, 210, 466, 2294}};
+        {2, 90, 547, 58, 735, 210, 466, 2294}};
     // The decode tokens are the expected tokens that will be returned by the
     // Decode function. The values are the token ids of the output response
     // "How's it going?" followed by the stop token id (2294).
@@ -53,14 +54,18 @@ class PipelineTest : public testing::Test {
 
 TEST_F(PipelineTest, Prefill) {
   const std::string prompt = "Hello World!";
+  std::optional<BenchmarkInfo> benchmark_info;
   auto last_prefill_token_id =
-      Prefill(executor_, tokenizer_, prompt, /*bos_token_id=*/2);
+      Prefill(executor_, tokenizer_, prompt,
+              /*bos_token_id=*/2, /*wait_for_completion=*/true, benchmark_info);
   EXPECT_OK(last_prefill_token_id.status());
   EXPECT_EQ(*last_prefill_token_id, 2294);
 }
 
 TEST_F(PipelineTest, Decode) {
-  auto responses = Decode(executor_, tokenizer_, /*stop_token_ids=*/{2294});
+  std::optional<BenchmarkInfo> benchmark_info;
+  auto responses =
+      Decode(executor_, tokenizer_, /*stop_token_ids=*/{2294}, benchmark_info);
   EXPECT_OK(responses);
   EXPECT_EQ(*(responses->GetResponseTextAt(0)), " How's it going?!");
 }
@@ -97,8 +102,10 @@ class PipelineCustomSamplingTest : public testing::Test {
 
 TEST_F(PipelineCustomSamplingTest, Prefill) {
   const std::string prompt = "Hello World!";
+  std::optional<BenchmarkInfo> benchmark_info;
   auto last_prefill_token_id =
-      Prefill(executor_, tokenizer_, prompt, /*bos_token_id=*/2);
+      Prefill(executor_, tokenizer_, prompt,
+              /*bos_token_id=*/2, /*wait_for_completion=*/true, benchmark_info);
   EXPECT_OK(last_prefill_token_id.status());
   EXPECT_EQ(*last_prefill_token_id, 2294);
 }
@@ -110,10 +117,11 @@ TEST_F(PipelineCustomSamplingTest, DecodeCustomSampling) {
   std::unique_ptr<TopPSampler> sampler = std::move(sampler_or.value());
 
   auto decoded_ids = CreateTensorBuffer<int>({2, 1});
-  auto responses =
-      DecodeCustomSampling(executor_, tokenizer_,
-                           /*stop_token_ids=*/{0},
-                           /*num_output_candidates=*/2, *sampler, *decoded_ids);
+  std::optional<BenchmarkInfo> benchmark_info;
+  auto responses = DecodeCustomSampling(executor_, tokenizer_,
+                                        /*stop_token_ids=*/{0},
+                                        /*num_output_candidates=*/2, *sampler,
+                                        *decoded_ids, benchmark_info);
   EXPECT_OK(responses);
   EXPECT_EQ(responses->GetNumOutputCandidates(), 2);
   // First candidate: " How's it going?!".

@@ -38,6 +38,7 @@ cc_library(
         "//runtime/components:tokenizer",
         "//runtime/engine:engine_interface",
         "//runtime/engine:engine_settings",
+        "//runtime/engine:io_types",
         "//runtime/executor:litert_compiled_model_executor_utils",
         "//runtime/executor:llm_executor",
         "//runtime/executor:llm_executor_settings",
@@ -123,6 +124,7 @@ cc_library(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:string_view",
+        "@com_google_absl//absl/time",
         "//runtime/components:sampler",
         "//runtime/components:sampler_factory",
         "//runtime/components:tokenizer",
@@ -166,8 +168,10 @@ cc_library(
         "//runtime/components:tokenizer",
         "//runtime/engine:engine_interface",
         "//runtime/engine:engine_settings",
+        "//runtime/engine:io_types",
         "//runtime/executor:llm_executor",
         "//runtime/proto:sampler_params_cc_proto",
+        "//runtime/util:litert_status_util",
     ],
 )
 

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <filesystem>  // NOLINT: Required for path manipulation.
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -84,7 +85,7 @@ int main(int argc, char* argv[]) {
   std::vector<int> stop_token_ids = {kEndOfTurnTokenId};
   auto session = litert::lm::SessionBasic::Create(
       executor_shared, tokenizer, stop_token_ids,
-      litert::lm::SessionConfig::CreateDefault());
+      litert::lm::SessionConfig::CreateDefault(), std::nullopt);
 
   // Run the session.
   const std::string prompt = absl::GetFlag(FLAGS_prompt);

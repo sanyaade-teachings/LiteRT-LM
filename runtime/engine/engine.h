@@ -50,6 +50,10 @@ class Engine {
     // This is a blocking call and the function will return when the decoding
     // process is done.
     virtual absl::StatusOr<Responses> RunDecode() = 0;
+
+    // Returns the benchmark info for the session. Returns error if the
+    // benchmark is not enabled.
+    virtual absl::StatusOr<BenchmarkInfo> GetBenchmarkInfo() = 0;
   };
 
   // Method to create Engine.
@@ -64,3 +68,4 @@ class Engine {
 }  // namespace litert::lm
 
 #endif  // THIRD_PARTY_ODML_LITERT_LM_RUNTIME_ENGINE_ENGINE_H_
+

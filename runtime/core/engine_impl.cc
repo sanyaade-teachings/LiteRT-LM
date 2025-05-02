@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -30,6 +31,7 @@
 #include "runtime/core/session_factory.h"
 #include "runtime/engine/engine.h"
 #include "runtime/engine/engine_settings.h"
+#include "runtime/engine/io_types.h"
 #include "runtime/executor/litert_compiled_model_executor_utils.h"
 #include "runtime/executor/llm_executor.h"
 #include "runtime/executor/llm_executor_settings.h"
@@ -67,6 +69,12 @@ class EngineImpl : public Engine {
   ~EngineImpl() override = default;
 
   explicit EngineImpl(const EngineSettings& engine_settings) {
+    if (engine_settings.IsBenchmarkEnabled()) {
+      benchmark_info_ = std::make_optional<BenchmarkInfo>(
+          engine_settings.GetBenchmarkParams().value());
+      ABSL_CHECK_OK(
+          benchmark_info_->TimeInitPhaseStart("Executor initialization"));
+    }
     const std::string& model_path = engine_settings.GetMainExecutorSettings()
                                         .GetModelAssets()
                                         .model_paths[0];
@@ -78,7 +86,12 @@ class EngineImpl : public Engine {
 
     ABSL_QCHECK_OK(executor);
     executor_ = std::move(*executor);
-
+    if (benchmark_info_.has_value()) {
+      ABSL_CHECK_OK(
+          benchmark_info_->TimeInitPhaseEnd("Executor initialization"));
+      ABSL_CHECK_OK(
+          benchmark_info_->TimeInitPhaseStart("Tokenizer initialization"));
+    }
     // TODO(b/397975034): factor out the tokenizer creation logic once the model
     // loading mechanism of the new file format is determined.
     auto external_file = std::make_unique<proto::ExternalFile>();
@@ -88,6 +101,10 @@ class EngineImpl : public Engine {
     auto vocab_buffer = (*resources)->GetFile("TOKENIZER_MODEL");
     tokenizer_ =
         std::move(*SentencePieceTokenizer::CreateFromBuffer(*vocab_buffer));
+    if (benchmark_info_.has_value()) {
+      ABSL_CHECK_OK(
+          benchmark_info_->TimeInitPhaseEnd("Tokenizer initialization"));
+    }
 
     // TODO(b/397975034) Add support for stop tokens loading from the model
     // file, most likely by creating a simplified DeriveLlmModelSettingsStruct.
@@ -100,7 +117,7 @@ class EngineImpl : public Engine {
   absl::StatusOr<std::unique_ptr<Session>> CreateSession(
       const SessionConfig& session_config) const override {
     return InitializeSession(executor_, tokenizer_, stop_token_ids_,
-                             session_config);
+                             session_config, benchmark_info_);
   }
 
  private:
@@ -123,6 +140,9 @@ class EngineImpl : public Engine {
   std::vector<int> stop_token_ids_;
   std::unique_ptr<ExecutorModelResources> litert_model_resources_;
   proto::SamplerParameters sampler_params_;
+
+  // Benchmark info for the engine.
+  std::optional<BenchmarkInfo> benchmark_info_;
 };
 
 // Method to create Engine.

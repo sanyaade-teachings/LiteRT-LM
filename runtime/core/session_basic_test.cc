@@ -2,6 +2,7 @@
 
 #include <filesystem>  // NOLINT: Required for path manipulation.
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -57,14 +58,16 @@ class SessionBasicTest : public testing::Test {
 TEST_F(SessionBasicTest, RunPrefill) {
   std::vector<int> stop_token_ids = {2294};
   auto session = SessionBasic::Create(executor_, tokenizer_, stop_token_ids,
-                                      SessionConfig(sampler_params_));
+                                      SessionConfig(sampler_params_),
+                                      /*benchmark_info=*/std::nullopt);
   EXPECT_OK((*session)->RunPrefill("Hello World!"));
 }
 
 TEST_F(SessionBasicTest, RunDecode) {
   std::vector<int> stop_token_ids = {2294};
-  auto session = SessionBasic::Create(executor_, tokenizer_, stop_token_ids,
-                                      SessionConfig(sampler_params_));
+  auto session =
+      SessionBasic::Create(executor_, tokenizer_, stop_token_ids,
+                           SessionConfig(sampler_params_), std::nullopt);
   EXPECT_OK((*session)->RunPrefill("Hello World!"));
   auto responses = (*session)->RunDecode();
   EXPECT_OK(responses);

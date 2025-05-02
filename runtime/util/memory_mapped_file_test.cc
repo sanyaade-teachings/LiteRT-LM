@@ -167,5 +167,22 @@ TEST(MemoryMappedFile, ModifiesFileWhenMutable) {
   EXPECT_EQ(ReadFile(path.string()), "xoo bar");
 }
 
+TEST(MemoryMappedFile, ModifiesScopedFileWhenMutable) {
+  auto path = std::filesystem::path(::testing::TempDir()) / "file.txt";
+  WriteFile(path.string(), "foo bar");
+
+  auto scoped_file = ScopedFile::OpenWritable(path.string());
+  ASSERT_OK(scoped_file);
+
+  auto file = MemoryMappedFile::CreateMutable(scoped_file->file());
+  ASSERT_OK(file);
+  EXPECT_EQ((*file)->length(), 7);
+  char* data = static_cast<char*>((*file)->data());
+  data[0] = 'x';
+
+  CheckContents(**file, "xoo bar");
+  EXPECT_EQ(ReadFile(path.string()), "xoo bar");
+}
+
 }  // namespace
 }  // namespace litert::lm

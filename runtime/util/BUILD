@@ -162,11 +162,12 @@ cc_library(
         "-D_WIN32_WINNT=_WIN32_WINNT_WIN10",
     ],
     deps = [
+        ":litert_status_util",
         ":scoped_file",
         "@com_google_absl//absl/cleanup",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
-        "//runtime/util:litert_status_util",
     ],
 )
 

@@ -177,6 +177,10 @@ class LlmLiteRtCompiledModelExecutor : public LlmExecutor {
   // A tensor buffer to store the logits decoded before sampling the final
   // tokens. It's to avoid creating a new tensor buffer for each Decode() call.
   ::litert::TensorBuffer decoded_logits_;
+
+  // A vector to store the logits decoded before sampling the final tokens.
+  // It's to avoid creating a new vector for each Decode() call.
+  std::vector<float> decoded_logits_vector_;
 };
 
 }  // namespace litert::lm

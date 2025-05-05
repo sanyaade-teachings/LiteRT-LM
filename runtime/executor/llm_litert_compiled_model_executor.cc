@@ -165,7 +165,7 @@ absl::Status LlmLiteRtCompiledModelExecutor::PrefillInternal(
   }
   absl::flat_hash_map<absl::string_view, ::litert::TensorBuffer>
       prefill_output_buffers;
-  for (const auto& [output_name, output_buffer] : prefill_input_buffers_) {
+  for (const auto& [output_name, output_buffer] : prefill_output_buffers_) {
     auto duplicated_output_buffer = output_buffer.Duplicate();
     RET_CHECK(duplicated_output_buffer) << "Failed to duplicate output buffer.";
     prefill_output_buffers[output_name] = std::move(*duplicated_output_buffer);
@@ -190,14 +190,22 @@ absl::Status LlmLiteRtCompiledModelExecutor::Decode(
     // use CPU sampling. Note that this will introduce extra overhead for
     // downloading the logits from GPU to CPU.
     // Provide empty input to use the next_input_token_id_.
-    ASSIGN_OR_RETURN(auto vocab_size, GetVocabSize());
-    LITERT_ASSIGN_OR_RETURN_ABSL(decoded_logits_,
-                                 CreateTensorBuffer<float>({1, 1, vocab_size}));
+    LITERT_ASSIGN_OR_RETURN_ABSL(
+        decoded_logits_,
+        compiled_model_.CreateOutputBuffer(kDecodeSignatureRunner,
+                                           signatures_.output_logits));
   }
   RETURN_IF_ERROR(Decode(ExecutorInputs(), decoded_logits_));
-  LITERT_ASSIGN_OR_RETURN_ABSL(auto logits,
-                               ReferTensorBufferAsSpan<float>(decoded_logits_));
-  ASSIGN_OR_RETURN(std::vector<int> output_ids, SampleLogits(logits));
+  LITERT_ASSIGN_OR_RETURN_ABSL(auto size, decoded_logits_.PackedSize());
+  if (decoded_logits_vector_.empty()) {
+    decoded_logits_vector_ = std::vector<float>(size / sizeof(float));
+  }
+  // ReferTensorBufferAsSpan() does not work here. Because when output buffer
+  // type is not host memory it will return an error. And for GPU we are using
+  // OpenCL buffer for output logits.
+  decoded_logits_.Read<float>(absl::MakeSpan(decoded_logits_vector_));
+  ASSIGN_OR_RETURN(std::vector<int> output_ids,
+                   SampleLogits(decoded_logits_vector_));
   next_input_token_id_ = output_ids[0];
   return ToAbslStatus(output_tokens.Write(absl::MakeConstSpan(output_ids)));
 }

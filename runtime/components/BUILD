@@ -93,7 +93,7 @@ cc_test(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@litert//litert/cc:litert_layout",
-        "@litert//litert/cc:litert_tensor_buffer",
+        "@litert//litert/cc/internal:litert_tensor_buffer",
         "@litert//litert/test:matchers",
         "//runtime/util:convert_tensor_buffer",
     ],

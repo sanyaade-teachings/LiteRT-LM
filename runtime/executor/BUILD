@@ -108,7 +108,7 @@ cc_library(
         "@com_google_absl//absl/strings:string_view",
         "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:span",
-        "@litert//litert/cc:litert_tensor_buffer",
+        "@litert//litert/cc/internal:litert_tensor_buffer",
         "//runtime/util:convert_tensor_buffer",
         "//runtime/util:litert_status_util",
     ],

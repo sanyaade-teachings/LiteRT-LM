@@ -80,7 +80,7 @@ cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:string_view",
         "@litert//litert/cc:litert_macros",
-        "@litert//litert/cc:litert_tensor_buffer",
+        "@litert//litert/cc/internal:litert_tensor_buffer",
         "//runtime/components:sampler",
         "//runtime/components:token_id_util",
         "//runtime/components:tokenizer",

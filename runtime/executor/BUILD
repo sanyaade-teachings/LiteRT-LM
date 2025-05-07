@@ -201,3 +201,19 @@ cc_test(
         "@litert//litert/cc/internal:litert_tensor_buffer",
     ],
 )
+
+cc_library(
+    name = "vision_executor",
+    hdrs = ["vision_executor.h"],
+    deps = [":vision_executor_base"],
+)
+
+cc_library(
+    name = "vision_executor_base",
+    hdrs = ["vision_executor_base.h"],
+    deps = [
+        ":llm_executor_io_types",
+        "@com_google_absl//absl/status:statusor",
+        "@litert//litert/cc:litert_tensor_buffer",  # copybara:comment_replace "@litert//litert/cc/internal:litert_tensor_buffer",
+    ],
+)

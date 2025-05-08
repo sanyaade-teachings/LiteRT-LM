@@ -153,10 +153,6 @@ absl::StatusOr<Responses> DecodeCustomSampling(
     RETURN_IF_ERROR(benchmark_info->TimeDecodeTurnStart());
   }
   Responses responses(num_output_candidates);
-  LITERT_ASSIGN_OR_RETURN_ABSL(
-      auto output_logits,
-      CreateTensorBuffer<float>(
-          {num_output_candidates, 1, *(executor->GetVocabSize())}));
   // TODO(b/397975034) LLM Executor should return error when reaching the
   // maximum number of kv-cache steps.
   std::vector<bool> stop_tokens_found(num_output_candidates, false);
@@ -175,7 +171,7 @@ absl::StatusOr<Responses> DecodeCustomSampling(
     if (benchmark_info.has_value()) {
       RETURN_IF_ERROR(benchmark_info->TimeMarkDelta("executor_decode"));
     }
-    RETURN_IF_ERROR(executor->Decode(inputs, output_logits));
+    ASSIGN_OR_RETURN(auto output_logits, executor->DecodeLogits(inputs));
     if (benchmark_info.has_value()) {
       RETURN_IF_ERROR(benchmark_info->TimeMarkDelta("executor_decode"));
       RETURN_IF_ERROR(benchmark_info->TimeMarkDelta("sampling"));

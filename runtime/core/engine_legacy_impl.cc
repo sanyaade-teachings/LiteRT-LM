@@ -138,8 +138,14 @@ class EngineImpl : public Engine {
   // Method to create the Session.
   absl::StatusOr<std::unique_ptr<Session>> CreateSession(
       const SessionConfig& session_config) const override {
-    return InitializeSession(executor_, tokenizer_, stop_token_ids_,
-                             session_config, benchmark_info_);
+    // For the TfLite executors, we use the built-in sampling logic instead of
+    // the sampler component. Setting the type to unspecified to disable the
+    // sampler component.
+    auto config = session_config;
+    config.GetMutableSamplerParams().set_type(
+        proto::SamplerParameters::TYPE_UNSPECIFIED);
+    return InitializeSession(executor_, tokenizer_, stop_token_ids_, config,
+                             benchmark_info_);
   }
 
  private:

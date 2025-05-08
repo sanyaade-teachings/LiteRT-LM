@@ -41,7 +41,8 @@ class FakeLlmExecutor : public LlmExecutor {
   //   tokens that will be returned at each time the Decode function is called.
   FakeLlmExecutor(int vocab_size,
                   const std::vector<std::vector<int>>& prefill_tokens_set,
-                  const std::vector<std::vector<int>>& decode_tokens_set);
+                  const std::vector<std::vector<int>>& decode_tokens_set,
+                  int batch_size = 1);
 
   absl::Status Prefill(const ExecutorInputs& inputs) override;
   absl::Status Prefill(const ExecutorInputs& inputs,
@@ -51,6 +52,9 @@ class FakeLlmExecutor : public LlmExecutor {
 
   absl::Status Decode(const ExecutorInputs& inputs,
                       ::litert::TensorBuffer& output_logits) override;
+
+  absl::StatusOr<::litert::TensorBuffer> DecodeLogits(
+      const ExecutorInputs& inputs) override;
 
   absl::string_view ExecutorBackendName() const override {
     return "FakeLlmExecutorBackend";
@@ -62,6 +66,7 @@ class FakeLlmExecutor : public LlmExecutor {
   int vocab_size_;
   std::vector<std::vector<int>> prefill_tokens_set_;
   std::vector<std::vector<int>> decode_tokens_set_;
+  int batch_size_;
 
   // The number of times the Prefill function has been called.
   int prefill_times_;

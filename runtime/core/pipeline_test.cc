@@ -93,7 +93,7 @@ class PipelineCustomSamplingTest : public testing::Test {
         {18, 466}, {2295, 2294}, {2294, 0}, {0, 0}};
     // Vocab size needs to at least be larger than the largest token id 2294.
     executor_ = std::make_shared<FakeLlmExecutor>(
-        /*vocab_size=*/2560, prefill_tokens, decode_tokens);
+        /*vocab_size=*/2560, prefill_tokens, decode_tokens, /*batch_size=*/2);
   }
 
   std::shared_ptr<Tokenizer> tokenizer_;

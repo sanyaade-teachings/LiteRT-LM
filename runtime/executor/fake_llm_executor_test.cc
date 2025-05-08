@@ -118,5 +118,45 @@ TEST(FakeLlmExecutorTest, DecodeToLogits) {
               StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
+TEST(FakeLlmExecutorTest, DecodeLogits) {
+  const std::vector<std::vector<int>> prefill_tokens_set = {{1, 2, 3}};
+  const std::vector<std::vector<int>> decode_tokens_set = {{3}, {0}};
+  FakeLlmExecutor fake_llm_executor(/*vocab_size=*/4, prefill_tokens_set,
+                                    decode_tokens_set);
+
+  ExecutorInputs inputs;
+  // Create a tensor buffer with 3 elements but only the first two elements
+  // match the expected prefill tokens.
+  const std::vector<int> input_tokens = {3};
+  LITERT_ASSERT_OK_AND_ASSIGN(
+      auto input_tokens_buffer,
+      CopyToTensorBuffer<int>(absl::MakeSpan(input_tokens), {1, 1}));
+  inputs.SetTextData(ExecutorTextData(std::move(input_tokens_buffer)));
+
+  auto output_logits = fake_llm_executor.DecodeLogits(inputs);
+  // Call Decode for the 1st time. The output logits should have values:
+  // [-inf, -inf, -inf, inf].
+  EXPECT_TRUE(output_logits.ok());
+  auto output_logits_span = ReferTensorBufferAsSpan<float>(*output_logits);
+  EXPECT_LE((*output_logits_span)[0], 0.0f);
+  EXPECT_LE((*output_logits_span)[1], 0.0f);
+  EXPECT_LE((*output_logits_span)[2], 0.0f);
+  EXPECT_GE((*output_logits_span)[3], 0.0f);
+
+  output_logits = fake_llm_executor.DecodeLogits(inputs);
+  // Call Decode for the 2nd time. The output logits should have values:
+  // [inf, -inf, -inf, -inf].
+  EXPECT_TRUE(output_logits.ok());
+  output_logits_span = ReferTensorBufferAsSpan<float>(*output_logits);
+  EXPECT_GE((*output_logits_span)[0], 0.0f);
+  EXPECT_LE((*output_logits_span)[1], 0.0f);
+  EXPECT_LE((*output_logits_span)[2], 0.0f);
+  EXPECT_LE((*output_logits_span)[3], 0.0f);
+
+  // Call Decode for the 3nd time. Should fail.
+  EXPECT_THAT(fake_llm_executor.Decode(inputs, *output_logits),
+              StatusIs(absl::StatusCode::kInvalidArgument));
+}
+
 }  // namespace
 }  // namespace litert::lm

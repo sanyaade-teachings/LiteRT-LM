@@ -1,13 +1,16 @@
 #include "runtime/executor/fake_llm_executor.h"
 
 #include <limits>
+#include <utility>
 #include <vector>
 
 #include "absl/status/status.h"  // from @com_google_absl
+#include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/str_cat.h"  // from @com_google_absl
 #include "absl/time/clock.h"  // from @com_google_absl
 #include "absl/time/time.h"  // from @com_google_absl
 #include "absl/types/span.h"  // from @com_google_absl
+#include "litert/cc/litert_macros.h"  // from @litert
 #include "litert/cc/litert_tensor_buffer.h"  // from @litert
 #include "runtime/executor/llm_executor_io_types.h"
 #include "runtime/util/convert_tensor_buffer.h"
@@ -55,10 +58,11 @@ absl::Status CheckEquivalent(absl::Span<int> expected, absl::Span<int> actual) {
 
 FakeLlmExecutor::FakeLlmExecutor(
     int vocab_size, const std::vector<std::vector<int>>& prefill_tokens_set,
-    const std::vector<std::vector<int>>& decode_tokens_set)
+    const std::vector<std::vector<int>>& decode_tokens_set, int batch_size)
     : vocab_size_(vocab_size),
       prefill_tokens_set_(prefill_tokens_set),
       decode_tokens_set_(decode_tokens_set),
+      batch_size_(batch_size),
       prefill_times_(0),
       decode_times_(0) {}
 
@@ -122,6 +126,30 @@ absl::Status FakeLlmExecutor::Decode(const ExecutorInputs& inputs,
                     output_logits);
   decode_times_++;
   return absl::OkStatus();
+}
+
+absl::StatusOr<::litert::TensorBuffer> FakeLlmExecutor::DecodeLogits(
+    const ExecutorInputs& inputs) {
+  if (decode_times_ >= decode_tokens_set_.size()) {
+    return absl::InvalidArgumentError(absl::StrCat(
+        "Decode function has been called more times than the number of "
+        "expected decode tokens.",
+        decode_times_));
+  }
+  if (decode_times_ > 0) {
+    // Check that the input tokens match the decode tokens from the last call.
+    auto input_span =
+        ReferTensorBufferAsSpan<int>(*(*inputs.GetTextTokenIdsPtr()));
+    RETURN_IF_ERROR(CheckEquivalent(
+        absl::MakeSpan(decode_tokens_set_[decode_times_ - 1]), *input_span));
+  }
+  LITERT_ASSIGN_OR_RETURN(
+      auto output_logits,
+      CreateTensorBuffer<float>({batch_size_, 1, vocab_size_}));
+  DecodeIdsToLogits(decode_tokens_set_[decode_times_], vocab_size_,
+                    output_logits);
+  decode_times_++;
+  return std::move(output_logits);
 }
 
 }  // namespace litert::lm

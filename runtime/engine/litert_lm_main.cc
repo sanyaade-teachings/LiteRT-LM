@@ -93,7 +93,7 @@ absl::Status MainHelper(int argc, char** argv) {
   executor_settings.SetBackend(backend);
   // TODO(b/397975034) Set the max num tokens based on the model.
   executor_settings.SetMaxNumTokens(160);
-
+  ABSL_LOG(INFO) << "executor_settings: " << executor_settings;
   EngineSettings model_settings(executor_settings);
 
   if (absl::GetFlag(FLAGS_benchmark)) {
@@ -104,14 +104,15 @@ absl::Status MainHelper(int argc, char** argv) {
         absl::GetFlag(FLAGS_benchmark_decode_tokens));
     model_settings.SetBenchmarkParams(benchmark_params);
   }
-
+  ABSL_LOG(INFO) << "Creating engine";
   absl::StatusOr<std::unique_ptr<litert::lm::Engine>> llm =
       litert::lm::Engine::CreateEngine(model_settings);
-  ABSL_CHECK_OK(llm);
+  ABSL_CHECK_OK(llm) << "Failed to create engine";
 
+  ABSL_LOG(INFO) << "Creating session";
   absl::StatusOr<std::unique_ptr<litert::lm::Engine::Session>> session =
       (*llm)->CreateSession(litert::lm::SessionConfig::CreateDefault());
-  ABSL_CHECK_OK(session);
+  ABSL_CHECK_OK(session) << "Failed to create session";
 
   ABSL_LOG(INFO) << "Adding prompt: " << absl::GetFlag(FLAGS_input_prompt);
   absl::Status status =

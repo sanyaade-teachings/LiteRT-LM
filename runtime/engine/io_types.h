@@ -141,6 +141,23 @@ class BenchmarkInfo {
 };
 std::ostream& operator<<(std::ostream& os, const BenchmarkInfo& info);
 
+// An interface with default implementations for the inference observer. The
+// default implementations are print out the first response text and the final
+// (or error) status to the stderr.
+class InferenceObservable {
+ public:
+  virtual ~InferenceObservable() = default;
+
+  // Called when a new response is generated.
+  virtual void OnNext(const Responses& responses);
+
+  // Called when the inference is done and finished successfully.
+  virtual void OnDone();
+
+  // Called when an error is encountered during the inference.
+  virtual void OnError(const absl::Status& status);
+};
+
 }  // namespace litert::lm
 
 #endif  // THIRD_PARTY_ODML_LITERT_LM_RUNTIME_ENGINE_IO_TYPES_H_

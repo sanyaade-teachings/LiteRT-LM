@@ -45,7 +45,6 @@ ModelAssetBundleResources::Create(
     std::unique_ptr<proto::ExternalFile> model_asset_bundle_file) {
   if (model_asset_bundle_file == nullptr) {
     return absl::InvalidArgumentError(
-
         "The model asset bundle file proto cannot be nullptr.");
   }
   auto model_bundle_resources = absl::WrapUnique(
@@ -55,10 +54,6 @@ ModelAssetBundleResources::Create(
 }
 
 absl::Status ModelAssetBundleResources::ExtractFilesFromExternalFileProto() {
-  if (model_asset_bundle_file_->has_file_name()) {
-    std::string path_to_resource = model_asset_bundle_file_->file_name();
-    model_asset_bundle_file_->set_file_name(path_to_resource);
-  }
   ASSIGN_OR_RETURN(model_asset_bundle_file_handler_,
                    ExternalFileHandler::CreateFromExternalFile(
                        model_asset_bundle_file_.get()));
@@ -72,20 +67,22 @@ absl::Status ModelAssetBundleResources::ExtractFilesFromExternalFileProto() {
 absl::StatusOr<absl::string_view> ModelAssetBundleResources::GetFile(
     const std::string& filename) const {
   auto it = files_.find(filename);
-  if (it == files_.end()) {
-    auto files = ListFiles();
-    std::string all_files = absl::StrJoin(files.begin(), files.end(), ", ");
-
-    return absl::NotFoundError(
-        absl::StrFormat("No file with name: %s. All files in the model asset "
-                        "bundle are: %s.",
-                        filename, all_files));
+  if (it != files_.end()) {
+    return it->second;
   }
-  return it->second;
+
+  auto files = ListFiles();
+  std::string all_files = absl::StrJoin(files, ", ");
+
+  return absl::NotFoundError(
+      absl::StrFormat("No file with name: %s. All files in the model asset "
+                      "bundle are: %s.",
+                      filename, all_files));
 }
 
 std::vector<std::string> ModelAssetBundleResources::ListFiles() const {
   std::vector<std::string> file_names;
+  file_names.reserve(files_.size());
   for (const auto& [file_name, _] : files_) {
     file_names.push_back(file_name);
   }

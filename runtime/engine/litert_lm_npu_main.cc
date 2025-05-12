@@ -16,11 +16,11 @@
 #include "absl/log/absl_log.h"  // from @com_google_absl
 #include "absl/time/clock.h"  // from @com_google_absl
 #include "absl/time/time.h"  // from @com_google_absl
-#include "third_party/odml/infra/genai/inference/executor/llm_litert_npu_compiled_model_executor.h"
 #include "runtime/components/sentencepiece_tokenizer.h"
 #include "runtime/components/tokenizer.h"
 #include "runtime/core/session_basic.h"
 #include "runtime/engine/engine_settings.h"
+#include "runtime/executor/llm_litert_npu_compiled_model_executor.h"
 #include "runtime/proto/sampler_params.pb.h"
 
 ABSL_FLAG(std::string, gemma3_path, "", "Path to the Gemma3 model.");

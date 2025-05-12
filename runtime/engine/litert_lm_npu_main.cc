@@ -21,6 +21,8 @@
 #include "runtime/core/session_basic.h"
 #include "runtime/engine/engine_settings.h"
 #include "runtime/executor/llm_litert_npu_compiled_model_executor.h"
+#include "runtime/framework/thread_options.h"
+#include "runtime/framework/threadpool.h"
 #include "runtime/proto/sampler_params.pb.h"
 
 ABSL_FLAG(std::string, gemma3_path, "", "Path to the Gemma3 model.");
@@ -37,6 +39,8 @@ ABSL_FLAG(int, num_runs, 1, "Number of times to run the benchmark.");
 
 using odml::infra::LlmLiteRtNpuCompiledModelExecutor;
 
+using litert::lm::ThreadOptions;
+using litert::lm::ThreadPool;
 using odml::infra::LlmLiteRtNpuCompiledModelExecutor::ModelQuantization::
     kAllQuantized;
 using odml::infra::LlmLiteRtNpuCompiledModelExecutor::ModelQuantization::
@@ -258,6 +262,14 @@ RunStats CreateAndRun(const std::string& prompt) {
   std::shared_ptr<LlmLiteRtNpuCompiledModelExecutor> executor_shared =
       std::move(executor);
 
+  auto worker_thread_pool_or =
+      ThreadPool::CreateThreadPool(ThreadOptions(),
+                                   /*name_prefix=*/"engine",
+                                   /*num_threads=*/1);
+  std::shared_ptr<ThreadPool> worker_thread_pool =
+      std::move(*worker_thread_pool_or);
+  worker_thread_pool->StartWorkers();
+
   // Create the session.
   constexpr int kEndOfTurnTokenId = 106;
   std::vector<int> stop_token_ids = {kEndOfTurnTokenId};
@@ -274,7 +286,8 @@ RunStats CreateAndRun(const std::string& prompt) {
   session_config.GetMutableSamplerParams().set_type(
       litert::lm::proto::SamplerParameters::TYPE_UNSPECIFIED);
   auto session = litert::lm::SessionBasic::Create(
-      executor_shared, tokenizer, stop_token_ids, session_config, std::nullopt);
+      executor_shared, tokenizer, stop_token_ids, session_config, std::nullopt,
+      worker_thread_pool);
 
   // Run the session.
   ABSL_LOG(INFO) << "Prompt: " << prompt;

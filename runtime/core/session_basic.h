@@ -29,6 +29,7 @@
 #include "runtime/engine/engine_settings.h"
 #include "runtime/engine/io_types.h"
 #include "runtime/executor/llm_executor.h"
+#include "runtime/framework/threadpool.h"
 #include "runtime/proto/sampler_params.pb.h"
 
 namespace litert::lm {
@@ -50,7 +51,8 @@ class SessionBasic : public Engine::Session {
       std::shared_ptr<Tokenizer> tokenizer,
       const std::vector<int>& stop_token_ids,
       const SessionConfig& session_config,
-      std::optional<BenchmarkInfo> benchmark_info);
+      std::optional<BenchmarkInfo> benchmark_info,
+      std::shared_ptr<ThreadPool> worker_thread_pool);
 
   virtual ~SessionBasic() = default;
 
@@ -67,18 +69,24 @@ class SessionBasic : public Engine::Session {
                         const std::vector<int>& stop_token_ids,
                         std::unique_ptr<Sampler> sampler,
                         const SessionConfig& session_config,
-                        std::optional<BenchmarkInfo> benchmark_info)
+                        std::optional<BenchmarkInfo> benchmark_info,
+                        std::shared_ptr<ThreadPool> worker_thread_pool)
       : executor_(executor),
         tokenizer_(tokenizer),
         stop_token_ids_(stop_token_ids),
         sampler_(std::move(sampler)),
         session_config_(session_config),
-        benchmark_info_(benchmark_info) {}
+        benchmark_info_(benchmark_info),
+        worker_thread_pool_(worker_thread_pool) {}
 
-  // The internal function to prefill the input prompt. It is used for both
-  // RunPrefillSync and RunPrefillAsync.
+  // The internal function to prefill the input prompt. It is for convenience to
+  // wrap it with lambda function for scheduling.
   absl::Status PrefillInternal(absl::string_view input,
                                bool wait_for_completion);
+
+  // The internal function to decode the input prompt. It is for convenience to
+  // wrap it with lambda function for scheduling.
+  absl::StatusOr<Responses> DecodeInternal();
 
   // The executor used for run the LLM for prefill/decode.
   std::shared_ptr<LlmExecutor> executor_;
@@ -101,6 +109,9 @@ class SessionBasic : public Engine::Session {
 
   // The benchmark info used for the session.
   std::optional<BenchmarkInfo> benchmark_info_;
+
+  // The thread pool used for the session.
+  std::shared_ptr<ThreadPool> worker_thread_pool_;
 };
 
 }  // namespace litert::lm

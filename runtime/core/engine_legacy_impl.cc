@@ -36,6 +36,8 @@
 #include "runtime/engine/io_types.h"
 #include "runtime/executor/llm_executor.h"
 #include "runtime/executor/llm_executor_settings.h"
+#include "runtime/framework/thread_options.h"
+#include "runtime/framework/threadpool.h"
 #include "runtime/proto/sampler_params.pb.h"
 #include "runtime/util/external_file.pb.h"
 #include "runtime/util/model_asset_bundle_resources.h"
@@ -133,6 +135,14 @@ class EngineImpl : public Engine {
     runtime_config.tokens_per_decode = 1;
     runtime_config.output_heads = 1;
     ABSL_QCHECK_OK(executor_->UpdateRuntimeConfig(runtime_config));
+
+    // Creating the thread pool of a single thread to execute the works.
+    auto thread_pool =
+        ThreadPool::CreateThreadPool(ThreadOptions(), /*name_prefix=*/"engine",
+                                     /*num_threads=*/1);
+    ABSL_CHECK_OK(thread_pool);
+    worker_thread_pool_ = std::move(*thread_pool);
+    worker_thread_pool_->StartWorkers();
   }
 
   // Method to create the Session.
@@ -145,7 +155,7 @@ class EngineImpl : public Engine {
     config.GetMutableSamplerParams().set_type(
         proto::SamplerParameters::TYPE_UNSPECIFIED);
     return InitializeSession(executor_, tokenizer_, stop_token_ids_, config,
-                             benchmark_info_);
+                             benchmark_info_, worker_thread_pool_);
   }
 
  private:
@@ -171,6 +181,9 @@ class EngineImpl : public Engine {
 
   // Benchmark info for the engine.
   std::optional<BenchmarkInfo> benchmark_info_;
+
+  // Thread pool for the engine to execute the works.
+  std::shared_ptr<ThreadPool> worker_thread_pool_;
 };
 
 // Method to create Engine.

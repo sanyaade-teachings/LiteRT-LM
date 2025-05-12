@@ -40,6 +40,8 @@
 #include "runtime/util/external_file.pb.h"
 #include "runtime/util/model_asset_bundle_resources.h"
 #include "runtime/util/status_macros.h"
+#include "runtime/framework/threadpool.h"
+#include "runtime/framework/thread_options.h"
 
 namespace litert::lm {
 namespace {
@@ -111,13 +113,22 @@ class EngineImpl : public Engine {
     AddStopTokenIds("<eos>");
     AddStopTokenIds("<end_of_turn>");
     // TODO(b/412390852): Add logics to initialize the sampler.
+
+    // Creating the thread pool of a single thread to execute the works.
+    auto thread_pool =
+        ThreadPool::CreateThreadPool(ThreadOptions(), /*name_prefix=*/"engine",
+                                     /*num_threads=*/1);
+    ABSL_CHECK_OK(thread_pool);
+    worker_thread_pool_ = std::move(*thread_pool);
+    worker_thread_pool_->StartWorkers();
   }
 
   // Method to create the Session.
   absl::StatusOr<std::unique_ptr<Session>> CreateSession(
       const SessionConfig& session_config) const override {
     return InitializeSession(executor_, tokenizer_, stop_token_ids_,
-                             session_config, benchmark_info_);
+                             session_config, benchmark_info_,
+                             worker_thread_pool_);
   }
 
  private:
@@ -143,6 +154,9 @@ class EngineImpl : public Engine {
 
   // Benchmark info for the engine.
   std::optional<BenchmarkInfo> benchmark_info_;
+
+  // Thread pool for the engine to execute the works.
+  std::shared_ptr<ThreadPool> worker_thread_pool_;
 };
 
 // Method to create Engine.

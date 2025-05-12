@@ -11,6 +11,7 @@
 #include "runtime/engine/engine_settings.h"
 #include "runtime/engine/io_types.h"
 #include "runtime/executor/llm_executor.h"
+#include "runtime/framework/threadpool.h"
 #include "runtime/proto/sampler_params.pb.h"
 #include "runtime/util/status_macros.h"  // NOLINT
 
@@ -19,9 +20,11 @@ namespace litert::lm {
 absl::StatusOr<std::unique_ptr<Engine::Session>> InitializeSession(
     std::shared_ptr<LlmExecutor> executor, std::shared_ptr<Tokenizer> tokenizer,
     const std::vector<int>& stop_token_ids, const SessionConfig& session_config,
-    std::optional<BenchmarkInfo> benchmark_info) {
-  auto session = SessionBasic::Create(executor, tokenizer, stop_token_ids,
-                                      session_config, benchmark_info);
+    std::optional<BenchmarkInfo> benchmark_info,
+    std::shared_ptr<ThreadPool> worker_thread_pool) {
+  auto session =
+      SessionBasic::Create(executor, tokenizer, stop_token_ids, session_config,
+                           benchmark_info, worker_thread_pool);
   return session;
 }
 

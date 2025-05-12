@@ -58,7 +58,7 @@ class Responses {
 
  private:
   // The number of output candidates.
-  const int num_output_candidates_;
+  int num_output_candidates_;
 
   // The output vector of response tokens (as strings).
   std::vector<std::string> response_texts_;

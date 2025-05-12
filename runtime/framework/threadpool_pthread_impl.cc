@@ -176,8 +176,8 @@ void* ThreadPoolPthreadImpl::WorkerThread::ThreadBody(void* arg) {
       CreateThreadName(thread->name_prefix_, syscall(SYS_gettid));
   if (nice_priority_level != 0) {
     if (nice(nice_priority_level) != -1 || errno == 0) {
-      ABSL_VLOG(1) << "Changed the nice priority level by "
-                   << nice_priority_level;
+      ABSL_LOG(INFO) << "Changed the nice priority level by "
+                     << nice_priority_level;
     } else {
       ABSL_LOG(ERROR) << "Error : " << strerror(errno) << std::endl
                       << "Could not change the nice priority level by "
@@ -193,8 +193,8 @@ void* ThreadPoolPthreadImpl::WorkerThread::ThreadBody(void* arg) {
     if (sched_setaffinity(syscall(SYS_gettid), sizeof(cpu_set_t), &cpu_set) !=
             -1 ||
         errno == 0) {
-      ABSL_VLOG(1) << "Pinned the thread pool executor to processor "
-                   << absl::StrJoin(selected_cpus, ", processor ") << ".";
+      ABSL_LOG(INFO) << "Pinned the thread pool executor to processor "
+                     << absl::StrJoin(selected_cpus, ", processor ") << ".";
     } else {
       ABSL_LOG(ERROR) << "Error : " << strerror(errno) << std::endl
                       << "Failed to set processor affinity. Ignore processor "
@@ -225,8 +225,8 @@ void* ThreadPoolPthreadImpl::WorkerThread::ThreadBody(void* arg) {
 }
 
 ThreadPoolPthreadImpl::~ThreadPoolPthreadImpl() {
-  ABSL_VLOG(2) << "ThreadPoolPthreadImpl '" << name_prefix_
-               << "': Shutting down...";
+  ABSL_LOG(INFO) << "ThreadPoolPthreadImpl '" << name_prefix_
+                 << "': Shutting down...";
   {
     absl::MutexLock lock(&mutex_);
     stopped_ = true;
@@ -250,9 +250,9 @@ ThreadPoolPthreadImpl::~ThreadPoolPthreadImpl() {
     absl::MutexLock lock(&mutex_);
     final_active_tasks = active_tasks_;
   }
-  ABSL_VLOG(2) << "ThreadPoolPthreadImpl '" << name_prefix_
-               << "': Shutdown complete. " << final_active_tasks
-               << " active tasks recorded at the end (should ideally be 0).";
+  ABSL_LOG(INFO) << "ThreadPoolPthreadImpl '" << name_prefix_
+                 << "': Shutdown complete. " << final_active_tasks
+                 << " active tasks recorded at the end (should ideally be 0).";
 }
 
 void ThreadPoolPthreadImpl::StartWorkers() {
@@ -267,8 +267,8 @@ void ThreadPoolPthreadImpl::StartWorkers() {
   for (int i = 0; i < num_threads_; ++i) {
     threads_.push_back(std::make_unique<WorkerThread>(this, name_prefix_));
   }
-  ABSL_VLOG(2) << "ThreadPoolPthreadImpl '" << name_prefix_ << "': Started "
-               << num_threads_ << " workers.";
+  ABSL_LOG(INFO) << "ThreadPoolPthreadImpl '" << name_prefix_ << "': Started "
+                 << num_threads_ << " workers.";
 }
 
 void ThreadPoolPthreadImpl::Schedule(std::function<void()> callback) {

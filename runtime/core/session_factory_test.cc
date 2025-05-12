@@ -40,9 +40,9 @@ TEST(SessionFactoryTest, InitializeSession) {
   std::shared_ptr<LlmExecutor> executor =
       std::make_shared<FakeLlmExecutor>(256, dummy_tokens,
                                                       dummy_tokens);
-  auto session = InitializeSession(executor, tokenizer, stop_token_ids,
-                                   SessionConfig::CreateDefault(),
-                                   /*benchmark_info=*/std::nullopt);
+  auto session = InitializeSession(
+      executor, tokenizer, stop_token_ids, SessionConfig::CreateDefault(),
+      /*benchmark_info=*/std::nullopt, /*worker_thread_pool=*/nullptr);
   EXPECT_OK(session);
 }
 

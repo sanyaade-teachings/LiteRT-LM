@@ -43,7 +43,8 @@ class Engine {
     // process is done.
     virtual absl::Status RunPrefill(absl::string_view input) = 0;
     // This is a not blocking call and the function will return right away.
-    virtual absl::Status RunPrefillAsync(absl::string_view input) = 0;
+    virtual absl::Status RunPrefillAsync(absl::string_view input,
+                                         InferenceObservable* observer) = 0;
 
     // Starts the decoding process for the model to predict the response based
     // on the input prompt/query added after using RunPrefill* functions.

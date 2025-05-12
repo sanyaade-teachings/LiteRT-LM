@@ -57,7 +57,8 @@ class SessionBasic : public Engine::Session {
   virtual ~SessionBasic() = default;
 
   absl::Status RunPrefill(absl::string_view input) override;
-  absl::Status RunPrefillAsync(absl::string_view input) override;
+  absl::Status RunPrefillAsync(absl::string_view input,
+                               InferenceObservable* observer) override;
 
   absl::StatusOr<Responses> RunDecode() override;
 

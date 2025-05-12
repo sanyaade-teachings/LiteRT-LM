@@ -35,6 +35,7 @@
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "runtime/engine/engine.h"
 #include "runtime/engine/engine_settings.h"
+#include "runtime/engine/io_types.h"
 #include "runtime/executor/llm_executor_settings.h"
 
 ABSL_FLAG(std::optional<std::string>, backend, "gpu",
@@ -52,6 +53,7 @@ ABSL_FLAG(int, benchmark_decode_tokens, 0,
           "If benchmark is true and the value is larger than 0, the benchmark "
           "will use this number to set the number of decode steps (regardless "
           "of the input prompt).");
+ABSL_FLAG(bool, async, false, "Run the LLM execution asynchronously.");
 
 namespace {
 
@@ -59,6 +61,7 @@ using ::litert::lm::Backend;
 using ::litert::lm::CpuConfig;
 using ::litert::lm::EngineSettings;
 using ::litert::lm::GpuConfig;
+using ::litert::lm::InferenceObservable;
 using ::litert::lm::LlmExecutorSettings;
 using ::litert::lm::ModelAssets;
 
@@ -114,15 +117,22 @@ absl::Status MainHelper(int argc, char** argv) {
       (*llm)->CreateSession(litert::lm::SessionConfig::CreateDefault());
   ABSL_CHECK_OK(session) << "Failed to create session";
 
-  ABSL_LOG(INFO) << "Adding prompt: " << absl::GetFlag(FLAGS_input_prompt);
-  absl::Status status =
-      (*session)->RunPrefill(absl::GetFlag(FLAGS_input_prompt));
-  ABSL_CHECK_OK(status);
-
-  auto responses = (*session)->RunDecode();
-
-  ABSL_CHECK_OK(responses);
-  ABSL_LOG(INFO) << "Responses: " << *responses;
+  const std::string input_prompt = absl::GetFlag(FLAGS_input_prompt);
+  if (absl::GetFlag(FLAGS_async)) {
+    InferenceObservable observable;
+    absl::Status status =
+        (*session)->RunPrefillAsync(input_prompt, &observable);
+    ABSL_CHECK_OK(status);
+    // TODO(b/415861485): Use the RunDecodeAsync when it is ready.
+    auto responses = (*session)->RunDecode();
+    ABSL_CHECK_OK(responses);
+    ABSL_LOG(INFO) << "Responses: " << *responses;
+  } else {
+    absl::Status status = (*session)->RunPrefill(input_prompt);
+    auto responses = (*session)->RunDecode();
+    ABSL_CHECK_OK(responses);
+    ABSL_LOG(INFO) << "Responses: " << *responses;
+  }
 
   if (absl::GetFlag(FLAGS_benchmark)) {
     auto benchmark_info = (*session)->GetBenchmarkInfo();
@@ -137,4 +147,3 @@ int main(int argc, char** argv) {
   ABSL_CHECK_OK(MainHelper(argc, argv));
   return 0;
 }
-

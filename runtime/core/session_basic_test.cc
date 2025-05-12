@@ -8,9 +8,12 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include "absl/time/clock.h"  // from @com_google_absl
+#include "absl/time/time.h"  // from @com_google_absl
 #include "runtime/components/sentencepiece_tokenizer.h"
 #include "runtime/components/tokenizer.h"
 #include "runtime/engine/engine_settings.h"
+#include "runtime/engine/io_types.h"
 #include "runtime/executor/fake_llm_executor.h"
 #include "runtime/executor/llm_executor.h"
 #include "runtime/framework/thread_options.h"
@@ -36,7 +39,7 @@ class SessionBasicTest : public testing::Test {
     // time the Prefill function is called. The values are the token ids of the
     // input prompt "Hello World!".
     std::vector<std::vector<int>> prefill_tokens = {
-        {2, 90, 547, 58, 735, 210, 466,  2294}};
+        {2, 90, 547, 58, 735, 210, 466, 2294}};
     // The decode tokens are the expected tokens that will be returned by the
     // Decode function. The values are the token ids of the output response
     // "How's it going?" followed by the stop token id (2294).
@@ -79,6 +82,32 @@ TEST_F(SessionBasicTest, RunDecode) {
   EXPECT_OK(responses);
   EXPECT_EQ(responses->GetNumOutputCandidates(), 1);
   EXPECT_EQ(*(responses->GetResponseTextAt(0)), " How's it going?!");
+}
+
+class TestObserver : public InferenceObservable {
+ public:
+  void OnDone() override {
+    done_ = true;
+  }
+
+  bool IsDone() {
+    return done_;
+  }
+
+ private:
+  bool done_ = false;
+};
+
+TEST_F(SessionBasicTest, RunPrefillAsync) {
+  std::vector<int> stop_token_ids = {2294};
+  auto session = SessionBasic::Create(executor_, tokenizer_, stop_token_ids,
+                                      SessionConfig(sampler_params_),
+                                      std::nullopt, worker_thread_pool_);
+  TestObserver observer;
+  EXPECT_OK((*session)->RunPrefillAsync("Hello World!", &observer));
+  // Wait for the async call to finish.
+  absl::SleepFor(absl::Seconds(1));
+  EXPECT_TRUE(observer.IsDone());
 }
 
 }  // namespace

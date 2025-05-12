@@ -74,9 +74,20 @@ absl::Status SessionBasic::RunPrefill(absl::string_view input) {
   return status;
 }
 
-absl::Status SessionBasic::RunPrefillAsync(absl::string_view input) {
-  // TODO(b/415861485): Update this function to actual async call.
-  return PrefillInternal(input, /*wait_for_completion=*/false);
+absl::Status SessionBasic::RunPrefillAsync(absl::string_view input,
+                                           InferenceObservable* observer) {
+  worker_thread_pool_->Schedule([this, input_copy = std::string(input),
+                                 observer]() {
+    absl::Status status =
+        this->PrefillInternal(input_copy, /*wait_for_completion=*/false);
+    ABSL_LOG(INFO) << "RunPrefillAsync status: " << status;
+    if (status.ok()) {
+      observer->OnDone();
+    } else {
+      observer->OnError(status);
+    }
+  });
+  return absl::OkStatus();
 }
 
 absl::StatusOr<Responses> SessionBasic::DecodeInternal() {

@@ -75,6 +75,7 @@ cc_binary(
     deps = [
         ":engine_interface",
         ":engine_settings",
+        ":io_types",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/log:absl_check",

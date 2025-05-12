@@ -40,12 +40,12 @@ using odml::infra::LlmLiteRtNpuCompiledModelExecutor;
 using odml::infra::LlmLiteRtNpuCompiledModelExecutor::ModelQuantization::
     kAllQuantized;
 using odml::infra::LlmLiteRtNpuCompiledModelExecutor::ModelQuantization::
-    kGemmaOnlyQuantized;
+    kTransformerStackOnlyQuantized;
 
 odml::infra::LlmLiteRtNpuCompiledModelExecutor::ModelQuantization
 GetQuantizationSchema() {
   if (absl::GetFlag(FLAGS_gemma_only_quantized)) {
-    return kGemmaOnlyQuantized;
+    return kTransformerStackOnlyQuantized;
   } else {
     return kAllQuantized;
   }
@@ -75,7 +75,7 @@ void PrintLatencyStats(
             << "(e2e) Prefill tokens per second: "
             << GetToksPrefill(latency_stats);
   std::cout << "\n"
-            << "(GemmaOnly) Prefill tokens per second: "
+            << "(TransformerStackOnly) Prefill tokens per second: "
             << ((latency_stats.prefill_num_tokens * 1000 * 1000) /
                 (float)latency_stats.prefill_llm_inference_latency_us);
 
@@ -148,7 +148,7 @@ void PrintLatencyStats(
   std::cout << "\n"
             << "Decode tokens per second: " << GetToksDecode(latency_stats);
   std::cout << "\n"
-            << "(GemmaOnly) Decode tokens per second: "
+            << "(TransformerStackOnly) Decode tokens per second: "
             << ((latency_stats.decode_num_tokens * 1000 * 1000) /
                 (float)latency_stats.decode_llm_inference_latency_us);
 

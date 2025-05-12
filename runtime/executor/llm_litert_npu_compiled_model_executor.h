@@ -38,13 +38,13 @@
 
 namespace odml::infra {
 
-// Component intended to be used with an NPU variant of Gemma3. This component
-// is work in progress.
+// Component intended to be used with an NPU variant of Gemma3.
 class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
  public:
   enum class ModelQuantization {
-    kGemmaOnlyQuantized,  // Only the main transformer stack is quantized.
-    kAllQuantized,        // All models are quantized.
+    kTransformerStackOnlyQuantized,  // Only the main transformer stack is
+                                     // quantized.
+    kAllQuantized,                   // All models are quantized.
   };
 
   // Holds the latency breakdown stats for the executor.
@@ -134,17 +134,6 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
   LatencyStats GetLatencyStats() const;
 
  private:
-  // Signature names for the embedder.
-  struct EmbedderSignatures {
-    static constexpr absl::string_view kPrefillEmbedderSubgraph =
-        "prefill_embedder_128";
-    static constexpr absl::string_view kDecodeEmbedderSubgraph =
-        "decode_embedder";
-    // Prefill and decode use identical tensor signature names.
-    static constexpr absl::string_view kEmbedderInput = "tokens";
-    static constexpr absl::string_view kEmbedderOutput = "embeds";
-  };
-
   // Holds the tensor buffers maps for the inference of a precompiled model,
   // both for prefill and decode.
   struct InferenceContext {
@@ -186,56 +175,12 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
   };
 
   // Holds the context for the NPU auxiliary model, which contains several
-  // subgraphs for mask, rope, etc.
+  // signatures for Mask, RoPE and KV cache update computation.
   struct NpuAuxiliaryContext {
     ::litert::Model npu_auxiliary_model;
     ::litert::CompiledModel npu_auxiliary_compiled_model;
     NpuAuxiliaryContext(::litert::Model npu_auxiliary_model,
                         ::litert::CompiledModel npu_auxiliary_compiled_model);
-  };
-
-  // Signature names for the mask subgraphs.
-  struct MaskSignatures {
-    static constexpr absl::string_view kPrefillMaskSubgraph =
-        "prefill_mask_128";
-    static constexpr absl::string_view kDecodeMaskSubgraph = "decode_mask";
-    // Prefill and decode use identical tensor signature names.
-    static constexpr absl::string_view kMaskInputTimeStep = "time_step";
-    static constexpr absl::string_view kMaskInputTokens = "input_tokens";
-    static constexpr absl::string_view kMaskOutputLocalMask = "mask_local";
-    static constexpr absl::string_view kMaskOutputGlobalMask = "mask_global";
-  };
-
-  // Signature names for the rope subgraphs.
-  struct RopeSignatures {
-    static constexpr absl::string_view kPrefillRopeSubgraph =
-        "prefill_rope_128";
-    static constexpr absl::string_view kDecodeRopeSubgraph = "decode_rope";
-    // Prefill and decode use identical tensor signature names.
-    static constexpr absl::string_view kInputPos = "input_pos";
-    static constexpr absl::string_view kOutputPosEmbeddingLocalLow =
-        "pos_emb_local_cos";
-    static constexpr absl::string_view kOutputPosEmbeddingHigh = "pos_emb_sin";
-    static constexpr absl::string_view kOutputPosEmbeddingLocalHigh =
-        "pos_emb_local_sin";
-    static constexpr absl::string_view kOutputPosEmbeddingLow = "pos_emb_cos";
-  };
-
-  // Signature names for the LLM subgraphs.
-  struct LlmSignatures {
-    static constexpr absl::string_view kPrefillLlmSubgraph = "prefill_128";
-    static constexpr absl::string_view kDecodeLlmSubgraph = "decode";
-    static constexpr absl::string_view kInputEmbeddings = "input_embeds";
-    static constexpr absl::string_view kDecodeLogitsOutput = "logits";
-  };
-
-  // Signature names for the cache update subgraphs.
-  struct CacheUpdateSignatures {
-    static constexpr absl::string_view kPrefillCacheUpdateSubgraph =
-        "prefill_cache_update_128";
-    static constexpr absl::string_view kDecodeCacheUpdateSubgraph =
-        "decode_cache_update";
-    static constexpr absl::string_view kInputPos = "input_pos";
   };
 
  protected:
@@ -271,8 +216,9 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
   absl::Status DecodeInternal(::litert::lm::ExecutorInputs inputs);
 
   // Creates the context for the embedder model.
-  static absl::StatusOr<EmbedderContext> CreateEmbedderContext(
-      ::litert::Environment& env, const std::string& embedder_model);
+  static absl::StatusOr<EmbedderContext>
+  CreateEmbedderContextWithoutBufferSharing(::litert::Environment& env,
+                                            const std::string& embedder_model);
 
   // Creates the context for the embedder model.  Instead of creating new
   // output buffers for the embedder, the context will use the input buffers
@@ -289,8 +235,8 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
   static absl::StatusOr<NpuAuxiliaryContext> CreateNpuAuxiliaryContext(
       ::litert::Environment& env, const std::string& npu_auxiliary_model);
 
-  // Creates the context for the mask subgraphs.
-  static absl::StatusOr<InferenceContext> CreateMaskContext(
+  // Creates the context for the mask signatures.
+  static absl::StatusOr<InferenceContext> CreateMaskContextWithoutBufferSharing(
       NpuAuxiliaryContext& npu_auxiliary_context, const std::string& mask_model,
       ::litert::TensorBuffer prefill_input_tokens,
       ::litert::TensorBuffer decode_input_tokens);
@@ -308,8 +254,8 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
       absl::flat_hash_map<absl::string_view, ::litert::TensorBuffer>&
           gemma_decode_input_buffers);
 
-  // Creates the context for the rope subgraphs.
-  static absl::StatusOr<InferenceContext> CreateRopeContext(
+  // Creates the context for the RoPE signatures.
+  static absl::StatusOr<InferenceContext> CreateRopeContextWithoutBufferSharing(
       NpuAuxiliaryContext& npu_auxiliary_context,
       const std::string& rope_model);
 
@@ -357,7 +303,8 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
       const absl::flat_hash_map<absl::string_view, ::litert::TensorBuffer>&
           decode_input_buffers);
 
-  static absl::StatusOr<InferenceContext> CreateCacheUpdateInferenceContext(
+  static absl::StatusOr<InferenceContext>
+  CreateCacheUpdateInferenceContextWithoutBufferSharing(
       absl::flat_hash_map<absl::string_view, ::litert::TensorBuffer>&
           input_kv_cache_buffers,
       absl::flat_hash_map<absl::string_view, ::litert::TensorBuffer>&

@@ -15,28 +15,82 @@ limitations under the License.
 
 #include "runtime/util/model_asset_bundle_resources.h"
 
-#include <cstddef>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "absl/memory/memory.h"  // from @com_google_absl
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/str_format.h"  // from @com_google_absl
 #include "absl/strings/str_join.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "runtime/util/external_file_handler.h"
+#include "runtime/util/memory_mapped_file.h"
+#include "runtime/util/scoped_file.h"
 #include "runtime/util/status_macros.h"
 #include "runtime/util/zip_utils.h"
 
 namespace litert::lm {
 
-ModelAssetBundleResources::ModelAssetBundleResources(
-    const std::string& tag,
-    std::unique_ptr<proto::ExternalFile> model_asset_bundle_file)
-    : tag_(tag), model_asset_bundle_file_(std::move(model_asset_bundle_file)) {}
+class ScopedFileModelAssetBundleResources : public ModelAssetBundleResources {
+ public:
+  ScopedFileModelAssetBundleResources(
+      const std::string& tag,
+      std::shared_ptr<ScopedFile> model_asset_bundle_file)
+      : ModelAssetBundleResources(tag),
+        model_asset_bundle_file_(std::move(model_asset_bundle_file)) {}
+
+  ~ScopedFileModelAssetBundleResources() override = default;
+
+  absl::StatusOr<absl::string_view> GetFileData() override {
+    if (!mapped_model_asset_bundle_file_) {
+      ASSIGN_OR_RETURN(
+          mapped_model_asset_bundle_file_,
+          MemoryMappedFile::Create(model_asset_bundle_file_->file()));
+    }
+
+    return absl::string_view(
+        reinterpret_cast<const char*>(mapped_model_asset_bundle_file_->data()),
+        mapped_model_asset_bundle_file_->length());
+  }
+
+ private:
+  // The model asset bundle file to be memory mapped.
+  const std::shared_ptr<ScopedFile> model_asset_bundle_file_;
+
+  // This owns the memory backing `files_`.
+  std::unique_ptr<MemoryMappedFile> mapped_model_asset_bundle_file_;
+};
+
+class ExternalFileModelAssetBundleResources : public ModelAssetBundleResources {
+ public:
+  ExternalFileModelAssetBundleResources(
+      const std::string& tag,
+      std::unique_ptr<proto::ExternalFile> model_asset_bundle_file)
+      : ModelAssetBundleResources(tag),
+        model_asset_bundle_file_(std::move(model_asset_bundle_file)) {}
+
+  ~ExternalFileModelAssetBundleResources() override = default;
+
+  absl::StatusOr<absl::string_view> GetFileData() override {
+    if (!model_asset_bundle_file_handler_) {
+      ASSIGN_OR_RETURN(model_asset_bundle_file_handler_,
+                       ExternalFileHandler::CreateFromExternalFile(
+                           model_asset_bundle_file_.get()));
+    }
+
+    return model_asset_bundle_file_handler_->GetFileContent();
+  }
+
+ private:
+  // The model asset bundle file.
+  const std::unique_ptr<proto::ExternalFile> model_asset_bundle_file_;
+
+  // The ExternalFileHandler for the model asset bundle. This owns the memory
+  // backing `files_`.
+  std::unique_ptr<ExternalFileHandler> model_asset_bundle_file_handler_;
+};
 
 /* static */
 absl::StatusOr<std::unique_ptr<ModelAssetBundleResources>>
@@ -47,22 +101,31 @@ ModelAssetBundleResources::Create(
     return absl::InvalidArgumentError(
         "The model asset bundle file proto cannot be nullptr.");
   }
-  auto model_bundle_resources = absl::WrapUnique(
-      new ModelAssetBundleResources(tag, std::move(model_asset_bundle_file)));
-  RETURN_IF_ERROR(model_bundle_resources->ExtractFilesFromExternalFileProto());
+  auto model_bundle_resources =
+      std::make_unique<ExternalFileModelAssetBundleResources>(
+          tag, std::move(model_asset_bundle_file));
+  RETURN_IF_ERROR(model_bundle_resources->ExtractFiles());
   return model_bundle_resources;
 }
 
-absl::Status ModelAssetBundleResources::ExtractFilesFromExternalFileProto() {
-  ASSIGN_OR_RETURN(model_asset_bundle_file_handler_,
-                   ExternalFileHandler::CreateFromExternalFile(
-                       model_asset_bundle_file_.get()));
-  const char* buffer_data =
-      model_asset_bundle_file_handler_->GetFileContent().data();
-  size_t buffer_size =
-      model_asset_bundle_file_handler_->GetFileContent().size();
-  return ExtractFilesfromZipFile(buffer_data, buffer_size, &files_);
+/* static */
+absl::StatusOr<std::unique_ptr<ModelAssetBundleResources>>
+ModelAssetBundleResources::Create(
+    const std::string& tag,
+    std::shared_ptr<ScopedFile> model_asset_bundle_file){
+  if (!model_asset_bundle_file->IsValid()) {
+    return absl::InvalidArgumentError(
+        "The model asset bundle file is not valid.");
+  }
+  auto model_bundle_resources =
+      std::make_unique<ScopedFileModelAssetBundleResources>(
+          tag, std::move(model_asset_bundle_file));
+  RETURN_IF_ERROR(model_bundle_resources->ExtractFiles());
+  return model_bundle_resources;
 }
+
+ModelAssetBundleResources::ModelAssetBundleResources(std::string tag)
+    : tag_(std::move(tag)) {}
 
 absl::StatusOr<absl::string_view> ModelAssetBundleResources::GetFile(
     const std::string& filename) const {
@@ -87,6 +150,11 @@ std::vector<std::string> ModelAssetBundleResources::ListFiles() const {
     file_names.push_back(file_name);
   }
   return file_names;
+}
+
+absl::Status ModelAssetBundleResources::ExtractFiles() {
+  ASSIGN_OR_RETURN(absl::string_view data, GetFileData());
+  return ExtractFilesfromZipFile(data.data(), data.size(), &files_);
 }
 
 }  // namespace litert::lm

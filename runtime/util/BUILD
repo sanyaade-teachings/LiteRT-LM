@@ -209,6 +209,8 @@ cc_library(
     deps = [
         ":external_file_cc_proto",
         ":external_file_handler",
+        ":memory_mapped_file",
+        ":scoped_file",
         ":zip_utils",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/memory",

@@ -16,20 +16,25 @@ limitations under the License.
 #ifndef THIRD_PARTY_ODML_LITERT_LM_RUNTIME_UTIL_MODEL_ASSET_BUNDLE_RESOURCES_H_
 #define THIRD_PARTY_ODML_LITERT_LM_RUNTIME_UTIL_MODEL_ASSET_BUNDLE_RESOURCES_H_
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "absl/container/flat_hash_map.h"  // from @com_google_absl
+#include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
+#include "absl/strings/string_view.h"  // from @com_google_absl
 #include "runtime/util/external_file.pb.h"
-#include "runtime/util/external_file_handler.h"
+#include "runtime/util/scoped_file.h"
 
 namespace litert::lm {
 
 // The mediapipe task model asset bundle resources class.
-// A ModelAssetBundleResources object, created from an external file proto,
-// contains model asset bundle related resources and the method to extract the
-// tflite models, resource files or model asset bundles for the mediapipe
-// sub-tasks. As the resources are owned by the ModelAssetBundleResources object
-// callers must keep ModelAssetBundleResources alive while using any of the
-// resources.
+// A ModelAssetBundleResources object contains model asset bundle related
+// resources and the method to extract the tflite models, resource files or
+// model asset bundles for the mediapipe sub-tasks. As the resources are owned
+// by the ModelAssetBundleResources object, callers must keep
+// ModelAssetBundleResources alive while using any of the resources.
 class ModelAssetBundleResources {
  public:
   // Takes the ownership of the provided ExternalFile proto and creates
@@ -40,10 +45,22 @@ class ModelAssetBundleResources {
       const std::string& tag,
       std::unique_ptr<proto::ExternalFile> model_asset_bundle_file);
 
+  // Takes a reference to the provided model asset bundle file and creates
+  // ModelAssetBundleResources from its contents. A non-empty tag
+  // must be set if the ModelAssetBundleResources will be used through
+  // ModelResourcesCacheService.
+  static absl::StatusOr<std::unique_ptr<ModelAssetBundleResources>> Create(
+      const std::string& tag,
+      std::shared_ptr<ScopedFile> model_asset_bundle_file);
+
   // ModelResources is neither copyable nor movable.
   ModelAssetBundleResources(const ModelAssetBundleResources&) = delete;
   ModelAssetBundleResources& operator=(const ModelAssetBundleResources&) =
       delete;
+
+  // Subclasses should override this to ensure that `files_` is cleared before
+  // the memory it points to is destroyed.
+  virtual ~ModelAssetBundleResources() = default;
 
   // Returns the model asset bundle resources tag.
   std::string GetTag() const { return tag_; }
@@ -56,24 +73,19 @@ class ModelAssetBundleResources {
   // Lists all the file names in the model asset model.
   std::vector<std::string> ListFiles() const;
 
- private:
-  // Constructor.
-  ModelAssetBundleResources(
-      const std::string& tag,
-      std::unique_ptr<proto::ExternalFile> model_asset_bundle_file);
+ protected:
+  explicit ModelAssetBundleResources(std::string tag);
 
+  // Provides a view over the model asset bundle file.
+  virtual absl::StatusOr<absl::string_view> GetFileData() = 0;
+
+ private:
   // Extracts the model files (either tflite model file, resource file or model
-  // bundle file) from the external file proto.
-  absl::Status ExtractFilesFromExternalFileProto();
+  // bundle file) from the model asset bundle file into `files_`.
+  absl::Status ExtractFiles();
 
   // The model asset bundle resources tag.
   const std::string tag_;
-
-  // The model asset bundle file.
-  std::unique_ptr<proto::ExternalFile> model_asset_bundle_file_;
-
-  // The ExternalFileHandler for the model asset bundle.
-  std::unique_ptr<ExternalFileHandler> model_asset_bundle_file_handler_;
 
   // The files bundled in model asset bundle, as a map with the filename
   // (corresponding to a basename, e.g. "hand_detector.tflite") as key and

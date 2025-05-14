@@ -34,11 +34,17 @@ cc_library(
         "@litert//litert/cc:litert_buffer_ref",
         "@litert//litert/cc:litert_expected",
         "@litert//litert/cc:litert_model",
-        "@litert//litert/cc/internal:litert_tensor_buffer",
         "//runtime/util:external_file_cc_proto",
         "//runtime/util:litert_status_util",
         "//runtime/util:model_asset_bundle_resources",
-    ],
+    ] + select({
+        "//:litert_lm_link_capi_so": [
+            "@litert//litert/cc:litert_tensor_buffer",
+        ],
+        "//conditions:default": [
+            "@litert//litert/cc/internal:litert_tensor_buffer",
+        ],
+    }),
 )
 
 cc_test(
@@ -72,17 +78,26 @@ cc_library(
         "@litert//litert/c:litert_common",
         "@litert//litert/cc:litert_expected",
         "@litert//litert/cc:litert_model",
-        "@litert//litert/cc/internal:litert_compiled_model",
-        "@litert//litert/cc/internal:litert_environment",
-        "@litert//litert/cc/internal:litert_options",
-        "@litert//litert/cc/internal:litert_tensor_buffer",
         "@litert//litert/cc/options:accelerator_options",
         "@litert//litert/cc/options:litert_cpu_options",
         "//runtime/components:sampler",
         "//runtime/components:sampler_factory",
         "//runtime/util:convert_tensor_buffer",
         "//runtime/util:litert_status_util",
-    ],
+    ] + select({
+        "//:litert_lm_link_capi_so": [
+            "@litert//litert/cc:litert_compiled_model",
+            "@litert//litert/cc:litert_environment",
+            "@litert//litert/cc:litert_options",
+            "@litert//litert/cc:litert_tensor_buffer",
+        ],
+        "//conditions:default": [
+            "@litert//litert/cc/internal:litert_compiled_model",
+            "@litert//litert/cc/internal:litert_environment",
+            "@litert//litert/cc/internal:litert_options",
+            "@litert//litert/cc/internal:litert_tensor_buffer",
+        ],
+    }),
 )
 
 cc_test(
@@ -121,10 +136,16 @@ cc_library(
         "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:span",
         "@litert//litert/cc:litert_macros",
-        "@litert//litert/cc/internal:litert_tensor_buffer",
         "//runtime/util:convert_tensor_buffer",
         "//runtime/util:litert_status_util",
-    ],
+    ] + select({
+        "//:litert_lm_link_capi_so": [
+            "@litert//litert/cc:litert_tensor_buffer",
+        ],
+        "//conditions:default": [
+            "@litert//litert/cc/internal:litert_tensor_buffer",
+        ],
+    }),
 )
 
 cc_test(
@@ -160,8 +181,14 @@ cc_library(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:string_view",
-        "@litert//litert/cc/internal:litert_tensor_buffer",
-    ],
+    ] + select({
+        "//:litert_lm_link_capi_so": [
+            "@litert//litert/cc:litert_tensor_buffer",
+        ],
+        "//conditions:default": [
+            "@litert//litert/cc/internal:litert_tensor_buffer",
+        ],
+    }),
 )
 
 cc_library(
@@ -196,9 +223,15 @@ cc_library(
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
-        "@litert//litert/cc/internal:litert_tensor_buffer",
         "//runtime/util:logging_tensor_buffer",
-    ],
+    ] + select({
+        "//:litert_lm_link_capi_so": [
+            "@litert//litert/cc:litert_tensor_buffer",
+        ],
+        "//conditions:default": [
+            "@litert//litert/cc/internal:litert_tensor_buffer",
+        ],
+    }),
 )
 
 cc_test(
@@ -212,8 +245,14 @@ cc_test(
         "@litert//litert/cc:litert_element_type",
         "@litert//litert/cc:litert_layout",
         "@litert//litert/cc:litert_model",
-        "@litert//litert/cc/internal:litert_tensor_buffer",
-    ],
+    ] + select({
+        "//:litert_lm_link_capi_so": [
+            "@litert//litert/cc:litert_tensor_buffer",
+        ],
+        "//conditions:default": [
+            "@litert//litert/cc/internal:litert_tensor_buffer",
+        ],
+    }),
 )
 
 cc_library(
@@ -228,6 +267,12 @@ cc_library(
     deps = [
         ":llm_executor_io_types",
         "@com_google_absl//absl/status:statusor",
-        "@litert//litert/cc:litert_tensor_buffer",  # copybara:comment_replace "@litert//litert/cc/internal:litert_tensor_buffer",
-    ],
+    ] + select({
+        "//:litert_lm_link_capi_so": [
+            "@litert//litert/cc:litert_tensor_buffer",
+        ],
+        "//conditions:default": [
+            "@litert//litert/cc:litert_tensor_buffer",  # copybara:comment_replace "@litert//litert/cc/internal:litert_tensor_buffer",
+        ],
+    }),
 )

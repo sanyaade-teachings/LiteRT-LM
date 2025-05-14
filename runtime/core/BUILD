@@ -84,7 +84,6 @@ cc_library(
         "@com_google_absl//absl/strings:string_view",
         "@com_google_absl//absl/types:span",
         "@litert//litert/cc:litert_macros",
-        "@litert//litert/cc/internal:litert_tensor_buffer",
         "//runtime/components:sampler",
         "//runtime/components:token_id_util",
         "//runtime/components:tokenizer",
@@ -93,7 +92,14 @@ cc_library(
         "//runtime/executor:llm_executor_io_types",
         "//runtime/util:convert_tensor_buffer",
         "//runtime/util:litert_status_util",
-    ],
+    ] + select({
+        "//:litert_lm_link_capi_so": [
+            "@litert//litert/cc:litert_tensor_buffer",
+        ],
+        "//conditions:default": [
+            "@litert//litert/cc/internal:litert_tensor_buffer",
+        ],
+    }),
 )
 
 cc_test(

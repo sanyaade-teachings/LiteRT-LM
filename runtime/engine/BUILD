@@ -69,7 +69,10 @@ cc_binary(
     name = "litert_lm_main",
     srcs = ["litert_lm_main.cc"],
     # Export LiteRt* symbols for LiteRt accelerator shlibs.
-    linkopts = ["-Wl,--export-dynamic-symbol=LiteRt*"] + select({
+    linkopts = select({
+        "//:litert_lm_link_capi_so": [],
+        "//conditions:default": ["-Wl,--export-dynamic-symbol=LiteRt*"],
+    }) + select({
         "@platforms//os:android": ["-lEGL", "-lGLESv3"],
         "//conditions:default": [],
     }),

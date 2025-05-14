@@ -34,8 +34,8 @@
 #include "litert/cc/litert_expected.h"  // from @litert
 #include "litert/cc/litert_model.h"  // from @litert
 #include "litert/cc/litert_tensor_buffer.h"  // from @litert
-#include "runtime/util/external_file.pb.h"
 #include "runtime/util/model_asset_bundle_resources.h"
+#include "runtime/util/scoped_file.h"
 #include "runtime/util/status_macros.h"
 
 namespace litert::lm {
@@ -45,7 +45,6 @@ namespace {
 using ::litert::Expected;
 using ::litert::Model;
 using ::litert::lm::ModelAssetBundleResources;
-using ::litert::lm::proto::ExternalFile;
 
 // The name of the prefill decode model in the task bundle.
 constexpr char kPrefilDecodeModelNameInTaskBundle[] = "TF_LITE_PREFILL_DECODE";
@@ -325,10 +324,9 @@ BuildLiteRtCompiledModelResources(const std::string& model_path) {
   std::unique_ptr<ModelAssetBundleResources> resources;
   if (absl::EndsWith(model_path, ".task")) {
     // .task format
-    auto external_file = std::make_unique<ExternalFile>();
-    external_file->set_file_name(model_path);
+    ASSIGN_OR_RETURN(auto scoped_file, ScopedFile::Open(model_path));
     ASSIGN_OR_RETURN(resources, ModelAssetBundleResources::Create(
-                                    "", std::move(external_file)));
+                                    "", std::move(scoped_file)));
     const std::vector<std::string>& files_list = resources->ListFiles();
     const absl::flat_hash_set<std::string> files_set(files_list.begin(),
                                                      files_list.end());

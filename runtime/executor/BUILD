@@ -37,6 +37,7 @@ cc_library(
         "//runtime/util:external_file_cc_proto",
         "//runtime/util:litert_status_util",
         "//runtime/util:model_asset_bundle_resources",
+        "//runtime/util:scoped_file",
     ] + select({
         "//:litert_lm_link_capi_so": [
             "@litert//litert/cc:litert_tensor_buffer",
@@ -55,6 +56,7 @@ cc_test(
         "@com_google_googletest//:gtest_main",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings:string_view",
+        "//runtime/util:litert_status_util",
     ],
 )
 
@@ -117,6 +119,7 @@ cc_test(
         "@litert//litert/cc:litert_model",
         "//runtime/util:litert_status_util",
         "//runtime/util:model_asset_bundle_resources",
+        "//runtime/util:scoped_file",
         "//runtime/util:test_utils",
     ],
 )

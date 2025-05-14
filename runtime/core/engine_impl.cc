@@ -40,8 +40,8 @@
 #include "runtime/framework/thread_options.h"
 #include "runtime/framework/threadpool.h"
 #include "runtime/proto/sampler_params.pb.h"
-#include "runtime/util/external_file.pb.h"
 #include "runtime/util/model_asset_bundle_resources.h"
+#include "runtime/util/scoped_file.h"
 #include "runtime/util/status_macros.h"
 
 namespace litert::lm {
@@ -99,10 +99,10 @@ class EngineImpl : public Engine {
     }
     // TODO(b/397975034): factor out the tokenizer creation logic once the model
     // loading mechanism of the new file format is determined.
-    auto external_file = std::make_unique<proto::ExternalFile>();
-    external_file->set_file_name(model_path);
+    auto scoped_file = ScopedFile::Open(model_path);
+    ABSL_CHECK_OK(scoped_file);
     auto resources = ModelAssetBundleResources::Create(
-        /*tag=*/"", std::move(external_file));
+        /*tag=*/"", *std::move(scoped_file));
     auto vocab_buffer = (*resources)->GetFile("TOKENIZER_MODEL");
     tokenizer_ =
         std::move(*SentencePieceTokenizer::CreateFromBuffer(*vocab_buffer));

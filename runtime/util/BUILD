@@ -235,7 +235,6 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        ":external_file_cc_proto",
         ":external_file_handler",
         ":memory_mapped_file",
         ":scoped_file",

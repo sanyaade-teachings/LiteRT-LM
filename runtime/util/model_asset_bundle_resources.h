@@ -21,10 +21,9 @@ limitations under the License.
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"  // from @com_google_absl
-#include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
-#include "runtime/util/external_file.pb.h"
+#include "runtime/util/memory_mapped_file.h"
 #include "runtime/util/scoped_file.h"
 
 namespace litert::lm {
@@ -37,14 +36,6 @@ namespace litert::lm {
 // ModelAssetBundleResources alive while using any of the resources.
 class ModelAssetBundleResources {
  public:
-  // Takes the ownership of the provided ExternalFile proto and creates
-  // ModelAssetBundleResources from the proto. A non-empty tag
-  // must be set if the ModelAssetBundleResources will be used through
-  // ModelResourcesCacheService.
-  static absl::StatusOr<std::unique_ptr<ModelAssetBundleResources>> Create(
-      const std::string& tag,
-      std::unique_ptr<proto::ExternalFile> model_asset_bundle_file);
-
   // Takes a reference to the provided model asset bundle file and creates
   // ModelAssetBundleResources from its contents. A non-empty tag
   // must be set if the ModelAssetBundleResources will be used through
@@ -52,6 +43,11 @@ class ModelAssetBundleResources {
   static absl::StatusOr<std::unique_ptr<ModelAssetBundleResources>> Create(
       const std::string& tag,
       std::shared_ptr<ScopedFile> model_asset_bundle_file);
+
+  // Convenience method to create from a ScopedFile directly.
+  static absl::StatusOr<std::unique_ptr<ModelAssetBundleResources>> Create(
+      const std::string& tag,
+      ScopedFile&& model_asset_bundle_file);
 
   // ModelResources is neither copyable nor movable.
   ModelAssetBundleResources(const ModelAssetBundleResources&) = delete;
@@ -73,25 +69,23 @@ class ModelAssetBundleResources {
   // Lists all the file names in the model asset model.
   std::vector<std::string> ListFiles() const;
 
- protected:
-  explicit ModelAssetBundleResources(std::string tag);
-
-  // Provides a view over the model asset bundle file.
-  virtual absl::StatusOr<absl::string_view> GetFileData() = 0;
-
  private:
-  // Extracts the model files (either tflite model file, resource file or model
-  // bundle file) from the model asset bundle file into `files_`.
-  absl::Status ExtractFiles();
+  ModelAssetBundleResources(
+      std::string tag,
+      std::unique_ptr<MemoryMappedFile> mapped_model_asset_bundle_file,
+      absl::flat_hash_map<std::string, absl::string_view> files);
 
   // The model asset bundle resources tag.
   const std::string tag_;
+
+  // This owns the memory backing `files_`.
+  const std::unique_ptr<MemoryMappedFile> mapped_model_asset_bundle_file_;
 
   // The files bundled in model asset bundle, as a map with the filename
   // (corresponding to a basename, e.g. "hand_detector.tflite") as key and
   // a pointer to the file contents as value. Each file can be either a TFLite
   // model file, resource file or a model bundle file for sub-task.
-  absl::flat_hash_map<std::string, absl::string_view> files_;
+  const absl::flat_hash_map<std::string, absl::string_view> files_;
 };
 
 }  // namespace litert::lm

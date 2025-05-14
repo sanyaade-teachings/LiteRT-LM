@@ -30,6 +30,7 @@
 #include "runtime/executor/litert_compiled_model_executor_utils.h"
 #include "runtime/executor/llm_executor_settings.h"
 #include "runtime/util/model_asset_bundle_resources.h"
+#include "runtime/util/scoped_file.h"
 #include "runtime/util/status_macros.h"
 #include "runtime/util/test_utils.h"  // NOLINT
 
@@ -42,7 +43,6 @@ const int kNumThreads = 4;
 using ::litert::Expected;
 using ::litert::Model;
 using ::litert::lm::ModelAssetBundleResources;
-using ::litert::lm::proto::ExternalFile;
 using ::testing::_;  // NOLINT: Required by ASSERT_OK_AND_ASSIGN().
 
 absl::StatusOr<std::unique_ptr<ExecutorModelResources>>
@@ -50,11 +50,12 @@ CreateExecutorModelResources(absl::string_view model_path) {
   auto executor_model_resources = std::make_unique<ExecutorModelResources>();
   litert::Expected<Model> litert_model;
   std::unique_ptr<ModelAssetBundleResources> resources;
-  auto external_file = std::make_unique<ExternalFile>();
-  external_file->set_file_name(std::string(model_path));
+
+  ASSIGN_OR_RETURN(auto scoped_file,  // NOLINT: wrongly detected.
+                   ScopedFile::Open(model_path));
   ASSIGN_OR_RETURN(resources,  // NOLINT: wrongly detected.
                    ModelAssetBundleResources::Create(
-                       /*tag=*/"", std::move(external_file)));
+                       /*tag=*/"", std::move(scoped_file)));
 
   ASSIGN_OR_RETURN(absl::string_view buffer,  // NOLINT: wrongly detected.
                    resources->GetFile(kPrefillDecodeModelNameInTaskBundle));

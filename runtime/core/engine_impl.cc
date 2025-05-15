@@ -27,6 +27,7 @@
 #include "absl/log/log.h"  // from @com_google_absl
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
+#include "absl/strings/match.h"  // from @com_google_absl
 #include "absl/strings/str_cat.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "absl/time/time.h"  // from @com_google_absl
@@ -121,11 +122,18 @@ class EngineImpl : public Engine {
       // model loading mechanism of the new file format is determined.
       auto scoped_file = ScopedFile::Open(model_path);
       ABSL_CHECK_OK(scoped_file);
-      auto resources = ModelAssetBundleResources::Create(
-          /*tag=*/"", *std::move(scoped_file));
-      auto vocab_buffer = (*resources)->GetFile("TOKENIZER_MODEL");
-      tokenizer_ =
-          std::move(*SentencePieceTokenizer::CreateFromBuffer(*vocab_buffer));
+
+      // TODO(b/413793273): Read the header bytes to determine the file type
+      // instead of depending on the file extension.
+      if (absl::EndsWith(model_path, ".litertlm")) {
+        ABSL_LOG(FATAL) << "Not supported file format in OSS yet.";
+      } else {
+        auto resources = ModelAssetBundleResources::Create(
+            /*tag=*/"", *std::move(scoped_file));
+        auto vocab_buffer = (*resources)->GetFile("TOKENIZER_MODEL");
+        tokenizer_ =
+            std::move(*SentencePieceTokenizer::CreateFromBuffer(*vocab_buffer));
+      }
       if (benchmark_info_.has_value()) {
         ABSL_CHECK_OK(
             benchmark_info_->TimeInitPhaseEnd("Tokenizer initialization"));

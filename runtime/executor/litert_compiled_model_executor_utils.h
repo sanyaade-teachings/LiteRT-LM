@@ -28,6 +28,7 @@
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "litert/cc/litert_model.h"  // from @litert
 #include "litert/cc/litert_tensor_buffer.h"  // from @litert
+#include "runtime/util/litert_lm_loader.h"
 #include "runtime/util/model_asset_bundle_resources.h"
 
 namespace litert::lm {
@@ -52,6 +53,9 @@ struct ExecutorModelResources {
   // the model.
   std::unique_ptr<litert::lm::ModelAssetBundleResources>
       model_asset_bundle_resources;
+  // The litert lm loader, used to mmap the tokenizer and tflite model etc from
+  // the .litertlm model file.
+  std::unique_ptr<litert::lm::LitertLmLoader> litert_lm_loader;
 };
 
 // A struct holding a set of model signatures used for doing inference on a

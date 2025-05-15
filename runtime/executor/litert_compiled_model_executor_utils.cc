@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "absl/container/flat_hash_set.h"  // from @com_google_absl
+#include "absl/log/absl_log.h"  // from @com_google_absl
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/match.h"  // from @com_google_absl
@@ -34,6 +35,7 @@
 #include "litert/cc/litert_expected.h"  // from @litert
 #include "litert/cc/litert_model.h"  // from @litert
 #include "litert/cc/litert_tensor_buffer.h"  // from @litert
+#include "runtime/util/litert_lm_loader.h"
 #include "runtime/util/model_asset_bundle_resources.h"
 #include "runtime/util/scoped_file.h"
 #include "runtime/util/status_macros.h"
@@ -322,7 +324,9 @@ BuildLiteRtCompiledModelResources(const std::string& model_path) {
   auto executor_model_resources = std::make_unique<ExecutorModelResources>();
   Expected<Model> litert_model;
   std::unique_ptr<ModelAssetBundleResources> resources;
-  if (absl::EndsWith(model_path, ".task")) {
+  if (absl::EndsWith(model_path, ".litertlm")) {
+    ABSL_LOG(FATAL) << "Not supported file format in OSS yet.";
+  } else if (absl::EndsWith(model_path, ".task")) {
     // .task format
     ASSIGN_OR_RETURN(auto scoped_file, ScopedFile::Open(model_path));
     ASSIGN_OR_RETURN(resources, ModelAssetBundleResources::Create(

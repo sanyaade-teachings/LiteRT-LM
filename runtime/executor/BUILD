@@ -28,6 +28,8 @@ cc_library(
     deps = [
         "@com_google_absl//absl/container:btree",
         "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -35,6 +37,7 @@ cc_library(
         "@litert//litert/cc:litert_expected",
         "@litert//litert/cc:litert_model",
         "//runtime/util:external_file_cc_proto",
+        "//runtime/util:litert_lm_loader",
         "//runtime/util:litert_status_util",
         "//runtime/util:model_asset_bundle_resources",
         "//runtime/util:scoped_file",

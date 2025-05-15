@@ -45,3 +45,18 @@ adb shell LD_LIBRARY_PATH=/data/local/tmp \
     --backend=gpu \
     --model_path=<model task file>
 ```
+
+To run on Qualcomm NPU, `libLiteRtDispatch_Qualcomm.so` in the maven package
+from [TBD]() and Qualcomm's runtime shared libraries downloaded from [TBD]()
+are required. Model file should be compiled with LiteRt compiler with Qualcomm's
+plugin.
+
+```
+adb push libLiteRtDispatch_Qualcomm.so /data/local/tmp
+adb push <qualcomm runtime shlibs> /data/local/tmp
+
+adb shell LD_LIBRARY_PATH=/data/local/tmp \
+    /data/local/tmp/litert_lm_main \
+    --backend=qnn \
+    --model_path=<model tflite file>
+```

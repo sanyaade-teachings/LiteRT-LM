@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// TODO(b/417209286): Remove this once the model assets are stored in the
+// litertlm file format.
+#include <filesystem>  // NOLINT: Required for path manipulation.
 #include <memory>
 #include <optional>
 #include <string>
@@ -37,6 +40,7 @@
 #include "runtime/executor/llm_executor.h"
 #include "runtime/executor/llm_executor_settings.h"
 #include "runtime/executor/llm_litert_compiled_model_executor.h"
+#include "runtime/executor/llm_litert_npu_compiled_model_executor.h"
 #include "runtime/framework/thread_options.h"
 #include "runtime/framework/threadpool.h"
 #include "runtime/proto/sampler_params.pb.h"
@@ -64,6 +68,18 @@ absl::StatusOr<std::unique_ptr<LlmExecutor>> BuildLitertCompiledModelExecutor(
                        executor_settings, model_resources->litert_model));
   return executor;
 }
+
+// Assume the files are in the same directory with the following names. This
+// should be cleaned up once we store everything in the litertlm file format.
+// TODO(b/417209286): Remove this once the model assets are stored in the
+// litertlm file format.
+constexpr absl::string_view kAuxiliaryModelName =
+    "static_a16w4-for-aux_qpa_quantized_gemma3_npu_auxiliary.tflite";
+constexpr absl::string_view kEmbedderName =
+    "static_a16w4-for-embedder_qpa_quantized_gemma3_npu_embedder.tflite";
+constexpr absl::string_view kVocabName = "gemma3_tokenizer.spiece";
+using ::odml::infra::LlmLiteRtNpuCompiledModelExecutor::ModelQuantization::
+    kAllQuantized;
 
 }  // namespace
 
@@ -115,7 +131,39 @@ class EngineImpl : public Engine {
             benchmark_info_->TimeInitPhaseEnd("Tokenizer initialization"));
       }
     } else {
-      ABSL_LOG(FATAL) << "Not supported backend.";
+      std::filesystem::path path(model_path);
+      ABSL_CHECK(std::filesystem::exists(path));
+      const std::string embedder_path =
+          std::filesystem::path(model_path).parent_path() /
+          std::string(kEmbedderName);
+      ABSL_CHECK(std::filesystem::exists(embedder_path));
+      const std::string auxiliary_path =
+          std::filesystem::path(model_path).parent_path() /
+          std::string(kAuxiliaryModelName);
+      ABSL_CHECK(std::filesystem::exists(auxiliary_path));
+      const std::string vocab_path =
+          std::filesystem::path(model_path).parent_path() /
+          std::string(kVocabName);
+      ABSL_CHECK(std::filesystem::exists(vocab_path));
+      auto executor_or = odml::infra::LlmLiteRtNpuCompiledModelExecutor::Create(
+          kAllQuantized, model_path, embedder_path, auxiliary_path,
+          std::string(path.parent_path()));
+      ABSL_CHECK_OK(executor_or);
+      executor_ = std::move(executor_or.value());
+      if (benchmark_info_.has_value()) {
+        ABSL_CHECK_OK(
+            benchmark_info_->TimeInitPhaseEnd("Executor initialization"));
+        ABSL_CHECK_OK(
+            benchmark_info_->TimeInitPhaseStart("Tokenizer initialization"));
+      }
+      auto tokenizer_or =
+          litert::lm::SentencePieceTokenizer::CreateFromFile(vocab_path);
+      ABSL_CHECK_OK(tokenizer_or);
+      tokenizer_ = std::move(tokenizer_or.value());
+      if (benchmark_info_.has_value()) {
+        ABSL_CHECK_OK(
+            benchmark_info_->TimeInitPhaseEnd("Tokenizer initialization"));
+      }
     }
 
     // TODO(b/397975034) Add support for stop tokens loading from the model

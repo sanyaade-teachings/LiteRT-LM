@@ -44,6 +44,7 @@ cc_library(
         "//runtime/executor:llm_executor",
         "//runtime/executor:llm_executor_settings",
         "//runtime/executor:llm_litert_compiled_model_executor",
+        "//runtime/executor:llm_litert_npu_compiled_model_executor",
         "//runtime/framework:thread_options",
         "//runtime/framework:threadpool_interface",
         "//runtime/proto:sampler_params_cc_proto",

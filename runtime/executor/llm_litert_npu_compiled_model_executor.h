@@ -106,27 +106,6 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
     return "LiteRT NPU Compiled Model";
   }
 
-  // Updates the runtime configuration.
-  absl::Status UpdateRuntimeConfig(
-      const ::litert::lm::RuntimeConfig& runtime_config) override {
-    if (runtime_config.sampler_params.has_value()) {
-      sampler_params_ = *runtime_config.sampler_params;
-    }
-    return absl::OkStatus();
-  }
-
-  // Gets the current step of the executor.
-  // Public API, the return value is the current step that user expects (e.g.
-  // users prefill 100 tokens, then they expect the current step to be 100). It
-  // is different from the internal current step.
-  absl::StatusOr<int> GetCurrentStep() const override {
-    return current_step_ + (next_input_token_id_ == -1 ? 0 : 1);
-  }
-
-  absl::StatusOr<const std::vector<int>*> GetProcessedTokens() const override {
-    return &processed_tokens_;
-  }
-
   absl::StatusOr<int> GetVocabSize() override;
 
   // Prints the latency stats for the executor.  Intended to be used for
@@ -360,9 +339,6 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
   InferenceContext llm_inference_context_;
   InferenceContext cache_update_inference_context_;
   ::litert::lm::SortedPrefillSignatureMap prefill_signature_map_;
-
-  // The sampler parameters to use for internal sampling.
-  proto::SamplerParameters sampler_params_;
 
   // The sampled ids to use for external sampling.
   // The layout is batch-major.

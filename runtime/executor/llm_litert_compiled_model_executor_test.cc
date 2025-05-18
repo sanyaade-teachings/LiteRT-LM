@@ -74,9 +74,9 @@ TEST(LlmLiteRTCompiledModelExecutorTest, CreateExecutorTest) {
       "litert_lm/runtime/testdata/test_lm.task";
   ASSERT_OK_AND_ASSIGN(auto model_resources,
                        CreateExecutorModelResources(model_path.string()));
-  ModelAssets model_assets;
-  model_assets.model_paths.push_back(model_path);
-  LlmExecutorSettings executor_settings(model_assets);
+  auto model_assets = ModelAssets::Create(model_path.string());
+  ASSERT_OK(model_assets);
+  LlmExecutorSettings executor_settings(*model_assets);
   executor_settings.SetMaxNumTokens(kMaxNumTokens);
   ::litert::lm::CpuConfig config;
   config.number_of_threads = kNumThreads;

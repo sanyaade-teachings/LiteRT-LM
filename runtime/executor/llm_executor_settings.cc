@@ -15,10 +15,15 @@
 #include "runtime/executor/llm_executor_settings.h"
 
 #include <iostream>
+#include <memory>
+#include <string>
+#include <utility>
 #include <variant>
-#include <vector>
 
+#include "absl/status/statusor.h"  // from @com_google_absl
+#include "absl/strings/string_view.h"  // from @com_google_absl
 #include "runtime/util/logging.h"
+#include "runtime/util/scoped_file.h"
 
 namespace litert::lm {
 
@@ -70,19 +75,41 @@ std::ostream& operator<<(std::ostream& os,
   }
 }
 
-std::ostream& operator<<(std::ostream& os, const ModelAssets& model_assets) {
-  if (!model_assets.model_paths.empty()) {
-    os << "model_paths:\n";
-    for (const auto& path : model_assets.model_paths) {
-      os << "  " << path << "\n";
-    }
-  } else if (!model_assets.model_files.empty()) {
-    os << "model_files:\n";
-    for (const auto& file : model_assets.model_files) {
-      os << "  file descriptor ID: " << file->file() << "\n";
-    }
+// static
+absl::StatusOr<ModelAssets> ModelAssets::Create(absl::string_view model_path) {
+  return ModelAssets(std::string(model_path));
+}
+
+// static
+absl::StatusOr<ModelAssets> ModelAssets::Create(
+    std::shared_ptr<litert::lm::ScopedFile> model_file) {
+  return ModelAssets(std::move(model_file));
+}
+
+// static
+absl::StatusOr<ModelAssets> ModelAssets::Create(
+    std::shared_ptr<litert::lm::ScopedFile> model_file,
+    absl::string_view model_path) {
+  if (model_file) {
+    return Create(std::move(model_file));
   }
-  os << "fake_weights_mode: " << model_assets.fake_weights_mode << "\n";
+  return Create(model_path);
+}
+
+ModelAssets::ModelAssets(std::shared_ptr<litert::lm::ScopedFile> model_file)
+    : path_or_scoped_file_(std::move(model_file)) {}
+
+ModelAssets::ModelAssets(std::string model_path)
+    : path_or_scoped_file_(std::move(model_path)) {}
+
+std::ostream& operator<<(std::ostream& os, const ModelAssets& model_assets) {
+  if (model_assets.HasScopedFile()) {
+    os << "model_file file descriptor ID: "
+       << model_assets.GetScopedFile().value()->file() << "\n";
+  } else {
+    os << "model_path: " << model_assets.GetPath().value() << "\n";
+  }
+  os << "fake_weights_mode: " << model_assets.fake_weights_mode() << "\n";
   return os;
 }
 

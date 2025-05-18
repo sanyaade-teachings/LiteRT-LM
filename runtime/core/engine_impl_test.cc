@@ -33,9 +33,9 @@ TEST(EngineTest, CreateEngine) {
   auto task_path =
       std::filesystem::path(::testing::SrcDir()) /
       "litert_lm/runtime/testdata/test_lm.task";
-  ModelAssets model_assets;
-  model_assets.model_paths.push_back(task_path.string());
-  LlmExecutorSettings executor_settings(model_assets);
+  auto model_assets = ModelAssets::Create(task_path.string());
+  ASSERT_OK(model_assets);
+  LlmExecutorSettings executor_settings(*model_assets);
   executor_settings.SetBackend(Backend::CPU);
   executor_settings.SetBackendConfig(CpuConfig());
   executor_settings.SetMaxNumTokens(160);

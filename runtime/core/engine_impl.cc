@@ -28,7 +28,6 @@
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/match.h"  // from @com_google_absl
-#include "absl/strings/str_cat.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "absl/time/time.h"  // from @com_google_absl
 #include "runtime/components/sentencepiece_tokenizer.h"
@@ -47,7 +46,6 @@
 #include "runtime/proto/sampler_params.pb.h"
 #include "runtime/util/model_asset_bundle_resources.h"
 #include "runtime/util/scoped_file.h"
-#include "runtime/util/status_macros.h"
 
 namespace litert::lm {
 namespace {
@@ -56,18 +54,13 @@ namespace {
 absl::StatusOr<std::unique_ptr<LlmExecutor>> BuildLitertCompiledModelExecutor(
     const std::unique_ptr<ExecutorModelResources>& model_resources,
     const LlmExecutorSettings& executor_settings) {
-  std::vector<std::string> model_paths =
-      executor_settings.GetModelAssets().model_paths;
-  if (model_paths.size() != 1) {
-    return absl::InvalidArgumentError(
-        absl::StrCat("Model paths size must be 1. Got ", model_paths.size()));
+  if (executor_settings.GetModelAssets().HasScopedFile()) {
+    return absl::InvalidArgumentError("Model must be passed as a single path.");
   }
+
   // Create executor that creates and owns the interpreter and kv cache.
-  std::unique_ptr<LlmExecutor> executor;
-  ASSIGN_OR_RETURN(executor,
-                   LlmLiteRtCompiledModelExecutor::Create(
-                       executor_settings, model_resources->litert_model));
-  return executor;
+  return LlmLiteRtCompiledModelExecutor::Create(executor_settings,
+                                                model_resources->litert_model);
 }
 
 // Assume the files are in the same directory with the following names. This
@@ -97,9 +90,10 @@ class EngineImpl : public Engine {
       ABSL_CHECK_OK(
           benchmark_info_->TimeInitPhaseStart("Executor initialization"));
     }
-    const std::string& model_path = engine_settings.GetMainExecutorSettings()
-                                        .GetModelAssets()
-                                        .model_paths[0];
+    auto model_path_view =
+        engine_settings.GetMainExecutorSettings().GetModelAssets().GetPath();
+    ABSL_CHECK_OK(model_path_view);
+    std::string model_path(*model_path_view);
     if ((engine_settings.GetMainExecutorSettings().GetBackend() ==
          Backend::CPU) ||
         (engine_settings.GetMainExecutorSettings().GetBackend() ==

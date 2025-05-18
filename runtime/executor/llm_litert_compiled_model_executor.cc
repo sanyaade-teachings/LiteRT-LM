@@ -495,8 +495,9 @@ LlmLiteRtCompiledModelExecutor::Create(
       gpu_compilation_options->SetPreferTextureWeights(true);
       if (!weight_cache_path.empty()) {
         gpu_compilation_options->SetSerializationDir(weight_cache_path.c_str());
-        absl::string_view model_name =
-            Basename(executor_settings.GetModelAssets().model_paths[0]);
+        ASSIGN_OR_RETURN(auto model_path,
+                         executor_settings.GetModelAssets().GetPath());
+        absl::string_view model_name = Basename(model_path);
         gpu_compilation_options->SetModelCacheKey(model_name.data());
         gpu_compilation_options->SetSerializeProgramCache(false);
         gpu_compilation_options->SetSerializeExternalTensors(true);
@@ -513,8 +514,8 @@ LlmLiteRtCompiledModelExecutor::Create(
           executor_settings.GetBackendConfig<CpuConfig>()->number_of_threads;
       cpu_compilation_options->SetNumThreads(num_threads);
       if (weight_cache_path != ":nocache") {
-        std::string model_path =
-            executor_settings.GetModelAssets().model_paths[0];
+        ASSIGN_OR_RETURN(auto model_path,
+                         executor_settings.GetModelAssets().GetPath());
         if (weight_cache_path.empty()) {
           weight_cache_path = absl::StrCat(model_path, ".xnnpack_cache");
         } else {

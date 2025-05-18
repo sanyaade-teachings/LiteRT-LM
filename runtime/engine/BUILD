@@ -90,6 +90,7 @@ cc_binary(
         "@com_google_absl//absl/strings:string_view",
         "@com_google_absl//absl/time",
         "//runtime/executor:llm_executor_settings",
+        "//runtime/util:litert_status_util",
     ] + select({
         "//conditions:default": ["//runtime/core:engine_impl"],
     }),
@@ -114,5 +115,6 @@ cc_test(
         "@com_google_googletest//:gtest_main",
         "//runtime/executor:llm_executor_settings",
         "//runtime/proto:engine_cc_proto",
+        "//runtime/util:test_utils",
     ],
 )

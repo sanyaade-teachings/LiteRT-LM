@@ -38,6 +38,7 @@
 #include "runtime/engine/engine_settings.h"
 #include "runtime/engine/io_types.h"
 #include "runtime/executor/llm_executor_settings.h"
+#include "runtime/util/status_macros.h" // NOLINT
 
 ABSL_FLAG(std::optional<std::string>, backend, "gpu",
           "Executor backend to use for LLM execution (cpu, gpu, etc.)");
@@ -77,8 +78,8 @@ absl::Status MainHelper(int argc, char** argv) {
     return absl::InvalidArgumentError("Model path is empty.");
   }
   ABSL_LOG(INFO) << "Model path: " << model_path;
-  ModelAssets model_assets;
-  model_assets.model_paths.push_back(model_path);
+  ASSIGN_OR_RETURN(ModelAssets model_assets,  // NOLINT
+                   ModelAssets::Create(model_path));
   LlmExecutorSettings executor_settings(model_assets);
 
   std::string backend_str = absl::GetFlag(FLAGS_backend).value();

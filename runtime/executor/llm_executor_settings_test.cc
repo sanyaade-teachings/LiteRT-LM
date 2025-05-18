@@ -83,14 +83,11 @@ TEST(LlmExecutorConfigTest, FakeWeightsMode) {
 }
 
 TEST(LlmExecutorConfigTest, ModelAssets) {
-  ModelAssets model_assets;
+  auto model_assets = ModelAssets::Create("/path/to/model1");
+  ASSERT_OK(model_assets);
   std::stringstream oss;
-  model_assets.model_paths = {"/path/to/model1", "/path/to/model2"};
-  model_assets.fake_weights_mode = FakeWeightsMode::FAKE_WEIGHTS_NONE;
-  oss << model_assets;
-  const std::string expected_output = R"(model_paths:
-  /path/to/model1
-  /path/to/model2
+  oss << *model_assets;
+  const std::string expected_output = R"(model_path: /path/to/model1
 fake_weights_mode: FAKE_WEIGHTS_NONE
 )";
   EXPECT_EQ(oss.str(), expected_output);
@@ -124,10 +121,9 @@ enable_decode_logits: 1
 }
 
 TEST(LlmExecutorConfigTest, LlmExecutorSettings) {
-  ModelAssets model_assets;
-  model_assets.model_paths = {"/path/to/model1"};
-  model_assets.fake_weights_mode = FakeWeightsMode::FAKE_WEIGHTS_NONE;
-  LlmExecutorSettings config(model_assets);
+  auto model_assets = ModelAssets::Create("/path/to/model1");
+  ASSERT_OK(model_assets);
+  LlmExecutorSettings config(*model_assets);
   config.SetBackend(Backend::GPU_ARTISAN);
   config.SetBackendConfig(CreateGpuArtisanConfig());
   config.SetMaxNumTokens(1024);
@@ -150,8 +146,7 @@ max_tokens: 1024
 activation_data_type: FLOAT16
 max_num_images: 1
 cache_dir: /path/to/cache
-model_assets: model_paths:
-  /path/to/model1
+model_assets: model_path: /path/to/model1
 fake_weights_mode: FAKE_WEIGHTS_NONE
 
 )";
@@ -159,8 +154,10 @@ fake_weights_mode: FAKE_WEIGHTS_NONE
 }
 
 TEST(LlmExecutorConfigTest, GetBackendConfig) {
-  ModelAssets model_assets;
-  LlmExecutorSettings config(model_assets);
+  auto model_assets = ModelAssets::Create("/path/to/model1");
+  ASSERT_OK(model_assets);
+  LlmExecutorSettings config(*model_assets);
+
   config.SetBackendConfig(CreateGpuArtisanConfig());
 
   auto gpu_config = config.GetBackendConfig<GpuArtisanConfig>();
@@ -170,8 +167,9 @@ TEST(LlmExecutorConfigTest, GetBackendConfig) {
 }
 
 TEST(LlmExecutorConfigTest, MutableBackendConfig) {
-  ModelAssets model_assets;
-  LlmExecutorSettings config(model_assets);
+  auto model_assets = ModelAssets::Create("/path/to/model1");
+  ASSERT_OK(model_assets);
+  LlmExecutorSettings config(*model_assets);
   config.SetBackendConfig(CreateGpuArtisanConfig());
 
   auto gpu_config = config.MutableBackendConfig<GpuArtisanConfig>();

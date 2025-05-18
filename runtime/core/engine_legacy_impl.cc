@@ -95,10 +95,10 @@ class EngineImpl : public Engine {
       ABSL_CHECK_OK(
           benchmark_info_->TimeInitPhaseStart("Executor initialization"));
     }
-    const std::string& model_path = engine_settings.GetMainExecutorSettings()
-                                        .GetModelAssets()
-                                        .model_paths[0];
-    auto model_resources = oi::BuildModelResources(model_path);
+    auto model_path =
+        engine_settings.GetMainExecutorSettings().GetModelAssets().GetPath();
+    ABSL_CHECK_OK(model_path);
+    auto model_resources = oi::BuildModelResources(std::string(*model_path));
     ABSL_QCHECK_OK(model_resources);
     model_resources_ = std::move(*model_resources);
     auto executor = BuildExecutor(model_resources_, engine_settings);
@@ -112,7 +112,7 @@ class EngineImpl : public Engine {
     }
     // TODO(b/397975034): factor out the tokenizer creation logic once the model
     // loading mechanism of the new file format is determined.
-    auto scoped_file = ScopedFile::Open(model_path);
+    auto scoped_file = ScopedFile::Open(*model_path);
     ABSL_CHECK_OK(scoped_file);
     auto resources = ModelAssetBundleResources::Create(
         /*tag=*/"", *std::move(scoped_file));

@@ -23,6 +23,7 @@
 #include <variant>
 #include <vector>
 
+#include "absl/log/absl_check.h"  // from @com_google_absl
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/str_cat.h"  // from @com_google_absl
@@ -82,16 +83,58 @@ enum class FakeWeightsMode {
 std::ostream& operator<<(std::ostream& os,
                          const FakeWeightsMode& fake_weights_mode);
 
-// Struct to host the model assets, including base models and lora models.
-struct ModelAssets {
-  // Model paths.
-  std::vector<std::string> model_paths;
+// Class to host the model assets, including base models and lora models.
+class ModelAssets {
+ public:
+  static absl::StatusOr<ModelAssets> Create(
+      std::shared_ptr<litert::lm::ScopedFile> model_file);
+  static absl::StatusOr<ModelAssets> Create(absl::string_view model_path);
 
-  // Vector of scoped file for the model files.
-  std::vector<std::shared_ptr<litert::lm::ScopedFile>> model_files;
+  // Convenience factory function to create a ModelAssets with both a model
+  // path and file. Will use the scoped file if both are provided.
+  static absl::StatusOr<ModelAssets> Create(
+      std::shared_ptr<litert::lm::ScopedFile> model_file,
+      absl::string_view model_path);
 
-  // Fake weights mode.
-  FakeWeightsMode fake_weights_mode = FakeWeightsMode::FAKE_WEIGHTS_NONE;
+  bool HasScopedFile() const {
+    return std::holds_alternative<std::shared_ptr<litert::lm::ScopedFile>>(
+        path_or_scoped_file_);
+  }
+
+  absl::StatusOr<absl::string_view> GetPath() const {
+    if (!std::holds_alternative<std::string>(path_or_scoped_file_)) {
+      return absl::InvalidArgumentError("Assets were not created with a path.");
+    }
+    return std::get<std::string>(path_or_scoped_file_);
+  }
+
+  absl::StatusOr<std::shared_ptr<litert::lm::ScopedFile>> GetScopedFile()
+      const {
+    if (!std::holds_alternative<std::shared_ptr<litert::lm::ScopedFile>>(
+            path_or_scoped_file_)) {
+      return absl::InvalidArgumentError(
+          "Assets were not created with a scoped file.");
+    }
+    return std::get<std::shared_ptr<litert::lm::ScopedFile>>(
+        path_or_scoped_file_);
+  }
+
+  FakeWeightsMode fake_weights_mode() const { return fake_weights_mode_; }
+
+  void SetFakeWeightsMode(FakeWeightsMode fake_weights_mode) {
+    fake_weights_mode_ = fake_weights_mode;
+  }
+
+ private:
+  explicit ModelAssets(std::shared_ptr<litert::lm::ScopedFile> model_file);
+  explicit ModelAssets(std::string model_path);
+
+  // TODO: b/417814685 - Consider supporting multiple model files if the need
+  // case arises.
+  std::variant<std::string, std::shared_ptr<litert::lm::ScopedFile>>
+      path_or_scoped_file_;
+
+  FakeWeightsMode fake_weights_mode_ = FakeWeightsMode::FAKE_WEIGHTS_NONE;
 };
 std::ostream& operator<<(std::ostream& os, const ModelAssets& model_assets);
 

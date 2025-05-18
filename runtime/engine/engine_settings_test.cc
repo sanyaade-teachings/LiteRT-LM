@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 #include "runtime/executor/llm_executor_settings.h"
 #include "runtime/proto/engine.pb.h"
+#include "runtime/util/test_utils.h"  // NOLINT
 
 namespace litert::lm {
 namespace {
@@ -15,37 +16,39 @@ using ::litert::lm::LlmExecutorSettings;
 using ::testing::Eq;
 
 TEST(EngineSettingsTest, GetModelPath) {
-  ModelAssets model_assets;
-  model_assets.model_paths.push_back("test_model_path_1");
-  LlmExecutorSettings executor_settings(model_assets);
+  auto model_assets = ModelAssets::Create("test_model_path_1");
+  ASSERT_OK(model_assets);
+  LlmExecutorSettings executor_settings(*model_assets);
   EngineSettings settings(executor_settings);
 
-  EXPECT_EQ(settings.GetMainExecutorSettings().GetModelAssets().model_paths[0],
-            "test_model_path_1");
+  auto model_path =
+      settings.GetMainExecutorSettings().GetModelAssets().GetPath();
+  ASSERT_OK(model_path);
+  EXPECT_EQ(*model_path, "test_model_path_1");
 }
 
 TEST(EngineSettingsTest, SetAndGetCacheDir) {
-  ModelAssets model_assets;
-  model_assets.model_paths.push_back("test_model_path_1");
-  LlmExecutorSettings executor_settings(model_assets);
+  auto model_assets = ModelAssets::Create("test_model_path_1");
+  ASSERT_OK(model_assets);
+  LlmExecutorSettings executor_settings(*model_assets);
   executor_settings.SetCacheDir("test_cache_dir");
   EngineSettings settings(executor_settings);
   EXPECT_EQ(settings.GetMainExecutorSettings().GetCacheDir(), "test_cache_dir");
 }
 
 TEST(EngineSettingsTest, SetAndGetMaxNumTokens) {
-  ModelAssets model_assets;
-  model_assets.model_paths.push_back("test_model_path_1");
-  LlmExecutorSettings executor_settings(model_assets);
+  auto model_assets = ModelAssets::Create("test_model_path_1");
+  ASSERT_OK(model_assets);
+  LlmExecutorSettings executor_settings(*model_assets);
   executor_settings.SetMaxNumTokens(128);
   EngineSettings settings(executor_settings);
   EXPECT_EQ(settings.GetMainExecutorSettings().GetMaxNumTokens(), 128);
 }
 
 TEST(EngineSettingsTest, SetAndGetExecutorBackend) {
-  ModelAssets model_assets;
-  model_assets.model_paths.push_back("test_model_path_1");
-  LlmExecutorSettings executor_settings(model_assets);
+  auto model_assets = ModelAssets::Create("test_model_path_1");
+  ASSERT_OK(model_assets);
+  LlmExecutorSettings executor_settings(*model_assets);
   executor_settings.SetBackend(Backend::GPU);
   EngineSettings settings(executor_settings);
   EXPECT_THAT(settings.GetMainExecutorSettings().GetBackend(),
@@ -53,18 +56,18 @@ TEST(EngineSettingsTest, SetAndGetExecutorBackend) {
 }
 
 TEST(EngineSettingsTest, DefaultExecutorBackend) {
-  ModelAssets model_assets;
-  model_assets.model_paths.push_back("test_model_path_1");
-  LlmExecutorSettings executor_settings(model_assets);
+  auto model_assets = ModelAssets::Create("test_model_path_1");
+  ASSERT_OK(model_assets);
+  LlmExecutorSettings executor_settings(*model_assets);
   EngineSettings settings(executor_settings);
   EXPECT_THAT(settings.GetMainExecutorSettings().GetBackend(),
               Eq(Backend::CPU));
 }
 
 TEST(EngineSettingsTest, BenchmarkParams) {
-  ModelAssets model_assets;
-  model_assets.model_paths.push_back("test_model_path_1");
-  LlmExecutorSettings executor_settings(model_assets);
+  auto model_assets = ModelAssets::Create("test_model_path_1");
+  ASSERT_OK(model_assets);
+  LlmExecutorSettings executor_settings(*model_assets);
   EngineSettings settings(executor_settings);
   EXPECT_FALSE(settings.IsBenchmarkEnabled());
 

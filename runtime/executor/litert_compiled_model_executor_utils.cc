@@ -322,9 +322,7 @@ absl::Status FillAttentionMask(litert::TensorBuffer& mask, int start_timestep,
 
 absl::StatusOr<std::unique_ptr<ModelResources>>
 BuildLiteRtCompiledModelResources(const std::string& model_path) {
-  std::unique_ptr<ModelResources>
-      executor_model_resources;  // =
-                                 // std::make_unique<ModelResources>();
+  std::unique_ptr<ModelResources> executor_model_resources;
   Expected<Model> litert_model;
   std::unique_ptr<ModelAssetBundleResources> resources;
   if (absl::EndsWith(model_path, ".litertlm")) {

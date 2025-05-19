@@ -1,6 +1,7 @@
 #include "runtime/engine/engine_settings.h"
 
 #include <string>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -14,6 +15,7 @@ namespace {
 using ::litert::lm::EngineSettings;
 using ::litert::lm::LlmExecutorSettings;
 using ::testing::Eq;
+using ::testing::ElementsAre;
 
 TEST(EngineSettingsTest, GetModelPath) {
   auto model_assets = ModelAssets::Create("test_model_path_1");
@@ -94,7 +96,8 @@ TEST(SessionConfigTest, SetAndGetSamplerParams) {
   proto::SamplerParameters sampler_params;
   sampler_params.set_type(proto::SamplerParameters::TOP_K);
   sampler_params.set_k(10);
-  SessionConfig session_config(sampler_params);
+  SessionConfig session_config = SessionConfig::CreateDefault();
+  session_config.SetSamplerParams(sampler_params);
   EXPECT_EQ(session_config.GetSamplerParams().type(),
             proto::SamplerParameters::TOP_K);
   EXPECT_EQ(session_config.GetSamplerParams().k(), 10);
@@ -106,6 +109,21 @@ TEST(SessionConfigTest, SetAndGetSamplerParams) {
             proto::SamplerParameters::TYPE_UNSPECIFIED);
 }
 
+TEST(SessionConfigTest, SetAndGetStopTokenIds) {
+  SessionConfig session_config = SessionConfig::CreateDefault();
+  std::vector<std::vector<int>> stop_token_ids = {{0}, {1, 2}};
+  session_config.SetStopTokenIds(stop_token_ids);
+  EXPECT_EQ(session_config.GetStopTokenIds().size(), 2);
+  EXPECT_THAT(session_config.GetStopTokenIds()[0], ElementsAre(0));
+  EXPECT_THAT(session_config.GetStopTokenIds()[1], ElementsAre(1, 2));
+}
+
+TEST(SessionConfigTest, SetAndGetNumOutputCandidates) {
+  SessionConfig session_config = SessionConfig::CreateDefault();
+  EXPECT_EQ(session_config.GetNumOutputCandidates(), 1);
+  session_config.SetNumOutputCandidates(2);
+  EXPECT_EQ(session_config.GetNumOutputCandidates(), 2);
+}
 
 }  // namespace
 }  // namespace litert::lm

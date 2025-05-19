@@ -1,6 +1,7 @@
 #include "runtime/engine/engine_settings.h"
 
 #include <optional>
+#include <vector>
 
 #include "runtime/executor/llm_executor_settings.h"
 #include "runtime/proto/engine.pb.h"
@@ -41,7 +42,9 @@ SessionConfig SessionConfig::CreateDefault() {
   sampler_params.set_p(0.95f);
   sampler_params.set_temperature(1.0f);
   sampler_params.set_seed(0);
-  return SessionConfig(sampler_params);
+  auto config = SessionConfig(sampler_params);
+  config.SetNumOutputCandidates(1);
+  return config;
 }
 
 SessionConfig::SessionConfig(const proto::SamplerParameters& sampler_params)
@@ -58,6 +61,26 @@ proto::SamplerParameters& SessionConfig::GetMutableSamplerParams() {
 void SessionConfig::SetSamplerParams(
     const proto::SamplerParameters& sampler_params) {
   sampler_params_ = sampler_params;
+}
+
+const std::vector<std::vector<int>>& SessionConfig::GetStopTokenIds() const {
+  return stop_token_ids_;
+}
+
+std::vector<std::vector<int>>& SessionConfig::GetMutableStopTokenIds() {
+  return stop_token_ids_;
+}
+
+void SessionConfig::SetStopTokenIds(
+    const std::vector<std::vector<int>>& stop_token_ids) {
+  stop_token_ids_ = stop_token_ids;
+}
+
+int SessionConfig::GetNumOutputCandidates() const {
+  return num_output_candidates_;
+}
+void SessionConfig::SetNumOutputCandidates(int num_output_candidates) {
+  num_output_candidates_ = num_output_candidates;
 }
 
 }  // namespace litert::lm

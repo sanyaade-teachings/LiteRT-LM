@@ -2,6 +2,7 @@
 #define THIRD_PARTY_ODML_LITERT_LM_RUNTIME_ENGINE_ENGINE_SETTINGS_H_
 
 #include <optional>
+#include <vector>
 
 #include "runtime/executor/llm_executor_settings.h"
 #include "runtime/proto/engine.pb.h"
@@ -47,9 +48,6 @@ class SessionConfig {
   // Creates a default SessionConfig.
   static SessionConfig CreateDefault();
 
-  // Creates a SessionConfig with the given sampler parameters.
-  explicit SessionConfig(const proto::SamplerParameters& sampler_params);
-
   // Sampler parameters:
   // Getters for the sampler parameters.
   const proto::SamplerParameters& GetSamplerParams() const;
@@ -57,9 +55,35 @@ class SessionConfig {
   // Sets the sampler parameters.
   void SetSamplerParams(const proto::SamplerParameters& sampler_params);
 
+  // Stop token ids:
+  // Getters for the stop token ids.
+  const std::vector<std::vector<int>>& GetStopTokenIds() const;
+  std::vector<std::vector<int>>& GetMutableStopTokenIds();
+  // Sets the stop token ids.
+  void SetStopTokenIds(const std::vector<std::vector<int>>& stop_token_ids);
+
+  // Number of output candidates:
+  // Getters for the number of output candidates.
+  int GetNumOutputCandidates() const;
+  void SetNumOutputCandidates(int num_output_candidates);
+
  private:
+  // Private constructor for the SessionConfig. The user should use the
+  // CreateDefault() method to create a SessionConfig.
+  explicit SessionConfig(const proto::SamplerParameters& sampler_params);
+
   // Parameters used to configure the sampling process.
   proto::SamplerParameters sampler_params_;
+
+  // Stop token ids for the session. Note that the stop token could be a
+  // sequence of token ids (as opposed to a single token id). The first
+  // dimension is the index of the stop token in the session, and the second
+  // dimension is the sequence of token ids that constitutes the stop token.
+  std::vector<std::vector<int>> stop_token_ids_;
+
+  // The number of output candidates to generate. Default value is 1 and setting
+  // it to a value greater than 1 will require the model to support batching.
+  int num_output_candidates_;
 };
 
 }  // namespace litert::lm

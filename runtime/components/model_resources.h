@@ -39,6 +39,8 @@ namespace litert::lm {
 // once the models are created, they will be re-used for all the following
 // calls.
 // Third, it provides a way to memory map the models from either file format.
+// TODO: b/413214239 - Load the model from mapped memory without creating an
+// extra copy.
 class ModelResources {
  public:
   // Creates a ModelResources from a LitertLmLoader for a .litertlm file.
@@ -64,6 +66,10 @@ class ModelResources {
   // Returns the litert model. We will create the model if it is not created
   // yet. And the model is created from memory mapped file, so physical memory
   // is only allocated when the model is actually used.
+  //
+  // TODO: b/413214239 - This currently always creates a copy of the model
+  // contents. The returned `litert::Model` should instead be backed by a view
+  // of mapped memory.
   absl::StatusOr<std::shared_ptr<litert::Model>> GetTFLiteModel();
 
   // Returns the tokenizer.

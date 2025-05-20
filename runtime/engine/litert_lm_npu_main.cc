@@ -287,9 +287,10 @@ RunStats CreateAndRun(const std::string& prompt) {
   auto session_config = litert::lm::SessionConfig::CreateDefault();
   session_config.GetMutableSamplerParams().set_type(
       litert::lm::proto::SamplerParameters::TYPE_UNSPECIFIED);
-  auto session = litert::lm::SessionBasic::Create(
-      executor_shared, tokenizer, stop_token_ids, session_config, std::nullopt,
-      worker_thread_pool);
+  session_config.SetStopTokenIds({stop_token_ids});
+  auto session = litert::lm::SessionBasic::Create(executor_shared, tokenizer,
+                                                  session_config, std::nullopt,
+                                                  worker_thread_pool);
 
   // Run the session.
   ABSL_LOG(INFO) << "Prompt: " << prompt;

@@ -30,7 +30,7 @@
 #include "litert/cc/litert_macros.h"  // from @litert
 #include "litert/cc/litert_tensor_buffer.h"  // from @litert
 #include "runtime/components/sampler.h"
-#include "runtime/components/token_id_util.h"
+#include "runtime/components/stop_token_detector.h"
 #include "runtime/components/tokenizer.h"
 #include "runtime/engine/io_types.h"
 #include "runtime/executor/llm_executor.h"
@@ -54,15 +54,14 @@ class DecodeExternalSampling {
   DecodeExternalSampling(std::shared_ptr<LlmExecutor> executor,
                          std::shared_ptr<Tokenizer> tokenizer,
                          int num_output_candidates, Sampler& sampler,
-                         const std::vector<int>& stop_token_ids,
+                         const StopTokenDetector& stop_token_detector,
                          std::optional<BenchmarkInfo>& benchmark_info)
       : executor_(executor),
         tokenizer_(tokenizer),
         num_output_candidates_(num_output_candidates),
         sampler_(sampler),
-        stop_token_ids_(stop_token_ids),
-        benchmark_info_(benchmark_info) {
-    stop_tokens_found_ = std::vector<bool>(num_output_candidates_, false);
+        benchmark_info_(benchmark_info),
+        stop_token_detector_(stop_token_detector) {
     auto scores_tensor = CreateTensorBuffer<float>({num_output_candidates_});
     scores_tensor_ = std::move(*scores_tensor);
   }
@@ -95,9 +94,8 @@ class DecodeExternalSampling {
                                  ReferTensorBufferAsSpan<int>(decoded_ids));
     LITERT_ASSIGN_OR_RETURN_ABSL(
         scores_span_, ReferTensorBufferAsSpan<float>(scores_tensor_));
-    ASSIGN_OR_RETURN(
-        bool should_stop,
-        StopTokenFound(decoded_ids_span, stop_token_ids_, stop_tokens_found_));
+    RETURN_IF_ERROR(stop_token_detector_.ProcessTokens(decoded_ids_span));
+    ASSIGN_OR_RETURN(bool should_stop, stop_token_detector_.AllDone());
     return should_stop;
   }
 
@@ -108,7 +106,7 @@ class DecodeExternalSampling {
   }
 
   const std::vector<bool>& GetStopTokensFound() const {
-    return stop_tokens_found_;
+    return stop_token_detector_.GetStopTokensFound();
   }
 
  private:
@@ -116,12 +114,11 @@ class DecodeExternalSampling {
   std::shared_ptr<Tokenizer> tokenizer_;
   const int num_output_candidates_;
   Sampler& sampler_;
-  const std::vector<int>& stop_token_ids_;
   std::optional<BenchmarkInfo> benchmark_info_;
-  std::vector<bool> stop_tokens_found_;
   litert::TensorBuffer scores_tensor_;
   std::vector<std::string> result_tokens_;
   absl::Span<float> scores_span_;
+  StopTokenDetector stop_token_detector_;
 };
 
 // A wrapper class to run one step of the decode process with sampling done
@@ -131,13 +128,13 @@ class DecodeInternalSamplingOneStep {
   DecodeInternalSamplingOneStep(std::shared_ptr<LlmExecutor> executor,
                                 std::shared_ptr<Tokenizer> tokenizer,
                                 int num_output_candidates,
-                                const std::vector<int>& stop_token_ids,
+                                const StopTokenDetector& stop_token_detector,
                                 std::optional<BenchmarkInfo>& benchmark_info)
       : executor_(executor),
         tokenizer_(tokenizer),
         num_output_candidates_(num_output_candidates),
-        stop_token_ids_(stop_token_ids),
-        benchmark_info_(benchmark_info) {
+        benchmark_info_(benchmark_info),
+        stop_token_detector_(stop_token_detector) {
     stop_tokens_found_ = std::vector<bool>(num_output_candidates_, false);
     auto output_tokens = CreateTensorBuffer<int>({num_output_candidates_, 1});
     output_tokens_ = std::move(*output_tokens);
@@ -163,9 +160,8 @@ class DecodeInternalSamplingOneStep {
 
     ASSIGN_OR_RETURN(result_tokens_,
                      tokenizer_->TensorBufferToText(output_tokens_));
-    ASSIGN_OR_RETURN(bool should_stop,
-                     StopTokenFound(output_tokens_span, stop_token_ids_,
-                                    stop_tokens_found_));
+    RETURN_IF_ERROR(stop_token_detector_.ProcessTokens(output_tokens_span));
+    ASSIGN_OR_RETURN(bool should_stop, stop_token_detector_.AllDone());
     return should_stop;
   }
 
@@ -176,19 +172,19 @@ class DecodeInternalSamplingOneStep {
   }
 
   const std::vector<bool>& GetStopTokensFound() const {
-    return stop_tokens_found_;
+    return stop_token_detector_.GetStopTokensFound();
   }
 
  private:
   std::shared_ptr<LlmExecutor> executor_;
   std::shared_ptr<Tokenizer> tokenizer_;
   const int num_output_candidates_;
-  const std::vector<int>& stop_token_ids_;
   std::optional<BenchmarkInfo> benchmark_info_;
   std::vector<bool> stop_tokens_found_;
   litert::TensorBuffer output_tokens_;
   std::vector<std::string> result_tokens_;
   absl::Span<float> scores_span_;
+  StopTokenDetector stop_token_detector_;
 };
 
 }  // namespace
@@ -233,7 +229,7 @@ absl::StatusOr<int> Prefill(std::shared_ptr<LlmExecutor> executor,
 
 absl::StatusOr<Responses> Decode(std::shared_ptr<LlmExecutor> executor,
                                  std::shared_ptr<Tokenizer> tokenizer,
-                                 const std::vector<int>& stop_token_ids,
+                                 const StopTokenDetector& stop_token_detector,
                                  std::optional<BenchmarkInfo>& benchmark_info) {
   int benchmark_decode_token_count = 0;
   if (benchmark_info.has_value()) {
@@ -249,9 +245,9 @@ absl::StatusOr<Responses> Decode(std::shared_ptr<LlmExecutor> executor,
   // TODO(b/397975034) LLM Executor should return error when reaching the
   // maximum number of kv-cache steps.
   int num_decoded_steps = 0;
-  DecodeInternalSamplingOneStep run_one_step(executor, tokenizer,
-                                             num_output_candidates,
-                                             stop_token_ids, benchmark_info);
+  DecodeInternalSamplingOneStep run_one_step(
+      executor, tokenizer, num_output_candidates, stop_token_detector,
+      benchmark_info);
   for (int i = 0; i < std::max(kMaxDecodeStop, benchmark_decode_token_count);
        ++i) {
     auto should_stop = run_one_step.Run();
@@ -276,7 +272,7 @@ absl::StatusOr<Responses> Decode(std::shared_ptr<LlmExecutor> executor,
 
 absl::Status DecodeStreaming(std::shared_ptr<LlmExecutor> executor,
                              std::shared_ptr<Tokenizer> tokenizer,
-                             const std::vector<int>& stop_token_ids,
+                             const StopTokenDetector& stop_token_detector,
                              std::optional<BenchmarkInfo>& benchmark_info,
                              InferenceObservable* observer) {
   if (observer == nullptr) {
@@ -294,9 +290,9 @@ absl::Status DecodeStreaming(std::shared_ptr<LlmExecutor> executor,
   // TODO(b/397975034) LLM Executor should return error when reaching the
   // maximum number of kv-cache steps.
   int num_decoded_steps = 0;
-  DecodeInternalSamplingOneStep run_one_step(executor, tokenizer,
-                                             num_output_candidates,
-                                             stop_token_ids, benchmark_info);
+  DecodeInternalSamplingOneStep run_one_step(
+      executor, tokenizer, num_output_candidates, stop_token_detector,
+      benchmark_info);
   for (int i = 0; i < std::max(kMaxDecodeStop, benchmark_decode_token_count);
        ++i) {
     Responses responses(num_output_candidates);
@@ -326,7 +322,7 @@ absl::Status DecodeStreaming(std::shared_ptr<LlmExecutor> executor,
 
 absl::StatusOr<Responses> DecodeCustomSampling(
     std::shared_ptr<LlmExecutor> executor, std::shared_ptr<Tokenizer> tokenizer,
-    const std::vector<int>& stop_token_ids, int num_output_candidates,
+    const StopTokenDetector& stop_token_detector, int num_output_candidates,
     Sampler& sampler, litert::TensorBuffer& decoded_ids,
     std::optional<BenchmarkInfo>& benchmark_info) {
   int benchmark_decode_token_count = 0;
@@ -344,7 +340,7 @@ absl::StatusOr<Responses> DecodeCustomSampling(
   int num_decode_steps = 0;
   DecodeExternalSampling run_one_step(executor, tokenizer,
                                       num_output_candidates, sampler,
-                                      stop_token_ids, benchmark_info);
+                                      stop_token_detector, benchmark_info);
   for (int i = 0; i < std::max(kMaxDecodeStop, benchmark_decode_token_count);
        ++i) {
     ASSIGN_OR_RETURN(bool should_stop, run_one_step.Run(decoded_ids));
@@ -387,7 +383,7 @@ absl::StatusOr<Responses> DecodeCustomSampling(
 
 absl::Status DecodeCustomSamplingStreaming(
     std::shared_ptr<LlmExecutor> executor, std::shared_ptr<Tokenizer> tokenizer,
-    const std::vector<int>& stop_token_ids, int num_output_candidates,
+    const StopTokenDetector& stop_token_detector, int num_output_candidates,
     Sampler& sampler, litert::TensorBuffer& decoded_ids,
     std::optional<BenchmarkInfo>& benchmark_info,
     InferenceObservable* observer) {
@@ -406,7 +402,7 @@ absl::Status DecodeCustomSamplingStreaming(
   int num_decode_steps = 0;
   DecodeExternalSampling run_one_step(executor, tokenizer,
                                       num_output_candidates, sampler,
-                                      stop_token_ids, benchmark_info);
+                                      stop_token_detector, benchmark_info);
   for (int i = 0; i < std::max(kMaxDecodeStop, benchmark_decode_token_count);
        ++i) {
     absl::StatusOr<bool> should_stop = run_one_step.Run(decoded_ids);

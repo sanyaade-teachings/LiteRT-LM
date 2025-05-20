@@ -17,7 +17,6 @@
 
 #include <memory>
 #include <optional>
-#include <vector>
 
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "runtime/components/tokenizer.h"
@@ -34,7 +33,7 @@ namespace litert::lm {
 // SessionConfig and be refactored with registry pattern.
 absl::StatusOr<std::unique_ptr<Engine::Session>> InitializeSession(
     std::shared_ptr<LlmExecutor> executor, std::shared_ptr<Tokenizer> tokenizer,
-    const std::vector<int>& stop_token_ids, const SessionConfig& session_config,
+    const SessionConfig& session_config,
     std::optional<BenchmarkInfo> benchmark_info,
     std::shared_ptr<ThreadPool> worker_thread_pool);
 

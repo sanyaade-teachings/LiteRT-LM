@@ -10,6 +10,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "runtime/components/sentencepiece_tokenizer.h"
+#include "runtime/components/stop_token_detector.h"
 #include "runtime/components/tokenizer.h"
 #include "runtime/components/top_p_cpu_sampler.h"
 #include "runtime/engine/io_types.h"
@@ -81,8 +82,10 @@ TEST_F(PipelineTest, Prefill) {
 
 TEST_F(PipelineTest, Decode) {
   std::optional<BenchmarkInfo> benchmark_info;
+  StopTokenDetector stop_token_detector(1);
+  EXPECT_OK(stop_token_detector.AddStopTokenSequence({2294}));
   auto responses =
-      Decode(executor_, tokenizer_, /*stop_token_ids=*/{2294}, benchmark_info);
+      Decode(executor_, tokenizer_, stop_token_detector, benchmark_info);
   EXPECT_OK(responses);
   EXPECT_EQ(*(responses->GetResponseTextAt(0)), " How's it going?!");
 }
@@ -90,7 +93,9 @@ TEST_F(PipelineTest, Decode) {
 TEST_F(PipelineTest, DecodeStreaming) {
   std::optional<BenchmarkInfo> benchmark_info;
   TestObserver observer(/*num_candidates=*/1);
-  EXPECT_OK(DecodeStreaming(executor_, tokenizer_, /*stop_token_ids=*/{2294},
+  StopTokenDetector stop_token_detector(1);
+  EXPECT_OK(stop_token_detector.AddStopTokenSequence({2294}));
+  EXPECT_OK(DecodeStreaming(executor_, tokenizer_, stop_token_detector,
                             benchmark_info, &observer));
   EXPECT_EQ(observer.GetResponses()[0], " How's it going?!");
 }
@@ -143,10 +148,11 @@ TEST_F(PipelineCustomSamplingTest, DecodeCustomSampling) {
 
   auto decoded_ids = CreateTensorBuffer<int>({2, 1});
   std::optional<BenchmarkInfo> benchmark_info;
-  auto responses = DecodeCustomSampling(executor_, tokenizer_,
-                                        /*stop_token_ids=*/{0},
-                                        /*num_output_candidates=*/2, *sampler,
-                                        *decoded_ids, benchmark_info);
+  StopTokenDetector stop_token_detector(2);
+  EXPECT_OK(stop_token_detector.AddStopTokenSequence({0}));
+  auto responses = DecodeCustomSampling(
+      executor_, tokenizer_, stop_token_detector,
+      /*num_output_candidates=*/2, *sampler, *decoded_ids, benchmark_info);
   EXPECT_OK(responses);
   EXPECT_EQ(responses->GetNumOutputCandidates(), 2);
   // First candidate: " How's it going?!".
@@ -169,11 +175,12 @@ TEST_F(PipelineCustomSamplingTest, DecodeCustomSamplingStreaming) {
   TestObserver observer(/*num_candidates=*/2);
   std::optional<BenchmarkInfo> benchmark_info;
 
-  EXPECT_OK(DecodeCustomSamplingStreaming(executor_, tokenizer_,
-                                          /*stop_token_ids=*/{0},
-                                          /*num_output_candidates=*/2, *sampler,
-                                          *decoded_ids, benchmark_info,
-                                          &observer));
+  StopTokenDetector stop_token_detector(2);
+  EXPECT_OK(stop_token_detector.AddStopTokenSequence({0}));
+  EXPECT_OK(
+      DecodeCustomSamplingStreaming(executor_, tokenizer_, stop_token_detector,
+                                    /*num_output_candidates=*/2, *sampler,
+                                    *decoded_ids, benchmark_info, &observer));
   // First candidate: " How's it going?!".
   EXPECT_EQ(observer.GetResponses()[0], " How's it going?!");
   // Second candidate: " Hello World!".

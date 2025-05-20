@@ -35,14 +35,16 @@ class FakeTokenizer : public Tokenizer {
 
 TEST(SessionFactoryTest, InitializeSession) {
   std::shared_ptr<Tokenizer> tokenizer = std::make_shared<FakeTokenizer>();
-  std::vector<int> stop_token_ids = {1, 2};
+  std::vector<std::vector<int>> stop_token_ids = {{1}, {2}};
   std::vector<std::vector<int>> dummy_tokens = {{0}};
   std::shared_ptr<LlmExecutor> executor =
       std::make_shared<FakeLlmExecutor>(256, dummy_tokens,
                                                       dummy_tokens);
-  auto session = InitializeSession(
-      executor, tokenizer, stop_token_ids, SessionConfig::CreateDefault(),
-      /*benchmark_info=*/std::nullopt, /*worker_thread_pool=*/nullptr);
+  SessionConfig session_config = SessionConfig::CreateDefault();
+  session_config.SetStopTokenIds(stop_token_ids);
+  auto session = InitializeSession(executor, tokenizer, session_config,
+                                   /*benchmark_info=*/std::nullopt,
+                                   /*worker_thread_pool=*/nullptr);
   EXPECT_OK(session);
 }
 

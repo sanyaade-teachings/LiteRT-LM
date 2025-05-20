@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"  // from @com_google_absl
-#include "absl/log/absl_log.h"  // from @com_google_absl
 #include "absl/log/check.h"  // from @com_google_absl
 #include "absl/log/log.h"  // from @com_google_absl
 #include "absl/status/status.h"  // from @com_google_absl
@@ -178,6 +177,7 @@ class EngineImpl : public Engine {
     // DeriveLlmModelSettingsStruct.
     AddStopTokenIds("<eos>");
     AddStopTokenIds("<end_of_turn>");
+    AddStopTokenIds("<ctrl100>");
     // TODO(b/412390852): Add logics to initialize the sampler.
 
     // Creating the thread pool of a single thread to execute the works.
@@ -192,8 +192,11 @@ class EngineImpl : public Engine {
   // Method to create the Session.
   absl::StatusOr<std::unique_ptr<Session>> CreateSession(
       const SessionConfig& session_config) const override {
-    return InitializeSession(executor_, tokenizer_, stop_token_ids_,
-                             session_config, benchmark_info_,
+    SessionConfig config = session_config;
+    // TODO(b/418794726): Move this logics to be part of the SessionConfig
+    // class.
+    MaybeUpdateSessionConfig(config);
+    return InitializeSession(executor_, tokenizer_, config, benchmark_info_,
                              worker_thread_pool_);
   }
   absl::Status WaitUntilDone(absl::Duration timeout) override {
@@ -203,12 +206,17 @@ class EngineImpl : public Engine {
  private:
   void AddStopTokenIds(const std::string& stop_token) {
     auto stop_token_ids = tokenizer_->TextToTokenIds(stop_token);
-    if ((*stop_token_ids).size() == 1) {
-      stop_token_ids_.push_back((*stop_token_ids)[0]);
-    } else {
-      ABSL_LOG(ERROR) << "Stop token \"" << stop_token
-                      << "\" maps to multiple token ids: "
-                      << (*stop_token_ids).size();
+    stop_token_ids_.push_back((*stop_token_ids));
+  }
+
+  // Updates the session config with the default values (typically from the
+  // model file) from the engine. Note that the values in the session config
+  // will take priority over the values from the model file. Only when the value
+  // is not set in the session config will it be updated with the default value
+  // from the engine.
+  void MaybeUpdateSessionConfig(SessionConfig& session_config) const {
+    if (session_config.GetStopTokenIds().empty()) {
+      session_config.SetStopTokenIds(stop_token_ids_);
     }
   }
 
@@ -217,7 +225,7 @@ class EngineImpl : public Engine {
   // Shared tokenizer for all sessions.
   std::shared_ptr<Tokenizer> tokenizer_;
   // Default stop token ids for all sessions loaded from the model file.
-  std::vector<int> stop_token_ids_;
+  std::vector<std::vector<int>> stop_token_ids_;
   std::unique_ptr<ModelResources> litert_model_resources_;
   proto::SamplerParameters sampler_params_;
 

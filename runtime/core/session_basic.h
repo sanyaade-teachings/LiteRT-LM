@@ -18,12 +18,12 @@
 #include <memory>
 #include <optional>
 #include <utility>
-#include <vector>
 
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "runtime/components/sampler.h"
+#include "runtime/components/stop_token_detector.h"
 #include "runtime/components/tokenizer.h"
 #include "runtime/engine/engine.h"
 #include "runtime/engine/engine_settings.h"
@@ -49,7 +49,6 @@ class SessionBasic : public Engine::Session {
   static absl::StatusOr<std::unique_ptr<SessionBasic>> Create(
       std::shared_ptr<LlmExecutor> executor,
       std::shared_ptr<Tokenizer> tokenizer,
-      const std::vector<int>& stop_token_ids,
       const SessionConfig& session_config,
       std::optional<BenchmarkInfo> benchmark_info,
       std::shared_ptr<ThreadPool> worker_thread_pool);
@@ -70,18 +69,18 @@ class SessionBasic : public Engine::Session {
  private:
   explicit SessionBasic(std::shared_ptr<LlmExecutor> executor,
                         std::shared_ptr<Tokenizer> tokenizer,
-                        const std::vector<int>& stop_token_ids,
                         std::unique_ptr<Sampler> sampler,
                         const SessionConfig& session_config,
                         std::optional<BenchmarkInfo> benchmark_info,
-                        std::shared_ptr<ThreadPool> worker_thread_pool)
+                        std::shared_ptr<ThreadPool> worker_thread_pool,
+                        const StopTokenDetector& stop_token_detector)
       : executor_(executor),
         tokenizer_(tokenizer),
-        stop_token_ids_(stop_token_ids),
         sampler_(std::move(sampler)),
         session_config_(session_config),
         benchmark_info_(benchmark_info),
-        worker_thread_pool_(worker_thread_pool) {}
+        worker_thread_pool_(worker_thread_pool),
+        stop_token_detector_(stop_token_detector) {}
 
   // The internal function to prefill the input prompt. It is for convenience to
   // wrap it with lambda function for scheduling.
@@ -100,9 +99,6 @@ class SessionBasic : public Engine::Session {
   // The tokenizer used for converting between text to token ids.
   std::shared_ptr<Tokenizer> tokenizer_;
 
-  // The stop token ids used for decoding.
-  std::vector<int> stop_token_ids_;
-
   // The session config used for the session.
   std::unique_ptr<Sampler> sampler_;
 
@@ -118,6 +114,9 @@ class SessionBasic : public Engine::Session {
 
   // The thread pool used for the session.
   std::shared_ptr<ThreadPool> worker_thread_pool_;
+
+  // The stop token detector used for the session.
+  StopTokenDetector stop_token_detector_;
 };
 
 }  // namespace litert::lm

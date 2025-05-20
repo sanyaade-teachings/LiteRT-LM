@@ -80,6 +80,7 @@ cc_library(
     srcs = ["pipeline.cc"],
     hdrs = ["pipeline.h"],
     deps = [
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -87,6 +88,7 @@ cc_library(
         "@com_google_absl//absl/types:span",
         "@litert//litert/cc:litert_macros",
         "//runtime/components:sampler",
+        "//runtime/components:stop_token_detector",
         "//runtime/components:token_id_util",
         "//runtime/components:tokenizer",
         "//runtime/engine:io_types",
@@ -114,6 +116,7 @@ cc_test(
         ":pipeline",
         "@com_google_googletest//:gtest_main",
         "//runtime/components:sentencepiece_tokenizer",
+        "//runtime/components:stop_token_detector",
         "//runtime/components:tokenizer",
         "//runtime/components:top_p_cpu_sampler",
         "//runtime/engine:io_types",
@@ -138,6 +141,7 @@ cc_library(
         "@com_google_absl//absl/time",
         "//runtime/components:sampler",
         "//runtime/components:sampler_factory",
+        "//runtime/components:stop_token_detector",
         "//runtime/components:tokenizer",
         "//runtime/engine:engine_interface",
         "//runtime/engine:engine_settings",
@@ -145,7 +149,7 @@ cc_library(
         "//runtime/executor:llm_executor",
         "//runtime/executor:llm_executor_settings",
         "//runtime/framework:threadpool_interface",
-        "//runtime/framework:threadpool_pthread_impl",
+        "//runtime/framework:threadpool_pthread_impl",  # buildcleaner: keep
         "//runtime/proto:sampler_params_cc_proto",
         "//runtime/util:convert_tensor_buffer",
         "//runtime/util:litert_status_util",
@@ -170,7 +174,7 @@ cc_test(
         "//runtime/executor:llm_executor",
         "//runtime/framework:thread_options",
         "//runtime/framework:threadpool_interface",
-        "//runtime/framework:threadpool_pthread_impl",
+        "//runtime/framework:threadpool_pthread_impl",  # buildcleaner: keep
         "//runtime/util:test_utils",
     ],
 )

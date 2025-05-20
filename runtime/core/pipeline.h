@@ -29,6 +29,7 @@
 #include "runtime/components/tokenizer.h"
 #include "runtime/engine/io_types.h"
 #include "runtime/executor/llm_executor.h"
+#include "runtime/components/stop_token_detector.h"
 
 namespace litert::lm {
 
@@ -54,10 +55,10 @@ absl::StatusOr<int> Prefill(std::shared_ptr<LlmExecutor> executor,
 // - benchmark_info: The benchmark info to record the performance metrics.
 // TODO(b/397975034): support batched output and update the logic to avoid
 // detokenizing the stop tokens.
-absl::StatusOr<Responses> Decode(std::shared_ptr<LlmExecutor> executor,
-                                 std::shared_ptr<Tokenizer> tokenizer,
-                                 const std::vector<int>& stop_token_ids,
-                                 std::optional<BenchmarkInfo>& benchmark_info);
+absl::StatusOr<Responses> Decode(
+    std::shared_ptr<LlmExecutor> executor, std::shared_ptr<Tokenizer> tokenizer,
+    const StopTokenDetector& stop_token_detector,
+    std::optional<BenchmarkInfo>& benchmark_info);
 
 // Runs the pipeline to decode the input prompt. The function is similar to
 // Decode, but it outputs the result using the observer to achieve streaming
@@ -65,7 +66,7 @@ absl::StatusOr<Responses> Decode(std::shared_ptr<LlmExecutor> executor,
 // - observer: The inference observer to receive the intermediate results.
 absl::Status DecodeStreaming(
     std::shared_ptr<LlmExecutor> executor, std::shared_ptr<Tokenizer> tokenizer,
-    const std::vector<int>& stop_token_ids,
+    const StopTokenDetector& stop_token_detector,
     std::optional<BenchmarkInfo>& benchmark_info,
     InferenceObservable* observer);
 
@@ -79,8 +80,9 @@ absl::Status DecodeStreaming(
 // - benchmark_info: The benchmark info to record the performance metrics.
 absl::StatusOr<Responses> DecodeCustomSampling(
     std::shared_ptr<LlmExecutor> executor, std::shared_ptr<Tokenizer> tokenizer,
-    const std::vector<int>& stop_token_ids, int num_output_candidates,
-    Sampler& sampler, litert::TensorBuffer& decoded_ids,
+    const StopTokenDetector& stop_token_detector,
+    int num_output_candidates, Sampler& sampler,
+    litert::TensorBuffer& decoded_ids,
     std::optional<BenchmarkInfo>& benchmark_info);
 
 // Runs the pipeline to decode the input prompt. The function is similar to
@@ -89,8 +91,9 @@ absl::StatusOr<Responses> DecodeCustomSampling(
 // - observer: The inference observer to receive the intermediate results.
 absl::Status DecodeCustomSamplingStreaming(
     std::shared_ptr<LlmExecutor> executor, std::shared_ptr<Tokenizer> tokenizer,
-    const std::vector<int>& stop_token_ids, int num_output_candidates,
-    Sampler& sampler, litert::TensorBuffer& decoded_ids,
+    const StopTokenDetector& stop_token_detector,
+    int num_output_candidates, Sampler& sampler,
+    litert::TensorBuffer& decoded_ids,
     std::optional<BenchmarkInfo>& benchmark_info,
     InferenceObservable* observer);
 

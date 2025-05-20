@@ -64,23 +64,22 @@ class SessionBasicTest : public testing::Test {
 };
 
 TEST_F(SessionBasicTest, RunPrefill) {
-  const std::vector<int> stop_token_ids = {2294};
+  const std::vector<std::vector<int>> stop_token_ids = {{2294}};
   SessionConfig session_config = SessionConfig::CreateDefault();
   session_config.SetSamplerParams(sampler_params_);
-  session_config.SetStopTokenIds({stop_token_ids});
-  auto session = SessionBasic::Create(
-      executor_, tokenizer_, stop_token_ids, session_config,
-      /*benchmark_info=*/std::nullopt, worker_thread_pool_);
+  session_config.SetStopTokenIds(stop_token_ids);
+  auto session = SessionBasic::Create(executor_, tokenizer_, session_config,
+                                      /*benchmark_info=*/std::nullopt,
+                                      worker_thread_pool_);
   EXPECT_OK((*session)->RunPrefill("Hello World!"));
 }
 
 TEST_F(SessionBasicTest, RunDecode) {
-  const std::vector<int> stop_token_ids = {2294};
+  const std::vector<std::vector<int>> stop_token_ids = {{2294}};
   SessionConfig session_config = SessionConfig::CreateDefault();
   session_config.SetSamplerParams(sampler_params_);
-  session_config.SetStopTokenIds({stop_token_ids});
-  auto session = SessionBasic::Create(executor_, tokenizer_, stop_token_ids,
-                                      session_config,
+  session_config.SetStopTokenIds(stop_token_ids);
+  auto session = SessionBasic::Create(executor_, tokenizer_, session_config,
                                       std::nullopt, worker_thread_pool_);
   EXPECT_OK((*session)->RunPrefill("Hello World!"));
   auto responses = (*session)->RunDecode();
@@ -100,13 +99,12 @@ class TestObserver : public InferenceObservable {
 };
 
 TEST_F(SessionBasicTest, RunPrefillAsync) {
-  const std::vector<int> stop_token_ids = {2294};
+  const std::vector<std::vector<int>> stop_token_ids = {{2294}};
   SessionConfig session_config = SessionConfig::CreateDefault();
   session_config.SetSamplerParams(sampler_params_);
-  session_config.SetStopTokenIds({stop_token_ids});
-  auto session =
-      SessionBasic::Create(executor_, tokenizer_, stop_token_ids,
-                           session_config, std::nullopt, worker_thread_pool_);
+  session_config.SetStopTokenIds(stop_token_ids);
+  auto session = SessionBasic::Create(executor_, tokenizer_, session_config,
+                                      std::nullopt, worker_thread_pool_);
   TestObserver observer;
   EXPECT_OK((*session)->RunPrefillAsync("Hello World!", &observer));
   // Wait for the async call to finish.
@@ -115,12 +113,11 @@ TEST_F(SessionBasicTest, RunPrefillAsync) {
 }
 
 TEST_F(SessionBasicTest, RunDecodeAsync) {
-  const std::vector<int> stop_token_ids = {2294};
+  const std::vector<std::vector<int>> stop_token_ids = {{2294}};
   SessionConfig session_config = SessionConfig::CreateDefault();
   session_config.SetSamplerParams(sampler_params_);
-  session_config.SetStopTokenIds({stop_token_ids});
-  auto session = SessionBasic::Create(executor_, tokenizer_, stop_token_ids,
-                                      session_config,
+  session_config.SetStopTokenIds(stop_token_ids);
+  auto session = SessionBasic::Create(executor_, tokenizer_, session_config,
                                       std::nullopt, worker_thread_pool_);
   TestObserver observer;
   EXPECT_OK((*session)->RunPrefillAsync("Hello World!", &observer));
@@ -131,3 +128,4 @@ TEST_F(SessionBasicTest, RunDecodeAsync) {
 
 }  // namespace
 }  // namespace litert::lm
+

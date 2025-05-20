@@ -13,6 +13,7 @@
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "absl/time/time.h"  // from @com_google_absl
 #include "runtime/components/sampler_factory.h"
+#include "runtime/components/stop_token_detector.h"
 #include "runtime/components/tokenizer.h"
 #include "runtime/core/pipeline.h"
 #include "runtime/engine/engine.h"
@@ -26,28 +27,28 @@
 #include "runtime/util/status_macros.h"
 
 namespace litert::lm {
-namespace {
-
-// Default batch size for the output. This should be configurable in the
-// future.
-constexpr int kOutputBatchSize = 1;
-
-}  // namespace
 
 absl::StatusOr<std::unique_ptr<SessionBasic>> SessionBasic::Create(
     std::shared_ptr<LlmExecutor> executor, std::shared_ptr<Tokenizer> tokenizer,
-    const std::vector<int>& stop_token_ids, const SessionConfig& session_config,
+    const SessionConfig& session_config,
     std::optional<BenchmarkInfo> benchmark_info,
     std::shared_ptr<ThreadPool> worker_thread_pool) {
-  ASSIGN_OR_RETURN(auto sampler,
-                   CreateSampler(Backend::CPU, kOutputBatchSize,
-                                 session_config.GetSamplerParams()));
+  ASSIGN_OR_RETURN(
+      auto sampler,
+      CreateSampler(Backend::CPU, session_config.GetNumOutputCandidates(),
+                    session_config.GetSamplerParams()));
   if (benchmark_info.has_value()) {
     ABSL_LOG(INFO) << "Benchmark is enabled.";
   }
-  return absl::WrapUnique(new SessionBasic(executor, tokenizer, stop_token_ids,
-                                           std::move(sampler), session_config,
-                                           benchmark_info, worker_thread_pool));
+  StopTokenDetector stop_token_detector(
+      session_config.GetNumOutputCandidates());
+  for (const auto& stop_token_sequence : session_config.GetStopTokenIds()) {
+    RETURN_IF_ERROR(
+        stop_token_detector.AddStopTokenSequence(stop_token_sequence));
+  }
+  return absl::WrapUnique(new SessionBasic(
+      executor, tokenizer, std::move(sampler), session_config, benchmark_info,
+      worker_thread_pool, stop_token_detector));
 }
 
 absl::Status SessionBasic::PrefillInternal(absl::string_view input,
@@ -89,17 +90,20 @@ absl::Status SessionBasic::RunPrefillAsync(absl::string_view input,
 
 absl::StatusOr<Responses> SessionBasic::DecodeInternal() {
   if (sampler_ == nullptr) {
-    ASSIGN_OR_RETURN(auto responses, Decode(executor_, tokenizer_,
-                                            stop_token_ids_, benchmark_info_));
+    ASSIGN_OR_RETURN(
+        auto responses,
+        Decode(executor_, tokenizer_, stop_token_detector_, benchmark_info_));
     return responses;
   } else {
-    std::vector<int> decoded_ids(kOutputBatchSize, last_prefill_token_id_);
-    auto decoded_ids_buffer =
-        CopyToTensorBuffer<int>(decoded_ids, {kOutputBatchSize, 1});
-    ASSIGN_OR_RETURN(auto responses, DecodeCustomSampling(
-                                         executor_, tokenizer_, stop_token_ids_,
-                                         /*num_output_candidates=*/1, *sampler_,
-                                         *decoded_ids_buffer, benchmark_info_));
+    std::vector<int> decoded_ids(session_config_.GetNumOutputCandidates(),
+                                 last_prefill_token_id_);
+    auto decoded_ids_buffer = CopyToTensorBuffer<int>(
+        decoded_ids, {session_config_.GetNumOutputCandidates(), 1});
+    ASSIGN_OR_RETURN(
+        auto responses,
+        DecodeCustomSampling(executor_, tokenizer_, stop_token_detector_,
+                             /*num_output_candidates=*/1, *sampler_,
+                             *decoded_ids_buffer, benchmark_info_));
     return responses;
   }
 }
@@ -107,15 +111,17 @@ absl::StatusOr<Responses> SessionBasic::DecodeInternal() {
 absl::Status SessionBasic::DecodeInternalStreaming(
     InferenceObservable* observer) {
   if (sampler_ == nullptr) {
-    RETURN_IF_ERROR(DecodeStreaming(executor_, tokenizer_, stop_token_ids_,
+    RETURN_IF_ERROR(DecodeStreaming(executor_, tokenizer_, stop_token_detector_,
                                     benchmark_info_, observer));
   } else {
-    std::vector<int> decoded_ids(kOutputBatchSize, last_prefill_token_id_);
-    auto decoded_ids_buffer =
-        CopyToTensorBuffer<int>(decoded_ids, {kOutputBatchSize, 1});
+    std::vector<int> decoded_ids(session_config_.GetNumOutputCandidates(),
+                                 last_prefill_token_id_);
+    auto decoded_ids_buffer = CopyToTensorBuffer<int>(
+        decoded_ids, {session_config_.GetNumOutputCandidates(), 1});
     RETURN_IF_ERROR(DecodeCustomSamplingStreaming(
-        executor_, tokenizer_, stop_token_ids_, /*num_output_candidates=*/1,
-        *sampler_, *decoded_ids_buffer, benchmark_info_, observer));
+        executor_, tokenizer_, stop_token_detector_,
+        /*num_output_candidates=*/1, *sampler_, *decoded_ids_buffer,
+        benchmark_info_, observer));
   }
   return absl::OkStatus();
 }

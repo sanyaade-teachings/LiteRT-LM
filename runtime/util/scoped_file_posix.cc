@@ -13,7 +13,12 @@
 // limitations under the License.
 
 #include <fcntl.h>
+#include <sys/stat.h>
 
+#include <cerrno>
+#include <cstddef>
+
+#include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "runtime/util/scoped_file.h"
@@ -37,5 +42,15 @@ absl::StatusOr<ScopedFile> ScopedFile::OpenWritable(absl::string_view path) {
 
 // static
 void ScopedFile::CloseFile(int file) { close(file); }
+
+// static
+absl::StatusOr<size_t> ScopedFile::GetSizeImpl(int file) {
+  struct stat info;
+  int result = fstat(file, &info);
+  if (result < 0) {
+    return absl::ErrnoToStatus(errno, "Failed to get file size");
+  }
+  return info.st_size;
+}
 
 }  // namespace litert::lm

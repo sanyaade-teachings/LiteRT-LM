@@ -66,7 +66,7 @@ absl::StatusOr<std::unique_ptr<MemoryMappedFile>> MemoryMappedFile::Create(
       << "Offset must be a multiple of page size : " << offset << ", "
       << GetOffsetAlignment();
 
-  size_t file_size = lseek(file, 0, SEEK_END);
+  ASSIGN_OR_RETURN(size_t file_size, ScopedFile::GetSize(file));
   RET_CHECK_GE(file_size, length + offset) << "Length and offset too large.";
   if (length == 0) {
     length = file_size - offset;
@@ -102,7 +102,7 @@ MemoryMappedFile::CreateMutable(int file, uint64_t offset, uint64_t length,
       << "Offset must be a multiple of page size : " << offset << ", "
       << GetOffsetAlignment();
 
-  size_t file_size = lseek(file, 0, SEEK_END);
+  ASSIGN_OR_RETURN(size_t file_size, ScopedFile::GetSize(file));
   RET_CHECK_GE(file_size, length + offset) << "Length and offset too large.";
   if (length == 0) {
     length = file_size - offset;

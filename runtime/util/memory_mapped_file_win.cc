@@ -14,6 +14,8 @@
 
 #include <windows.h>
 
+#include <cstddef>
+
 #include "absl/cleanup/cleanup.h"  // from @com_google_absl
 #include "runtime/util/memory_mapped_file.h"
 #include "runtime/util/scoped_file.h"
@@ -50,9 +52,7 @@ absl::StatusOr<std::unique_ptr<MemoryMappedFile>> CreateImpl(HANDLE hfile,
       << "Offset must be a multiple of allocation granularity: " << offset
       << ", " << MemoryMappedFile::GetOffsetAlignment();
 
-  LARGE_INTEGER size;
-  RET_CHECK(::GetFileSizeEx(hfile, &size)) << "Failed to get size.";
-  int64_t file_size = static_cast<int64_t>(size.QuadPart);
+  ASSIGN_OR_RETURN(size_t file_size, ScopedFile::GetSize(hfile));
   RET_CHECK_GE(file_size, length + offset) << "Length and offset too large.";
   if (length == 0) {
     length = file_size - offset;

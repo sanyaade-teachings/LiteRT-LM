@@ -19,6 +19,8 @@
 #include <Windows.h>
 #endif
 
+#include <cstddef>
+
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
 
@@ -58,6 +60,10 @@ class ScopedFile {
   PlatformFile file() const { return file_; }
   bool IsValid() const { return file_ != kInvalidPlatformFile; }
 
+  // Returns the number of bytes of the file.
+  static absl::StatusOr<size_t> GetSize(PlatformFile file);
+  absl::StatusOr<size_t> GetSize() { return GetSize(file_); }
+
  private:
   PlatformFile Release() {
     PlatformFile temp = file_;
@@ -65,7 +71,11 @@ class ScopedFile {
     return temp;
   }
 
+  // Platform-specific file operations requiring platform-specific
+  // implementations. It may be assumed by the implementation that the passed
+  // `PlatformFile` is valid. This must be ensured by the caller.
   static void CloseFile(PlatformFile file);
+  static absl::StatusOr<size_t> GetSizeImpl(PlatformFile file);
 
   PlatformFile file_;
 };

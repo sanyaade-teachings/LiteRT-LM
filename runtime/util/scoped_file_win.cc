@@ -14,6 +14,11 @@
 
 #include <windows.h>
 
+#include <cstddef>
+
+#include "absl/status/status.h"  // from @com_google_absl
+#include "absl/status/statusor.h"  // from @com_google_absl
+#include "absl/strings/string_view.h"  // from @com_google_absl
 #include "runtime/util/scoped_file.h"
 #include "runtime/util/status_macros.h"
 
@@ -60,5 +65,14 @@ absl::StatusOr<ScopedFile> ScopedFile::OpenWritable(absl::string_view path) {
 
 // static
 void ScopedFile::CloseFile(HANDLE file) { ::CloseHandle(file); }
+
+// static
+absl::StatusOr<size_t> ScopedFile::GetSizeImpl(HANDLE file) {
+  LARGE_INTEGER size;
+  if (!::GetFileSizeEx(file, &size)) {
+    return absl::UnknownError("Failed to get file size");
+  }
+  return static_cast<size_t>(size.QuadPart);
+}
 
 }  // namespace litert::lm

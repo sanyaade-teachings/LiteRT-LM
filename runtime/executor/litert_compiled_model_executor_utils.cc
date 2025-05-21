@@ -35,7 +35,8 @@
 #include "litert/cc/litert_expected.h"  // from @litert
 #include "litert/cc/litert_model.h"  // from @litert
 #include "litert/cc/litert_tensor_buffer.h"  // from @litert
-#include "runtime/components/model_resources.h"
+#include "runtime/components/model_resources_litert_lm.h"
+#include "runtime/components/model_resources_task.h"
 #include "runtime/util/litert_lm_loader.h"
 #include "runtime/util/model_asset_bundle_resources.h"
 #include "runtime/util/scoped_file.h"
@@ -345,15 +346,7 @@ BuildLiteRtCompiledModelResources(const std::string& model_path) {
     RET_CHECK(litert_model) << "Failed to build "
                             << kPrefilDecodeModelNameInTaskBundle << " model.";
     ASSIGN_OR_RETURN(executor_model_resources,  // NOLINT
-                     ModelResources::Create(std::move(resources)));
-  } else {
-    // .tflite format
-    litert_model = Model::CreateFromFile(model_path.c_str());
-    RET_CHECK(litert_model) << "Failed to build "  // NOLINT
-                            << kPrefilDecodeModelNameInTaskBundle << " model.";
-    ASSIGN_OR_RETURN(executor_model_resources,  // NOLINT
-                     ModelResources::Create(
-                         std::make_unique<Model>(std::move(*litert_model))));
+                     ModelResourcesTask::Create(std::move(resources)));
   }
   return executor_model_resources;
 }

@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "runtime/components/model_resources.h"
-
 #include <filesystem>  // NOLINT: Required for path manipulation.
 #include <memory>
 #include <string>
@@ -22,6 +20,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "litert/cc/litert_buffer_ref.h"  // from @litert
+#include "runtime/components/model_resources_litert_lm.h"
+#include "runtime/components/model_resources_task.h"
 #include "runtime/util/litert_lm_loader.h"
 #include "runtime/util/model_asset_bundle_resources.h"
 #include "runtime/util/scoped_file.h"
@@ -30,7 +30,8 @@ namespace {
 
 using ::litert::lm::LitertLmLoader;
 using ::litert::lm::ModelAssetBundleResources;
-using ::litert::lm::ModelResources;
+using ::litert::lm::ModelResourcesLitertLm;
+using ::litert::lm::ModelResourcesTask;
 using ::litert::lm::ScopedFile;
 
 TEST(ModelResourcesTest, InitializeWithValidLitertLmLoader) {
@@ -43,7 +44,7 @@ TEST(ModelResourcesTest, InitializeWithValidLitertLmLoader) {
   ASSERT_GT(loader.GetTokenizer().Size(), 0);
   ASSERT_GT(loader.GetTFLiteModel().Size(), 0);
 
-  auto model_resources = ModelResources::Create(
+  auto model_resources = ModelResourcesLitertLm::Create(
       std::make_unique<LitertLmLoader>(std::move(loader)));
   ASSERT_OK(model_resources);
 
@@ -66,8 +67,8 @@ TEST(ModelResourcesTest, InitializeWithValidModelAssetBundleResources) {
       ModelAssetBundleResources::Create("tag", std::move(model_file.value()));
   ASSERT_OK(model_asset_bundle_resources);
 
-  auto model_resources =
-      ModelResources::Create(std::move(model_asset_bundle_resources.value()));
+  auto model_resources = ModelResourcesTask::Create(
+      std::move(model_asset_bundle_resources.value()));
   ASSERT_OK(model_resources);
 
   auto tflite_model = model_resources.value()->GetTFLiteModel();

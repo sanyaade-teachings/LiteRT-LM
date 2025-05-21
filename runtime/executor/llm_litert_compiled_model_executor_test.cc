@@ -24,6 +24,7 @@
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "runtime/components/model_resources.h"
+#include "runtime/components/model_resources_task.h"
 #include "runtime/executor/llm_executor_settings.h"
 #include "runtime/util/model_asset_bundle_resources.h"
 #include "runtime/util/scoped_file.h"
@@ -36,14 +37,14 @@ const int kNumThreads = 4;
 
 using ::litert::lm::LlmLiteRtCompiledModelExecutor;
 using ::litert::lm::ModelAssetBundleResources;
-using ::litert::lm::ModelResources;
+using ::litert::lm::ModelResourcesTask;
 
 absl::StatusOr<std::unique_ptr<ModelResources>> CreateExecutorModelResources(
     absl::string_view model_path) {
   auto scoped_file = ScopedFile::Open(model_path);
   auto resources = ModelAssetBundleResources::Create(
       /*tag=*/"", std::move(*scoped_file));
-  auto model_resources = ModelResources::Create(std::move(*resources));
+  auto model_resources = ModelResourcesTask::Create(std::move(*resources));
   return model_resources;
 }
 

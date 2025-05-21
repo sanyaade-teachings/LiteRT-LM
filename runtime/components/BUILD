@@ -248,19 +248,40 @@ cc_test(
 )
 
 cc_library(
-    name = "model_resources",
-    srcs = ["model_resources.cc"],
-    hdrs = ["model_resources.h"],
+    name = "model_resources_litert_lm",
+    srcs = ["model_resources_litert_lm.cc"],
+    hdrs = ["model_resources_litert_lm.h"],
     deps = [
+        ":model_resources_task",
         ":sentencepiece_tokenizer",
+        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@litert//litert/cc:litert_buffer_ref",
         "@litert//litert/cc:litert_macros",
         "@litert//litert/cc:litert_model",
         "//runtime/util:litert_lm_loader",
+        "//runtime/util:litert_status_util",
+    ],
+)
+
+cc_library(
+    name = "model_resources_task",
+    srcs = ["model_resources_task.cc"],
+    hdrs = [
+        "model_resources.h",
+        "model_resources_task.h",
+    ],
+    deps = [
+        ":sentencepiece_tokenizer",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:absl_log",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status:statusor",
+        "@litert//litert/cc:litert_buffer_ref",
+        "@litert//litert/cc:litert_macros",
+        "@litert//litert/cc:litert_model",
         "//runtime/util:litert_status_util",
         "//runtime/util:model_asset_bundle_resources",
     ],

@@ -12,21 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "runtime/executor/litert_compiled_model_executor_utils.h"
+#include "runtime/util/file_util.h"
 
 #include <string>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/status/status.h"  // from @com_google_absl
-#include "absl/strings/string_view.h"  // from @com_google_absl
 
 namespace litert::lm {
 namespace {
 
-using ::testing::_;  // NOLINT: Required by ASSERT_OK_AND_ASSIGN().
-
-TEST(LlmLiteRTCompiledModelExecutorUtilsTest, JoinPathBasicTest) {
+TEST(FileUtilTest, JoinPath) {
   std::string path1 = "";
   std::string path2 = "path2";
   EXPECT_THAT(JoinPath(path1, path2),
@@ -42,7 +39,7 @@ TEST(LlmLiteRTCompiledModelExecutorUtilsTest, JoinPathBasicTest) {
   EXPECT_THAT(JoinPath(path1, path2), "path1/path2");
 }
 
-TEST(LlmLiteRTCompiledModelExecutorUtilsTest, BasenameBasicTest) {
+TEST(FileUtilTest, Basename) {
   std::string model_path = "/path/to/model.tflite";
   EXPECT_THAT(Basename(model_path), "model.tflite");
 }

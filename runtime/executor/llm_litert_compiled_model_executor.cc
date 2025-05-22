@@ -44,6 +44,7 @@
 #include "runtime/executor/llm_executor_io_types.h"
 #include "runtime/executor/llm_executor_settings.h"
 #include "runtime/util/convert_tensor_buffer.h"
+#include "runtime/util/file_util.h"
 #include "runtime/util/litert_status_util.h"
 #include "runtime/util/status_macros.h"  //NOLINT
 

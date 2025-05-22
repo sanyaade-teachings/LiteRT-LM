@@ -110,15 +110,6 @@ absl::Status FillAttentionMask(::litert::TensorBuffer& mask, int start_timestep,
 absl::StatusOr<std::unique_ptr<ModelResources>>
 BuildLiteRtCompiledModelResources(const std::string& model_path);
 
-// TODO(b/416040802): Move utils to a more generic library.
-// Joins two file paths.
-absl::StatusOr<std::string> JoinPath(absl::string_view path1,
-                                     absl::string_view path2);
-
-// TODO(b/416040802): Move utils to a more generic library.
-// Returns the basename of a file path.
-absl::string_view Basename(absl::string_view path);
-
 }  // namespace litert::lm
 
 #endif  // THIRD_PARTY_ODML_INFRA_GENAI_INFERENCE_EXECUTOR_LITERT_COMPILED_MODEL_EXECUTOR_UTILS_H_

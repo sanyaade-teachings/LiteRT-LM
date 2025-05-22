@@ -56,17 +56,6 @@ cc_library(
     }),
 )
 
-cc_test(
-    name = "litert_compiled_model_executor_utils_test",
-    srcs = ["litert_compiled_model_executor_utils_test.cc"],
-    deps = [
-        ":litert_compiled_model_executor_utils",
-        "@com_google_googletest//:gtest_main",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/strings:string_view",
-    ],
-)
-
 cc_library(
     name = "llm_litert_compiled_model_executor",
     srcs = ["llm_litert_compiled_model_executor.cc"],
@@ -94,6 +83,7 @@ cc_library(
         "//runtime/components:sampler",
         "//runtime/components:sampler_factory",
         "//runtime/util:convert_tensor_buffer",
+        "//runtime/util:file_util",
         "//runtime/util:litert_status_util",
     ] + select({
         "//:litert_lm_link_capi_so": [
@@ -244,10 +234,10 @@ cc_library(
     srcs = ["llm_executor_settings.cc"],
     hdrs = ["llm_executor_settings.h"],
     deps = [
-        ":litert_compiled_model_executor_utils",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+        "//runtime/util:file_util",
         "//runtime/util:logging",
         "//runtime/util:scoped_file",
     ],

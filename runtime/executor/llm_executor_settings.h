@@ -99,37 +99,27 @@ std::ostream& operator<<(std::ostream& os, const FileFormat& file_format);
 class ModelAssets {
  public:
   static absl::StatusOr<ModelAssets> Create(
-      std::shared_ptr<litert::lm::ScopedFile> model_file);
+      std::shared_ptr<ScopedFile> model_file);
   static absl::StatusOr<ModelAssets> Create(absl::string_view model_path);
 
   // Convenience factory function to create a ModelAssets with both a model
   // path and file. Will use the scoped file if both are provided.
   static absl::StatusOr<ModelAssets> Create(
-      std::shared_ptr<litert::lm::ScopedFile> model_file,
-      absl::string_view model_path);
+      std::shared_ptr<ScopedFile> model_file, absl::string_view model_path);
 
   bool HasScopedFile() const {
-    return std::holds_alternative<std::shared_ptr<litert::lm::ScopedFile>>(
+    return std::holds_alternative<std::shared_ptr<ScopedFile>>(
         path_or_scoped_file_);
   }
 
-  absl::StatusOr<absl::string_view> GetPath() const {
-    if (!std::holds_alternative<std::string>(path_or_scoped_file_)) {
-      return absl::InvalidArgumentError("Assets were not created with a path.");
-    }
-    return std::get<std::string>(path_or_scoped_file_);
-  }
+  // Returns the model file if it was created with the respective variant,
+  // otherwise returns an error.
+  absl::StatusOr<absl::string_view> GetPath() const;
+  absl::StatusOr<std::shared_ptr<ScopedFile>> GetScopedFile() const;
 
-  absl::StatusOr<std::shared_ptr<litert::lm::ScopedFile>> GetScopedFile()
-      const {
-    if (!std::holds_alternative<std::shared_ptr<litert::lm::ScopedFile>>(
-            path_or_scoped_file_)) {
-      return absl::InvalidArgumentError(
-          "Assets were not created with a scoped file.");
-    }
-    return std::get<std::shared_ptr<litert::lm::ScopedFile>>(
-        path_or_scoped_file_);
-  }
+  // Convenience method to get a read-only scoped file to the model file
+  // regardless of whether this instance was created from a path or scoped file.
+  absl::StatusOr<std::shared_ptr<ScopedFile>> GetOrCreateScopedFile() const;
 
   FakeWeightsMode fake_weights_mode() const { return fake_weights_mode_; }
 
@@ -138,12 +128,12 @@ class ModelAssets {
   }
 
  private:
-  explicit ModelAssets(std::shared_ptr<litert::lm::ScopedFile> model_file);
+  explicit ModelAssets(std::shared_ptr<ScopedFile> model_file);
   explicit ModelAssets(std::string model_path);
 
   // TODO: b/417814685 - Consider supporting multiple model files if the need
   // case arises.
-  std::variant<std::string, std::shared_ptr<litert::lm::ScopedFile>>
+  std::variant<std::string, std::shared_ptr<ScopedFile>>
       path_or_scoped_file_;
 
   FakeWeightsMode fake_weights_mode_ = FakeWeightsMode::FAKE_WEIGHTS_NONE;

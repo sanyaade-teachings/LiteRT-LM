@@ -27,6 +27,7 @@
 #include "runtime/executor/litert_compiled_model_executor_utils.h"
 #include "runtime/util/logging.h"
 #include "runtime/util/scoped_file.h"
+#include "runtime/util/status_macros.h"  // NOLINT
 
 namespace litert::lm {
 
@@ -115,6 +116,36 @@ ModelAssets::ModelAssets(std::shared_ptr<litert::lm::ScopedFile> model_file)
 
 ModelAssets::ModelAssets(std::string model_path)
     : path_or_scoped_file_(std::move(model_path)) {}
+
+absl::StatusOr<absl::string_view> ModelAssets::GetPath() const {
+  if (!std::holds_alternative<std::string>(path_or_scoped_file_)) {
+    return absl::InvalidArgumentError("Assets were not created with a path.");
+  }
+  return std::get<std::string>(path_or_scoped_file_);
+}
+
+absl::StatusOr<std::shared_ptr<ScopedFile>> ModelAssets::GetScopedFile() const {
+  if (!std::holds_alternative<std::shared_ptr<ScopedFile>>(
+          path_or_scoped_file_)) {
+    return absl::InvalidArgumentError(
+        "Assets were not created with a scoped file.");
+  }
+  return std::get<std::shared_ptr<ScopedFile>>(path_or_scoped_file_);
+}
+
+absl::StatusOr<std::shared_ptr<ScopedFile>> ModelAssets::GetOrCreateScopedFile()
+    const {
+  if (std::holds_alternative<std::shared_ptr<ScopedFile>>(
+          path_or_scoped_file_)) {
+    return std::get<std::shared_ptr<ScopedFile>>(path_or_scoped_file_);
+  }
+
+  ASSIGN_OR_RETURN(  // NOLINT
+      ScopedFile scoped_file,
+      ScopedFile::Open(std::get<std::string>(path_or_scoped_file_)));
+
+  return std::make_shared<ScopedFile>(std::move(scoped_file));
+}
 
 std::ostream& operator<<(std::ostream& os, const ModelAssets& model_assets) {
   if (model_assets.HasScopedFile()) {

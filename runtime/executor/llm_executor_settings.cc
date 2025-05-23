@@ -22,6 +22,7 @@
 
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
+#include "absl/strings/match.h"  // from @com_google_absl
 #include "absl/strings/str_cat.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "runtime/util/file_util.h"
@@ -48,6 +49,27 @@ std::ostream& operator<<(std::ostream& os, const Backend& backend) {
   }
 }
 
+absl::StatusOr<Backend> GetBackendFromString(absl::string_view backend_str) {
+  Backend backend;
+  if (absl::EqualsIgnoreCase(backend_str, "cpu")) {
+    backend = Backend::CPU;
+  } else if (absl::EqualsIgnoreCase(backend_str, "gpu")) {
+    backend = Backend::GPU;
+  } else if (absl::EqualsIgnoreCase(backend_str, "qnn")) {
+    backend = Backend::QNN;
+  } else if (absl::EqualsIgnoreCase(backend_str, "gpu_artisan")) {
+    backend = Backend::GPU_ARTISAN;
+  } else if (absl::EqualsIgnoreCase(backend_str, "cpu_artisan")) {
+    backend = Backend::CPU_ARTISAN;
+  } else if (absl::EqualsIgnoreCase(backend_str, "google_tensor_artisan")) {
+    backend = Backend::GOOGLE_TENSOR_ARTISAN;
+  } else {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Unsupported backend: ", backend_str));
+  }
+  return backend;
+}
+
 std::ostream& operator<<(std::ostream& os,
                          const ActivationDataType& activation) {
   switch (activation) {
@@ -63,7 +85,6 @@ std::ostream& operator<<(std::ostream& os,
       return os << "UNKNOWN";
   }
 }
-
 
 std::ostream& operator<<(std::ostream& os,
                          const FakeWeightsMode& fake_weights_mode) {
@@ -226,6 +247,29 @@ std::ostream& operator<<(std::ostream& os, const LlmExecutorSettings& config) {
   }
   os << "model_assets: " << config.GetModelAssets() << "\n";
   return os;
+}
+
+absl::StatusOr<LlmExecutorSettings> LlmExecutorSettings::CreateDefault(
+  const ModelAssets& model_assets, Backend backend) {
+  LlmExecutorSettings settings(model_assets);
+  if (backend == Backend::CPU) {
+    CpuConfig config;
+    config.number_of_threads = 4;
+    settings.SetBackendConfig(config);
+  } else if (backend == Backend::GPU) {
+    GpuConfig config;
+    // Default max top k to 1 for GPU.
+    config.max_top_k = 1;
+    settings.SetBackendConfig(config);
+  } else if (backend == Backend::QNN) {
+  } else if (backend == Backend::GPU_ARTISAN) {
+    settings.SetBackendConfig(GpuArtisanConfig());
+  } else {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Unsupported backend: ", backend));
+  }
+  settings.SetBackend(backend);
+  return settings;
 }
 
 }  // namespace litert::lm

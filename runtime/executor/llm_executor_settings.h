@@ -51,6 +51,8 @@ enum class Backend {
   QNN,
 };
 std::ostream& operator<<(std::ostream& os, const Backend& backend);
+// Returns the backend from the string.
+absl::StatusOr<Backend> GetBackendFromString(absl::string_view backend_str);
 
 enum class ActivationDataType {
   // Use float32 as the activation data type.
@@ -203,9 +205,10 @@ std::ostream& operator<<(std::ostream& os, const CpuConfig& config);
 // remaining settings using the setter APIs.
 class LlmExecutorSettings {
  public:
-  // TODO(b/397975034): Set default values in the constructor.
-  explicit LlmExecutorSettings(const ModelAssets& model_assets)
-      : model_assets_(model_assets) {}
+  // Creates a LlmExecutorSettings with default values using the provided
+  // ModelAssets.
+  static absl::StatusOr<LlmExecutorSettings> CreateDefault(
+      const ModelAssets& model_assets, Backend backend = Backend::CPU);
 
   // Getter APIs.
   const ModelAssets& GetModelAssets() const { return model_assets_; }
@@ -271,6 +274,9 @@ class LlmExecutorSettings {
   }
 
  private:
+  explicit LlmExecutorSettings(const ModelAssets& model_assets)
+      : model_assets_(model_assets) {}
+
   // Path to the LiteRT model file.
   const ModelAssets model_assets_;
 

@@ -35,6 +35,9 @@ namespace {
 const int kMaxNumTokens = 32;
 const int kNumThreads = 4;
 
+using ::litert::lm::Backend;
+using ::litert::lm::LlmExecutorSettings;
+using ::litert::lm::ModelAssets;
 using ::litert::lm::LlmLiteRtCompiledModelExecutor;
 using ::litert::lm::ModelAssetBundleResources;
 using ::litert::lm::ModelResourcesTask;
@@ -56,14 +59,14 @@ TEST(LlmLiteRTCompiledModelExecutorTest, CreateExecutorTest) {
                        CreateExecutorModelResources(model_path.string()));
   auto model_assets = ModelAssets::Create(model_path.string());
   ASSERT_OK(model_assets);
-  LlmExecutorSettings executor_settings(*model_assets);
-  executor_settings.SetMaxNumTokens(kMaxNumTokens);
+  auto executor_settings =
+      LlmExecutorSettings::CreateDefault(*model_assets, Backend::CPU);
+  executor_settings->SetMaxNumTokens(kMaxNumTokens);
   ::litert::lm::CpuConfig config;
   config.number_of_threads = kNumThreads;
-  executor_settings.SetBackendConfig(config);
-  executor_settings.SetBackend(Backend::CPU);
+  executor_settings->SetBackendConfig(config);
   auto executor = LlmLiteRtCompiledModelExecutor::Create(
-      executor_settings, std::move(model_resources));
+      *executor_settings, std::move(model_resources));
   ASSERT_OK(executor);
   ASSERT_NE(*executor, nullptr);
 }

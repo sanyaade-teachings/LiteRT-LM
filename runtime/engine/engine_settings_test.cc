@@ -14,14 +14,15 @@ namespace {
 
 using ::litert::lm::EngineSettings;
 using ::litert::lm::LlmExecutorSettings;
-using ::testing::Eq;
 using ::testing::ElementsAre;
+using ::testing::Eq;
 
 TEST(EngineSettingsTest, GetModelPath) {
   auto model_assets = ModelAssets::Create("test_model_path_1");
   ASSERT_OK(model_assets);
-  LlmExecutorSettings executor_settings(*model_assets);
-  EngineSettings settings(executor_settings);
+  auto executor_settings =
+      LlmExecutorSettings::CreateDefault(*model_assets, Backend::CPU);
+  EngineSettings settings(*executor_settings);
 
   auto model_path =
       settings.GetMainExecutorSettings().GetModelAssets().GetPath();
@@ -32,27 +33,32 @@ TEST(EngineSettingsTest, GetModelPath) {
 TEST(EngineSettingsTest, SetAndGetCacheDir) {
   auto model_assets = ModelAssets::Create("test_model_path_1");
   ASSERT_OK(model_assets);
-  LlmExecutorSettings executor_settings(*model_assets);
-  executor_settings.SetCacheDir("test_cache_dir");
-  EngineSettings settings(executor_settings);
+  auto executor_settings =
+      LlmExecutorSettings::CreateDefault(*model_assets, Backend::CPU);
+  executor_settings->SetCacheDir("test_cache_dir");
+  EngineSettings settings(*executor_settings);
   EXPECT_EQ(settings.GetMainExecutorSettings().GetCacheDir(), "test_cache_dir");
 }
 
 TEST(EngineSettingsTest, SetAndGetMaxNumTokens) {
   auto model_assets = ModelAssets::Create("test_model_path_1");
   ASSERT_OK(model_assets);
-  LlmExecutorSettings executor_settings(*model_assets);
-  executor_settings.SetMaxNumTokens(128);
-  EngineSettings settings(executor_settings);
+
+  auto executor_settings =
+      LlmExecutorSettings::CreateDefault(*model_assets, Backend::CPU);
+  executor_settings->SetMaxNumTokens(128);
+  EngineSettings settings(*executor_settings);
   EXPECT_EQ(settings.GetMainExecutorSettings().GetMaxNumTokens(), 128);
 }
 
 TEST(EngineSettingsTest, SetAndGetExecutorBackend) {
   auto model_assets = ModelAssets::Create("test_model_path_1");
   ASSERT_OK(model_assets);
-  LlmExecutorSettings executor_settings(*model_assets);
-  executor_settings.SetBackend(Backend::GPU);
-  EngineSettings settings(executor_settings);
+
+  auto executor_settings =
+      LlmExecutorSettings::CreateDefault(*model_assets, Backend::CPU);
+  executor_settings->SetBackend(Backend::GPU);
+  EngineSettings settings(*executor_settings);
   EXPECT_THAT(settings.GetMainExecutorSettings().GetBackend(),
               Eq(Backend::GPU));
 }
@@ -60,8 +66,9 @@ TEST(EngineSettingsTest, SetAndGetExecutorBackend) {
 TEST(EngineSettingsTest, DefaultExecutorBackend) {
   auto model_assets = ModelAssets::Create("test_model_path_1");
   ASSERT_OK(model_assets);
-  LlmExecutorSettings executor_settings(*model_assets);
-  EngineSettings settings(executor_settings);
+  auto executor_settings =
+      LlmExecutorSettings::CreateDefault(*model_assets, Backend::CPU);
+  EngineSettings settings(*executor_settings);
   EXPECT_THAT(settings.GetMainExecutorSettings().GetBackend(),
               Eq(Backend::CPU));
 }
@@ -69,8 +76,10 @@ TEST(EngineSettingsTest, DefaultExecutorBackend) {
 TEST(EngineSettingsTest, BenchmarkParams) {
   auto model_assets = ModelAssets::Create("test_model_path_1");
   ASSERT_OK(model_assets);
-  LlmExecutorSettings executor_settings(*model_assets);
-  EngineSettings settings(executor_settings);
+  auto executor_settings =
+      LlmExecutorSettings::CreateDefault(*model_assets, Backend::CPU);
+
+  EngineSettings settings(*executor_settings);
   EXPECT_FALSE(settings.IsBenchmarkEnabled());
 
   proto::BenchmarkParams benchmark_params;

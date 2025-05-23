@@ -2,6 +2,7 @@
 #define THIRD_PARTY_ODML_LITERT_LM_RUNTIME_ENGINE_ENGINE_SETTINGS_H_
 
 #include <optional>
+#include <ostream>
 #include <vector>
 
 #include "runtime/executor/llm_executor_settings.h"
@@ -39,6 +40,7 @@ class EngineSettings {
   // Parameters used to configure the benchmarking process.
   std::optional<proto::BenchmarkParams> benchmark_params_;
 };
+std::ostream& operator<<(std::ostream& os, const EngineSettings& settings);
 
 // Configurations used for the session.
 // This class encapsulates the session-specific configurations that are used for

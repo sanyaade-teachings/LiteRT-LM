@@ -38,7 +38,7 @@
 #include "runtime/engine/engine_settings.h"
 #include "runtime/engine/io_types.h"
 #include "runtime/executor/llm_executor_settings.h"
-#include "runtime/util/status_macros.h" // NOLINT
+#include "runtime/util/status_macros.h"  // NOLINT
 
 ABSL_FLAG(std::optional<std::string>, backend, "gpu",
           "Executor backend to use for LLM execution (cpu, gpu, etc.)");
@@ -80,34 +80,24 @@ absl::Status MainHelper(int argc, char** argv) {
   ABSL_LOG(INFO) << "Model path: " << model_path;
   ASSIGN_OR_RETURN(ModelAssets model_assets,  // NOLINT
                    ModelAssets::Create(model_path));
-  LlmExecutorSettings executor_settings(model_assets);
-
   std::string backend_str = absl::GetFlag(FLAGS_backend).value();
   ABSL_LOG(INFO) << "Choose backend: " << backend_str;
+  ASSIGN_OR_RETURN(Backend backend,
+                   litert::lm::GetBackendFromString(backend_str));
+  ASSIGN_OR_RETURN(
+      LlmExecutorSettings executor_settings,
+      LlmExecutorSettings::CreateDefault(model_assets, backend));
+  // TODO(b/397975034) Set the max num tokens based on the model.
+  executor_settings.SetMaxNumTokens(160);
+
   auto session_config = litert::lm::SessionConfig::CreateDefault();
-  Backend backend;
-  if (backend_str == "cpu") {
-    CpuConfig config;
-    config.number_of_threads = 4;
-    executor_settings.SetBackendConfig(config);
-    executor_settings.SetBackend(Backend::CPU);
-  } else if (backend_str == "gpu") {
-    backend = Backend::GPU;
-    GpuConfig config;
-    config.max_top_k = 1;
-    executor_settings.SetBackendConfig(config);
-    executor_settings.SetBackend(Backend::GPU);
-  } else if (backend_str == "qnn") {
-    backend = Backend::QNN;
-    executor_settings.SetBackend(Backend::QNN);
+  // TODO(b/418794726): update the session config parsing logic to remove this
+  // if statement.
+  if (backend_str == "qnn") {
     // The NPU executor does not support the external sampler yet.
     session_config.GetMutableSamplerParams().set_type(
         litert::lm::proto::SamplerParameters::TYPE_UNSPECIFIED);
-  } else {
-    return absl::InvalidArgumentError("Unsupported backend: " + backend_str);
   }
-  // TODO(b/397975034) Set the max num tokens based on the model.
-  executor_settings.SetMaxNumTokens(160);
   ABSL_LOG(INFO) << "executor_settings: " << executor_settings;
   EngineSettings model_settings(executor_settings);
 

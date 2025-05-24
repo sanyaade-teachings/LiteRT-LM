@@ -22,11 +22,11 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"  // from @com_google_absl
+#include "absl/log/absl_log.h"  // from @com_google_absl
 #include "absl/log/check.h"  // from @com_google_absl
 #include "absl/log/log.h"  // from @com_google_absl
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
-#include "absl/strings/match.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "absl/time/time.h"  // from @com_google_absl
 #include "runtime/components/model_resources.h"
@@ -44,8 +44,7 @@
 #include "runtime/framework/thread_options.h"
 #include "runtime/framework/threadpool.h"
 #include "runtime/proto/sampler_params.pb.h"
-#include "runtime/util/model_asset_bundle_resources.h"
-#include "runtime/util/scoped_file.h"
+#include "runtime/util/file_format_util.h"
 #include "runtime/util/status_macros.h"  // NOLINT
 
 namespace litert::lm {
@@ -94,15 +93,14 @@ class EngineImpl : public Engine {
       ABSL_CHECK_OK(
           benchmark_info_->TimeInitPhaseStart("Executor initialization"));
     }
-    auto model_path_view =
-        engine_settings.GetMainExecutorSettings().GetModelAssets().GetPath();
-    ABSL_CHECK_OK(model_path_view);
-    std::string model_path(*model_path_view);
     if ((engine_settings.GetMainExecutorSettings().GetBackend() ==
          Backend::CPU) ||
         (engine_settings.GetMainExecutorSettings().GetBackend() ==
          Backend::GPU)) {
-      auto model_resources = BuildLiteRtCompiledModelResources(model_path);
+      const ModelAssets& model_assets =
+          engine_settings.GetMainExecutorSettings().GetModelAssets();
+
+      auto model_resources = BuildLiteRtCompiledModelResources(model_assets);
       ABSL_CHECK_OK(model_resources);
       litert_model_resources_ = std::move(*model_resources);
       auto executor = BuildLitertCompiledModelExecutor(
@@ -116,27 +114,36 @@ class EngineImpl : public Engine {
         ABSL_CHECK_OK(
             benchmark_info_->TimeInitPhaseStart("Tokenizer initialization"));
       }
-      // TODO(b/397975034): factor out the tokenizer creation logic once the
-      // model loading mechanism of the new file format is determined.
-      auto scoped_file = ScopedFile::Open(model_path);
+      auto scoped_file = model_assets.GetOrCreateScopedFile();
       ABSL_CHECK_OK(scoped_file);
 
-      // TODO(b/413793273): Read the header bytes to determine the file type
-      // instead of depending on the file extension.
-      if (absl::EndsWith(model_path, ".litertlm")) {
-        ABSL_LOG(FATAL) << "Not supported file format in OSS yet.";
-      } else {
-        auto resources = ModelAssetBundleResources::Create(
-            /*tag=*/"", *std::move(scoped_file));
-        auto vocab_buffer = (*resources)->GetFile("TOKENIZER_MODEL");
-        tokenizer_ =
-            std::move(*SentencePieceTokenizer::CreateFromBuffer(*vocab_buffer));
+      auto file_format = GetFileFormat(/*model_path=*/"", *scoped_file);
+      ABSL_CHECK_OK(file_format);
+
+      // TODO(b/397975034): factor out the tokenizer creation logic once the
+      // model loading mechanism of the new file format is determined.
+      switch (*file_format) {
+        case FileFormat::TFLITE:
+          ABSL_LOG(FATAL) << "Not supported file format.";
+          break;
+        case FileFormat::TASK:
+          tokenizer_ = litert_model_resources_->GetTokenizer().value();
+          break;
+        case FileFormat::LITERT_LM: {
+          ABSL_LOG(FATAL) << "Not supported file format in OSS yet.";
+          break;
+        }
       }
       if (benchmark_info_.has_value()) {
         ABSL_CHECK_OK(
             benchmark_info_->TimeInitPhaseEnd("Tokenizer initialization"));
       }
     } else {
+      std::string model_path(engine_settings.GetMainExecutorSettings()
+                                 .GetModelAssets()
+                                 .GetPath()
+                                 .value_or(""));
+
       std::filesystem::path path(model_path);
       ABSL_CHECK(std::filesystem::exists(path));
       const std::string embedder_path =

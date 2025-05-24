@@ -26,6 +26,7 @@ cc_library(
     srcs = ["litert_compiled_model_executor_utils.cc"],
     hdrs = ["litert_compiled_model_executor_utils.h"],
     deps = [
+        ":llm_executor_settings",
         "@com_google_absl//absl/container:btree",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/log:absl_check",
@@ -42,8 +43,10 @@ cc_library(
         "//runtime/components:model_resources_task",
         "//runtime/components:sentencepiece_tokenizer",
         "//runtime/util:external_file_cc_proto",
+        "//runtime/util:file_format_util",
         "//runtime/util:litert_lm_loader",
         "//runtime/util:litert_status_util",
+        "//runtime/util:memory_mapped_file",
         "//runtime/util:model_asset_bundle_resources",
         "//runtime/util:scoped_file",
     ] + select({
@@ -54,6 +57,19 @@ cc_library(
             "@litert//litert/cc/internal:litert_tensor_buffer",
         ],
     }),
+)
+
+cc_test(
+    name = "litert_compiled_model_executor_utils_test",
+    srcs = ["litert_compiled_model_executor_utils_test.cc"],
+    data = ["//runtime/testdata"],
+    deps = [
+        ":litert_compiled_model_executor_utils",
+        ":llm_executor_settings",
+        "@com_google_googletest//:gtest_main",
+        "//runtime/util:scoped_file",
+        "//runtime/util:test_utils",
+    ],
 )
 
 cc_library(

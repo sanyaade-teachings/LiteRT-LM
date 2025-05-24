@@ -32,10 +32,8 @@ cc_library(
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:string_view",
         "@com_google_absl//absl/time",
-        "//runtime/components:model_resources_litert_lm",
         "//runtime/components:model_resources_task",
         "//runtime/components:sentencepiece_tokenizer",
         "//runtime/components:tokenizer",
@@ -50,9 +48,8 @@ cc_library(
         "//runtime/framework:thread_options",
         "//runtime/framework:threadpool_interface",
         "//runtime/proto:sampler_params_cc_proto",
+        "//runtime/util:file_format_util",
         "//runtime/util:litert_status_util",
-        "//runtime/util:model_asset_bundle_resources",
-        "//runtime/util:scoped_file",
     ],
 )
 

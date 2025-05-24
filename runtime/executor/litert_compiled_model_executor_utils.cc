@@ -34,8 +34,11 @@
 #include "litert/cc/litert_expected.h"  // from @litert
 #include "litert/cc/litert_model.h"  // from @litert
 #include "litert/cc/litert_tensor_buffer.h"  // from @litert
+#include "runtime/components/model_resources.h"
 #include "runtime/components/model_resources_litert_lm.h"
 #include "runtime/components/model_resources_task.h"
+#include "runtime/executor/llm_executor_settings.h"
+#include "runtime/util/file_format_util.h"
 #include "runtime/util/litert_lm_loader.h"
 #include "runtime/util/model_asset_bundle_resources.h"
 #include "runtime/util/scoped_file.h"
@@ -135,6 +138,40 @@ bool IsGemini(const std::vector<absl::string_view>& input_names,
          Contains(input_names, kGemini_InputPositions) &&
          Contains(input_names, kGemini_InputAttnMask) &&
          Contains(output_names, kGemini_OutputLogits);
+}
+
+absl::StatusOr<std::unique_ptr<ModelResources>>
+BuildModelResourcesFromTaskFormat(std::shared_ptr<ScopedFile> model_file) {
+  ASSIGN_OR_RETURN(auto resources, ModelAssetBundleResources::Create(  // NOLINT
+                                       /*tag=*/"", std::move(model_file)));
+
+  const std::vector<std::string>& files_list = resources->ListFiles();
+  const absl::flat_hash_set<std::string> files_set(files_list.begin(),
+                                                   files_list.end());
+  RET_CHECK(files_set.contains(kPrefilDecodeModelNameInTaskBundle))  // NOLINT
+      << kPrefilDecodeModelNameInTaskBundle
+      << " model file not found in task bundle.";
+  ASSIGN_OR_RETURN(absl::string_view buffer,  // NOLINT
+                   resources->GetFile(kPrefilDecodeModelNameInTaskBundle));
+  litert::BufferRef<uint8_t> buffer_ref(buffer.data(), buffer.size());
+
+  // TODO: b/413214239 - This factory function copies the contents of
+  // `buffer_ref`. Ideally we'd create a `Model` backed by a view of mapped
+  // memory.
+  Expected<Model> litert_model = Model::CreateFromBuffer(buffer_ref);
+  RET_CHECK(litert_model) << "Failed to build "  // NOLINT
+                          << kPrefilDecodeModelNameInTaskBundle << " model.";
+  return ModelResourcesTask::Create(std::move(resources));
+}
+
+absl::StatusOr<std::unique_ptr<ModelResources>>
+BuildModelResourcesFromLitertLmFormat(ScopedFile model_file) {
+  auto loader = std::make_unique<LitertLmLoader>(std::move(model_file));
+
+  ABSL_LOG(INFO) << "Read litert model from section.";
+
+  // Save the loader for future use and keep the model alive.
+  return ModelResourcesLitertLm::Create(std::move(loader));
 }
 
 }  // namespace
@@ -321,33 +358,24 @@ absl::Status FillAttentionMask(litert::TensorBuffer& mask, int start_timestep,
 }
 
 absl::StatusOr<std::unique_ptr<ModelResources>>
-BuildLiteRtCompiledModelResources(const std::string& model_path) {
-  std::unique_ptr<ModelResources> executor_model_resources;
-  Expected<Model> litert_model;
-  std::unique_ptr<ModelAssetBundleResources> resources;
-  if (absl::EndsWith(model_path, ".litertlm")) {
-    ABSL_LOG(FATAL) << "Not supported file format in OSS yet.";
-  } else if (absl::EndsWith(model_path, ".task")) {
-    // .task format
-    ASSIGN_OR_RETURN(auto scoped_file, ScopedFile::Open(model_path));  // NOLINT
-    ASSIGN_OR_RETURN(resources, ModelAssetBundleResources::Create(     // NOLINT
-                                    "", std::move(scoped_file)));
-    const std::vector<std::string>& files_list = resources->ListFiles();
-    const absl::flat_hash_set<std::string> files_set(files_list.begin(),
-                                                     files_list.end());
-    RET_CHECK(files_set.contains(kPrefilDecodeModelNameInTaskBundle))  // NOLINT
-        << kPrefilDecodeModelNameInTaskBundle
-        << " model file not found in task bundle.";
-    ASSIGN_OR_RETURN(absl::string_view buffer,  // NOLINT
-                     resources->GetFile(kPrefilDecodeModelNameInTaskBundle));
-    litert::BufferRef<uint8_t> buffer_ref(buffer.data(), buffer.size());
-    litert_model = Model::CreateFromBuffer(buffer_ref);
-    RET_CHECK(litert_model) << "Failed to build "
-                            << kPrefilDecodeModelNameInTaskBundle << " model.";
-    ASSIGN_OR_RETURN(executor_model_resources,  // NOLINT
-                     ModelResourcesTask::Create(std::move(resources)));
+BuildLiteRtCompiledModelResources(const ModelAssets& model_assets) {
+  ASSIGN_OR_RETURN(  // NOLINT
+      auto format,
+      GetFileFormat(model_assets.GetPath().value_or(""),
+                    model_assets.GetScopedFile().value_or(nullptr)));
+
+  ASSIGN_OR_RETURN(auto scoped_file,  // NOLINT
+                   model_assets.GetOrCreateScopedFile());
+
+  switch (format) {
+    case FileFormat::TFLITE:
+      return absl::InvalidArgumentError("Unsupported file format.");
+    case FileFormat::TASK:
+      return BuildModelResourcesFromTaskFormat(std::move(scoped_file));
+    case FileFormat::LITERT_LM:
+      return absl::InvalidArgumentError(
+          "Not supported file format in OSS yet.");
   }
-  return executor_model_resources;
 }
 
 }  // namespace litert::lm

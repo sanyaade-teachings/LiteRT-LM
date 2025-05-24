@@ -29,6 +29,7 @@
 #include "litert/cc/litert_model.h"  // from @litert
 #include "litert/cc/litert_tensor_buffer.h"  // from @litert
 #include "runtime/components/model_resources.h"
+#include "runtime/executor/llm_executor_settings.h"
 
 namespace litert::lm {
 
@@ -106,9 +107,9 @@ absl::Status FillAttentionMask(::litert::TensorBuffer& mask, int start_timestep,
                                int steps, AttentionMaskDataType mask_data_type);
 
 // Builds the model resources from the model_path for compiled model only.
-// Supports .tflite and .task format.
+// Supports .task and .litertlm formats.
 absl::StatusOr<std::unique_ptr<ModelResources>>
-BuildLiteRtCompiledModelResources(const std::string& model_path);
+BuildLiteRtCompiledModelResources(const ModelAssets& model_assets);
 
 }  // namespace litert::lm
 

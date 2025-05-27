@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <vector>
 
 #include "absl/status/status.h"  // from @com_google_absl
@@ -94,6 +95,7 @@ class EngineSettings {
   // present).
   std::optional<proto::LlmMetadata> metadata_;
 };
+std::ostream& operator<<(std::ostream& os, const EngineSettings& settings);
 
 // Configurations used for the session.
 // This class encapsulates the session-specific configurations that are used for
@@ -148,6 +150,7 @@ class SessionConfig {
   // it to a value greater than 1 will require the model to support batching.
   int num_output_candidates_;
 };
+std::ostream& operator<<(std::ostream& os, const SessionConfig& config);
 
 }  // namespace litert::lm
 

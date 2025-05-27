@@ -1,6 +1,7 @@
 #include "runtime/engine/engine_settings.h"
 
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -20,6 +21,7 @@ namespace {
 using ::litert::lm::EngineSettings;
 using ::testing::ElementsAre;
 using ::testing::Eq;
+using ::testing::ContainsRegex;
 
 TEST(EngineSettingsTest, GetModelPath) {
   auto model_assets = ModelAssets::Create("test_model_path_1");
@@ -175,6 +177,21 @@ TEST(EngineSettingsTest, MaybeUpdateAndValidateQNN) {
             proto::SamplerParameters::TYPE_UNSPECIFIED);
 }
 
+TEST(EngineSettingsTest, PrintOperator) {
+  auto model_assets = ModelAssets::Create("test_model_path_1");
+  ASSERT_OK(model_assets);
+  auto settings = EngineSettings::CreateDefault(*model_assets);
+  EXPECT_OK(settings);
+  proto::LlmMetadata& llm_metadata = settings->GetMutableLlmMetadata();
+  llm_metadata.mutable_start_token()->set_token_str("test_token_str");
+  proto::BenchmarkParams& benchmark_params =
+      settings->GetMutableBenchmarkParams();
+  benchmark_params.set_num_decode_tokens(100);
+  benchmark_params.set_num_prefill_tokens(100);
+  std::stringstream oss;
+  oss << *settings;
+}
+
 TEST(SessionConfigTest, CreateDefault) {
   SessionConfig session_config = SessionConfig::CreateDefault();
   EXPECT_EQ(session_config.GetSamplerParams().type(),
@@ -237,6 +254,17 @@ TEST(SessionConfigTest, MaybeUpdateAndValidate) {
   EXPECT_OK(session_config.MaybeUpdateAndValidate(*settings));
 }
 
+TEST(SessionConfigTest, PrintOperator) {
+  SessionConfig session_config = SessionConfig::CreateDefault();
+  session_config.GetMutableSamplerParams().set_type(
+      proto::SamplerParameters::TOP_K);
+  session_config.GetMutableSamplerParams().set_k(10);
+  session_config.SetStartTokenId(1);
+  session_config.GetMutableStopTokenIds() = {{0}, {1, 2}};
+  session_config.SetNumOutputCandidates(2);
+  std::stringstream oss;
+  oss << session_config;
+}
 
 }  // namespace
 }  // namespace litert::lm

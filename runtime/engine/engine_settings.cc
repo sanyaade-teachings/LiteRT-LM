@@ -2,8 +2,10 @@
 
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <vector>
 
+#include "absl/log/absl_log.h"  // from @com_google_absl
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/str_cat.h"  // from @com_google_absl
@@ -16,6 +18,26 @@
 #include "runtime/util/status_macros.h"  //NOLINT
 
 namespace litert::lm {
+namespace {
+
+std::ostream& operator<<(std::ostream& os,
+                         const std::vector<int>& vec) {
+  constexpr int newline_num = 10;
+  os << "vector size: " << vec.size() << ": [";
+  for (int i = 0; i < vec.size(); ++i) {
+    os << vec[i];
+    if (i < vec.size() - 1) {
+      os << ", ";
+    }
+    if ((i + 1) % newline_num == 0) {
+      os << "\n";
+    }
+  }
+  os << "]";
+  return os;
+}
+
+}  // namespace
 
 absl::StatusOr<EngineSettings> EngineSettings::CreateDefault(
     const ModelAssets& model_assets, Backend backend) {
@@ -75,6 +97,7 @@ absl::Status EngineSettings::MaybeUpdateAndValidate(
           absl::StrCat("Not recognized backend: ", backend));
     }
   }
+  ABSL_LOG(INFO) << "The validated engine settings: " << *this;
   return absl::OkStatus();
 }
 
@@ -112,6 +135,23 @@ proto::BenchmarkParams& EngineSettings::GetMutableBenchmarkParams() {
 const std::optional<proto::LlmMetadata>& EngineSettings::GetLlmMetadata()
     const {
   return metadata_;
+}
+
+std::ostream& operator<<(std::ostream& os, const EngineSettings& settings) {
+  os << "EngineSettings: " << std::endl;
+  os << "  MainExecutorSettings: " << settings.GetMainExecutorSettings();
+  if (settings.GetLlmMetadata().has_value()) {
+    os << "  LlmMetadata: " << settings.GetLlmMetadata().value().DebugString();
+  } else {
+    os << "  LlmMetadata: Not set" << std::endl;
+  }
+  if (settings.GetBenchmarkParams().has_value()) {
+    os << "  BenchmarkParams: "
+       << settings.GetBenchmarkParams().value().DebugString();
+  } else {
+    os << "  BenchmarkParams: Not set" << std::endl;
+  }
+  return os;
 }
 
 proto::LlmMetadata& EngineSettings::GetMutableLlmMetadata() {
@@ -193,6 +233,7 @@ absl::Status SessionConfig::MaybeUpdateAndValidate(
         "Number of output candidates need to be at least 1, but got: ",
         num_output_candidates_));
   }
+  ABSL_LOG(INFO) << "The validated session config: " << *this;
   return absl::OkStatus();
 }
 
@@ -225,6 +266,20 @@ int SessionConfig::GetNumOutputCandidates() const {
 }
 void SessionConfig::SetNumOutputCandidates(int num_output_candidates) {
   num_output_candidates_ = num_output_candidates;
+}
+
+std::ostream& operator<<(std::ostream& os, const SessionConfig& config) {
+  os << "SessionConfig: " << std::endl;
+  os << "  SamplerParams: " << config.GetSamplerParams().DebugString()
+     << std::endl;
+  os << "  StartTokenId: " << config.GetStartTokenId() << std::endl;
+  os << "  StopTokenIds: " << std::endl;
+  for (const auto& stop_token_ids : config.GetStopTokenIds()) {
+    os << "    " << stop_token_ids << std::endl;
+  }
+  os << "  NumOutputCandidates: " << config.GetNumOutputCandidates()
+     << std::endl;
+  return os;
 }
 
 }  // namespace litert::lm

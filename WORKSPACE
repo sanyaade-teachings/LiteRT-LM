@@ -6,6 +6,19 @@ workspace(name = "litert_lm")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+http_archive(
+    name = "rules_shell",
+    sha256 = "bc61ef94facc78e20a645726f64756e5e285a045037c7a61f65af2941f4c25e1",
+    strip_prefix = "rules_shell-0.4.1",
+    url = "https://github.com/bazelbuild/rules_shell/releases/download/v0.4.1/rules_shell-v0.4.1.tar.gz",
+)
+
+load("@rules_shell//shell:repositories.bzl", "rules_shell_dependencies", "rules_shell_toolchains")
+
+rules_shell_dependencies()
+
+rules_shell_toolchains()
+
 # Java rules
 http_archive(
     name = "rules_java",
@@ -16,9 +29,9 @@ http_archive(
 # Tensorflow
 http_archive(
     name = "org_tensorflow",
-    sha256 = "98e9fde9b0a885e1d1e2fdcfeef0d79a351e7f3a5739dd39d346eb9ac0178053",
-    strip_prefix = "tensorflow-c0c9c298214fb4ad0b1623c82e65be4bcf22186b",
-    url = "https://github.com/tensorflow/tensorflow/archive/c0c9c298214fb4ad0b1623c82e65be4bcf22186b.tar.gz",  # 2025-05-14
+    sha256 = "f75e336c0f3fab135b231f1ef0d90f47489f6fe0482870d757e61ba3f01cbd0e",
+    strip_prefix = "tensorflow-a3e93584ec122897b03f1ec2a849d0cb9bdbcade",
+    url = "https://github.com/tensorflow/tensorflow/archive/a3e93584ec122897b03f1ec2a849d0cb9bdbcade.tar.gz",  # 2025-05-27
 )
 
 # Initialize the TensorFlow repository and all dependencies.
@@ -203,9 +216,9 @@ http_archive(
 
 http_archive(
     name = "litert",
-    sha256 = "fcb44ecf2c5c9cd88a6afbdf35f59a418bba52517b13bcc789d0fe7440a82392",
-    strip_prefix = "LiteRT-3b2a7b9682446f50e8e0991bab3b7c00b232d466",
-    url = "https://github.com/google-ai-edge/LiteRT/archive/3b2a7b9682446f50e8e0991bab3b7c00b232d466.tar.gz",  # 2025-05-14
+    sha256 = "fdfc2d74b0aad17b3b8d445cee0119b3914cf86306376ddee7e96e118724b23a",
+    strip_prefix = "LiteRT-6eefc3f329a0982bf10b3abb78f674bb91c67782",
+    url = "https://github.com/google-ai-edge/LiteRT/archive/6eefc3f329a0982bf10b3abb78f674bb91c67782.tar.gz",  # 2025-05-27
 )
 
 # Android rules. Need latest rules_android_ndk to use NDK 26+.

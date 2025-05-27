@@ -44,6 +44,8 @@ std::ostream& operator<<(std::ostream& os, const Backend& backend) {
       return os << "CPU";
     case Backend::GOOGLE_TENSOR_ARTISAN:
       return os << "GOOGLE_TENSOR_ARTISAN";
+    case Backend::QNN:
+      return os << "QNN";
     default:
       return os << "UNKNOWN";
   }
@@ -269,6 +271,13 @@ absl::StatusOr<LlmExecutorSettings> LlmExecutorSettings::CreateDefault(
         absl::StrCat("Unsupported backend: ", backend));
   }
   settings.SetBackend(backend);
+  // Explicitly set the field value to avoid undefined behavior. Setting to 0
+  // means that the maximum number of tokens is not set can could be inferred
+  // from the model assets (but note that for the model or backend which does
+  // not support this, an error will be thrown during initialization).
+  settings.SetMaxNumTokens(0);
+  // Disable image input by default.
+  settings.SetMaxNumImages(0);
   return settings;
 }
 

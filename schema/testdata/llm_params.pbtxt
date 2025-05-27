@@ -1,0 +1,4 @@
+vocab_size: 32000
+start_token: "<bos>"
+stop_tokens: "<eos>"
+stop_tokens: "<pad>"

@@ -35,14 +35,13 @@ TEST(EngineTest, CreateEngine) {
       "litert_lm/runtime/testdata/test_lm.task";
   auto model_assets = ModelAssets::Create(task_path.string());
   ASSERT_OK(model_assets);
-  auto executor_settings =
-      LlmExecutorSettings::CreateDefault(*model_assets, Backend::CPU);
-  (*executor_settings).SetBackendConfig(CpuConfig());
-  (*executor_settings).SetMaxNumTokens(160);
-  EngineSettings llm_settings((*executor_settings));
+  auto engine_settings =
+      EngineSettings::CreateDefault(*model_assets, Backend::CPU);
+  ASSERT_OK(engine_settings);
+  engine_settings->GetMutableMainExecutorSettings().SetMaxNumTokens(160);
 
   absl::StatusOr<std::unique_ptr<Engine>> llm =
-      Engine::CreateEngine(llm_settings);
+      Engine::CreateEngine(*engine_settings);
   ABSL_CHECK_OK(llm);
 
   absl::StatusOr<std::unique_ptr<Engine::Session>> session =

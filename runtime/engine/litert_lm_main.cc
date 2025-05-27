@@ -84,22 +84,11 @@ absl::Status MainHelper(int argc, char** argv) {
   ABSL_LOG(INFO) << "Choose backend: " << backend_str;
   ASSIGN_OR_RETURN(Backend backend,
                    litert::lm::GetBackendFromString(backend_str));
-  ASSIGN_OR_RETURN(
-      LlmExecutorSettings executor_settings,
-      LlmExecutorSettings::CreateDefault(model_assets, backend));
-  // TODO(b/397975034) Set the max num tokens based on the model.
-  executor_settings.SetMaxNumTokens(160);
-
+  ASSIGN_OR_RETURN(EngineSettings engine_settings,
+                   EngineSettings::CreateDefault(model_assets, backend));
   auto session_config = litert::lm::SessionConfig::CreateDefault();
-  // TODO(b/418794726): update the session config parsing logic to remove this
-  // if statement.
-  if (backend_str == "qnn") {
-    // The NPU executor does not support the external sampler yet.
-    session_config.GetMutableSamplerParams().set_type(
-        litert::lm::proto::SamplerParameters::TYPE_UNSPECIFIED);
-  }
-  ABSL_LOG(INFO) << "executor_settings: " << executor_settings;
-  EngineSettings model_settings(executor_settings);
+  ABSL_LOG(INFO) << "executor_settings: "
+                 << engine_settings.GetMainExecutorSettings();
 
   if (absl::GetFlag(FLAGS_benchmark)) {
     litert::lm::proto::BenchmarkParams benchmark_params;
@@ -107,11 +96,11 @@ absl::Status MainHelper(int argc, char** argv) {
         absl::GetFlag(FLAGS_benchmark_prefill_tokens));
     benchmark_params.set_num_decode_tokens(
         absl::GetFlag(FLAGS_benchmark_decode_tokens));
-    model_settings.SetBenchmarkParams(benchmark_params);
+    engine_settings.GetMutableBenchmarkParams() = benchmark_params;
   }
   ABSL_LOG(INFO) << "Creating engine";
   absl::StatusOr<std::unique_ptr<litert::lm::Engine>> llm =
-      litert::lm::Engine::CreateEngine(model_settings);
+      litert::lm::Engine::CreateEngine(engine_settings);
   ABSL_CHECK_OK(llm) << "Failed to create engine";
 
   ABSL_LOG(INFO) << "Creating session";

@@ -87,29 +87,22 @@ class EngineImpl : public Engine {
     ABSL_QCHECK_OK(WaitUntilDone(Engine::kDefaultTimeout));
   }
 
-  explicit EngineImpl(const EngineSettings& engine_settings) {
+  explicit EngineImpl(const EngineSettings& engine_settings)
+      : engine_settings_(engine_settings) {
     ABSL_LOG(INFO) << "Constructing legacy EngineImpl...";
-    if (engine_settings.IsBenchmarkEnabled()) {
+    if (engine_settings_.IsBenchmarkEnabled()) {
       benchmark_info_ = std::make_optional<BenchmarkInfo>(
-          engine_settings.GetBenchmarkParams().value());
+          engine_settings_.GetBenchmarkParams().value());
       ABSL_CHECK_OK(
           benchmark_info_->TimeInitPhaseStart("Executor initialization"));
     }
     auto model_path =
-        engine_settings.GetMainExecutorSettings().GetModelAssets().GetPath();
+        engine_settings_.GetMainExecutorSettings().GetModelAssets().GetPath();
     ABSL_CHECK_OK(model_path);
     auto model_resources = oi::BuildModelResources(std::string(*model_path));
     ABSL_QCHECK_OK(model_resources);
     model_resources_ = std::move(*model_resources);
-    auto executor = BuildExecutor(model_resources_, engine_settings);
-    ABSL_QCHECK_OK(executor);
-    executor_ = std::move(*executor);
-    if (benchmark_info_.has_value()) {
-      ABSL_CHECK_OK(
-          benchmark_info_->TimeInitPhaseEnd("Executor initialization"));
-      ABSL_CHECK_OK(
-          benchmark_info_->TimeInitPhaseStart("Tokenizer initialization"));
-    }
+
     // TODO(b/397975034): factor out the tokenizer creation logic once the model
     // loading mechanism of the new file format is determined.
     auto scoped_file = ScopedFile::Open(*model_path);
@@ -123,11 +116,20 @@ class EngineImpl : public Engine {
       ABSL_CHECK_OK(
           benchmark_info_->TimeInitPhaseEnd("Tokenizer initialization"));
     }
+    // Update and load the parameters from the model file and convert the tokens
+    // to ids.
+    ABSL_CHECK_OK(engine_settings_.MaybeUpdateAndValidate(tokenizer_));
 
-    // TODO(b/397975034) Add support for stop tokens loading from the model
-    // file, most likely by creating a simplified DeriveLlmModelSettingsStruct.
-    AddStopTokenIds("<eos>");
-    AddStopTokenIds("<end_of_turn>");
+    auto executor = BuildExecutor(model_resources_, engine_settings_);
+    ABSL_QCHECK_OK(executor);
+    executor_ = std::move(*executor);
+    if (benchmark_info_.has_value()) {
+      ABSL_CHECK_OK(
+          benchmark_info_->TimeInitPhaseEnd("Executor initialization"));
+      ABSL_CHECK_OK(
+          benchmark_info_->TimeInitPhaseStart("Tokenizer initialization"));
+    }
+
     RuntimeConfig runtime_config;
     oi::proto::SamplerParameters sampler_params;
     sampler_params.set_type(oi::proto::SamplerParameters::GREEDY);
@@ -151,9 +153,7 @@ class EngineImpl : public Engine {
   absl::StatusOr<std::unique_ptr<Session>> CreateSession(
       const SessionConfig& session_config) const override {
     auto config = session_config;
-    // TODO(b/418794726): Move this logics to be part of the SessionConfig
-    // class.
-    MaybeUpdateSessionConfig(config);
+    RETURN_IF_ERROR(config.MaybeUpdateAndValidate(engine_settings_));
     // For the TfLite executors, we use the built-in sampling logic instead of
     // the sampler component. Setting the type to unspecified to disable the
     // sampler component.
@@ -168,21 +168,8 @@ class EngineImpl : public Engine {
   }
 
  private:
-  void AddStopTokenIds(const std::string& stop_token) {
-    auto stop_token_ids = tokenizer_->TextToTokenIds(stop_token);
-    stop_token_ids_.push_back((*stop_token_ids));
-  }
-
-  // Updates the session config with the default values from the engine. Note
-  // that the values in the session config will take priority over the values
-  // from the model file. Only when the value is not set in the session config
-  // will it be updated with the default value from the engine.
-  void MaybeUpdateSessionConfig(SessionConfig& session_config) const {
-    if (session_config.GetStopTokenIds().empty()) {
-      session_config.SetStopTokenIds(stop_token_ids_);
-    }
-  }
-
+  // Stored engine settings.
+  EngineSettings engine_settings_;
   // Shared executor for all sessions.
   std::shared_ptr<LlmExecutor> executor_;
   // Shared tokenizer for all sessions.

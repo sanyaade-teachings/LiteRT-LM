@@ -44,6 +44,7 @@ cc_proto_library(
 proto_library(
     name = "llm_metadata_proto",
     srcs = ["llm_metadata.proto"],
+    deps = [":sampler_params_proto"],
 )
 
 cc_proto_library(

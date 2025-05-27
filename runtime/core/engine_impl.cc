@@ -86,40 +86,29 @@ class EngineImpl : public Engine {
     ABSL_QCHECK_OK(WaitUntilDone(Engine::kDefaultTimeout));
   }
 
-  explicit EngineImpl(const EngineSettings& engine_settings) {
-    if (engine_settings.IsBenchmarkEnabled()) {
+  explicit EngineImpl(const EngineSettings& engine_settings)
+      : engine_settings_(engine_settings) {
+    if (engine_settings_.IsBenchmarkEnabled()) {
       benchmark_info_ = std::make_optional<BenchmarkInfo>(
-          engine_settings.GetBenchmarkParams().value());
+          engine_settings_.GetBenchmarkParams().value());
       ABSL_CHECK_OK(
           benchmark_info_->TimeInitPhaseStart("Executor initialization"));
     }
-    if ((engine_settings.GetMainExecutorSettings().GetBackend() ==
+    if ((engine_settings_.GetMainExecutorSettings().GetBackend() ==
          Backend::CPU) ||
-        (engine_settings.GetMainExecutorSettings().GetBackend() ==
+        (engine_settings_.GetMainExecutorSettings().GetBackend() ==
          Backend::GPU)) {
       const ModelAssets& model_assets =
-          engine_settings.GetMainExecutorSettings().GetModelAssets();
+          engine_settings_.GetMainExecutorSettings().GetModelAssets();
 
       auto model_resources = BuildLiteRtCompiledModelResources(model_assets);
       ABSL_CHECK_OK(model_resources);
       litert_model_resources_ = std::move(*model_resources);
-      auto executor = BuildLitertCompiledModelExecutor(
-          litert_model_resources_, engine_settings.GetMainExecutorSettings());
-
-      ABSL_QCHECK_OK(executor);
-      executor_ = std::move(*executor);
-      if (benchmark_info_.has_value()) {
-        ABSL_CHECK_OK(
-            benchmark_info_->TimeInitPhaseEnd("Executor initialization"));
-        ABSL_CHECK_OK(
-            benchmark_info_->TimeInitPhaseStart("Tokenizer initialization"));
-      }
       auto scoped_file = model_assets.GetOrCreateScopedFile();
       ABSL_CHECK_OK(scoped_file);
 
       auto file_format = GetFileFormat(/*model_path=*/"", *scoped_file);
       ABSL_CHECK_OK(file_format);
-
       // TODO(b/397975034): factor out the tokenizer creation logic once the
       // model loading mechanism of the new file format is determined.
       switch (*file_format) {
@@ -134,12 +123,27 @@ class EngineImpl : public Engine {
           break;
         }
       }
+      // Update and load the parameters from the model file and convert the
+      // tokens to ids.
+      ABSL_CHECK_OK(engine_settings_.MaybeUpdateAndValidate(tokenizer_));
+
+      auto executor = BuildLitertCompiledModelExecutor(
+          litert_model_resources_, engine_settings_.GetMainExecutorSettings());
+      ABSL_QCHECK_OK(executor);
+      executor_ = std::move(*executor);
+      if (benchmark_info_.has_value()) {
+        ABSL_CHECK_OK(
+            benchmark_info_->TimeInitPhaseEnd("Executor initialization"));
+        ABSL_CHECK_OK(
+            benchmark_info_->TimeInitPhaseStart("Tokenizer initialization"));
+      }
+
       if (benchmark_info_.has_value()) {
         ABSL_CHECK_OK(
             benchmark_info_->TimeInitPhaseEnd("Tokenizer initialization"));
       }
     } else {
-      std::string model_path(engine_settings.GetMainExecutorSettings()
+      std::string model_path(engine_settings_.GetMainExecutorSettings()
                                  .GetModelAssets()
                                  .GetPath()
                                  .value_or(""));
@@ -157,7 +161,16 @@ class EngineImpl : public Engine {
       const std::string vocab_path =
           std::filesystem::path(model_path).parent_path() /
           std::string(kVocabName);
+
       ABSL_CHECK(std::filesystem::exists(vocab_path));
+      auto tokenizer_or =
+          litert::lm::SentencePieceTokenizer::CreateFromFile(vocab_path);
+      ABSL_CHECK_OK(tokenizer_or);
+      tokenizer_ = std::move(tokenizer_or.value());
+      // Update and load the parameters from the model file and convert the
+      // tokens to ids.
+      ABSL_CHECK_OK(engine_settings_.MaybeUpdateAndValidate(tokenizer_));
+
       auto executor_or = odml::infra::LlmLiteRtNpuCompiledModelExecutor::Create(
           kAllQuantized, model_path, embedder_path, auxiliary_path,
           std::string(path.parent_path()));
@@ -169,23 +182,11 @@ class EngineImpl : public Engine {
         ABSL_CHECK_OK(
             benchmark_info_->TimeInitPhaseStart("Tokenizer initialization"));
       }
-      auto tokenizer_or =
-          litert::lm::SentencePieceTokenizer::CreateFromFile(vocab_path);
-      ABSL_CHECK_OK(tokenizer_or);
-      tokenizer_ = std::move(tokenizer_or.value());
       if (benchmark_info_.has_value()) {
         ABSL_CHECK_OK(
             benchmark_info_->TimeInitPhaseEnd("Tokenizer initialization"));
       }
     }
-
-    // TODO(b/397975034) Add support for stop tokens loading from the model
-    // file, most likely by creating a simplified
-    // DeriveLlmModelSettingsStruct.
-    AddStopTokenIds("<eos>");
-    AddStopTokenIds("<end_of_turn>");
-    AddStopTokenIds("<ctrl100>");
-    // TODO(b/412390852): Add logics to initialize the sampler.
 
     // Creating the thread pool of a single thread to execute the works.
     auto thread_pool = ThreadPool::CreateThreadPool(ThreadOptions(),
@@ -202,7 +203,7 @@ class EngineImpl : public Engine {
     SessionConfig config = session_config;
     // TODO(b/418794726): Move this logics to be part of the SessionConfig
     // class.
-    MaybeUpdateSessionConfig(config);
+    RETURN_IF_ERROR(config.MaybeUpdateAndValidate(engine_settings_));  // NOLINT
     return InitializeSession(executor_, tokenizer_, config, benchmark_info_,
                              worker_thread_pool_);
   }
@@ -211,22 +212,8 @@ class EngineImpl : public Engine {
   }
 
  private:
-  void AddStopTokenIds(const std::string& stop_token) {
-    auto stop_token_ids = tokenizer_->TextToTokenIds(stop_token);
-    stop_token_ids_.push_back((*stop_token_ids));
-  }
-
-  // Updates the session config with the default values (typically from the
-  // model file) from the engine. Note that the values in the session config
-  // will take priority over the values from the model file. Only when the value
-  // is not set in the session config will it be updated with the default value
-  // from the engine.
-  void MaybeUpdateSessionConfig(SessionConfig& session_config) const {
-    if (session_config.GetStopTokenIds().empty()) {
-      session_config.SetStopTokenIds(stop_token_ids_);
-    }
-  }
-
+  // Stored engine settings.
+  EngineSettings engine_settings_;
   // Shared executor for all sessions.
   std::shared_ptr<LlmExecutor> executor_;
   // Shared tokenizer for all sessions.

@@ -101,9 +101,16 @@ cc_library(
     srcs = ["engine_settings.cc"],
     hdrs = ["engine_settings.h"],
     deps = [
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:string_view",
+        "//runtime/components:tokenizer",
         "//runtime/executor:llm_executor_settings",
         "//runtime/proto:engine_cc_proto",
+        "//runtime/proto:llm_metadata_cc_proto",
         "//runtime/proto:sampler_params_cc_proto",
+        "//runtime/util:litert_status_util",
     ],
 )
 
@@ -113,6 +120,10 @@ cc_test(
     deps = [
         ":engine_settings",
         "@com_google_googletest//:gtest_main",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:string_view",
+        "//runtime/components:tokenizer",
         "//runtime/executor:llm_executor_settings",
         "//runtime/proto:engine_cc_proto",
         "//runtime/util:test_utils",

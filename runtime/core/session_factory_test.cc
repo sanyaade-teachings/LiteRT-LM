@@ -41,7 +41,7 @@ TEST(SessionFactoryTest, InitializeSession) {
       std::make_shared<FakeLlmExecutor>(256, dummy_tokens,
                                                       dummy_tokens);
   SessionConfig session_config = SessionConfig::CreateDefault();
-  session_config.SetStopTokenIds(stop_token_ids);
+  session_config.GetMutableStopTokenIds() = stop_token_ids;
   auto session = InitializeSession(executor, tokenizer, session_config,
                                    /*benchmark_info=*/std::nullopt,
                                    /*worker_thread_pool=*/nullptr);

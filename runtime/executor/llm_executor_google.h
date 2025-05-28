@@ -123,10 +123,6 @@ class LlmContext {
   LlmContext& operator=(LlmContext&&) noexcept = default;
 };
 
-// Function type to create a new context.
-using ContextCreationFunction = absl::StatusOr<std::unique_ptr<LlmContext>> (*)(
-    std::optional<uint32_t>, const RuntimeConfig&);
-
 // TODO(b/412847331): provide better documentation.
 class LlmExecutorGoogle : public LlmExecutorBase {
  public:
@@ -174,14 +170,12 @@ class LlmExecutorGoogle : public LlmExecutorBase {
   //
   // TODO b/405224841 - Simplify context-related APIs.
   // ------------State/context management APIs------------:
-  // This function will return a function that can be used to create an empty
-  // context. The creation of new context can then be done without the executor
-  // by simply executing the returned function.
-  virtual absl::StatusOr<ContextCreationFunction> GetNewContextCreateFunction()
-      const {
-    return absl::UnimplementedError(absl::StrCat(
-        "GetNewContextCreateFunction not implemented for backend: ",
-        ExecutorBackendName()));
+  // Creates a new context with the given configs.
+  virtual absl::StatusOr<std::unique_ptr<LlmContext>> CreateNewContext(
+      std::optional<uint32_t> lora_id, RuntimeConfig runtime_config) const {
+    return absl::UnimplementedError(
+        absl::StrCat("CreateNewContext not implemented for backend: ",
+                     ExecutorBackendName()));
   };
 
   // Performs necessary operations to clone the current llm context from the

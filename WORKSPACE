@@ -29,9 +29,9 @@ http_archive(
 # Tensorflow
 http_archive(
     name = "org_tensorflow",
-    sha256 = "f75e336c0f3fab135b231f1ef0d90f47489f6fe0482870d757e61ba3f01cbd0e",
-    strip_prefix = "tensorflow-a3e93584ec122897b03f1ec2a849d0cb9bdbcade",
-    url = "https://github.com/tensorflow/tensorflow/archive/a3e93584ec122897b03f1ec2a849d0cb9bdbcade.tar.gz",  # 2025-05-27
+    sha256 = "36e44657fbc0904d695a3194749c41df857d0ca5b6aef4c35e7c015e0125bd8a",
+    strip_prefix = "tensorflow-22e0f5532ac1a51dd4b82759de18489cd2417648",
+    url = "https://github.com/tensorflow/tensorflow/archive/22e0f5532ac1a51dd4b82759de18489cd2417648.tar.gz",  # 2025-05-28
 )
 
 # Initialize the TensorFlow repository and all dependencies.
@@ -217,9 +217,9 @@ http_archive(
 
 http_archive(
     name = "litert",
-    sha256 = "fdfc2d74b0aad17b3b8d445cee0119b3914cf86306376ddee7e96e118724b23a",
-    strip_prefix = "LiteRT-6eefc3f329a0982bf10b3abb78f674bb91c67782",
-    url = "https://github.com/google-ai-edge/LiteRT/archive/6eefc3f329a0982bf10b3abb78f674bb91c67782.tar.gz",  # 2025-05-27
+    sha256 = "d11551904ccbc386c8afde098e979fa34a9582986712846ddc6e152e2d9947bd",
+    strip_prefix = "LiteRT-61292e75c7a46032cfdd996834d3f2df8693c2c0",
+    url = "https://github.com/google-ai-edge/LiteRT/archive/61292e75c7a46032cfdd996834d3f2df8693c2c0.tar.gz",  # 2025-05-28
 )
 
 # Android rules. Need latest rules_android_ndk to use NDK 26+.

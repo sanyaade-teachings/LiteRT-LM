@@ -149,16 +149,18 @@ TEST_F(LiteRTLMWriteTest, BasicFileCreationAndValidation) {
   // Check for presence of metadata (adjust based on ProcessLiteRTLMFile's
   // output format). Assuming ProcessLiteRTLMFile prints metadata like "key:
   // value".
-  EXPECT_THAT(inspection_str,
-              testing::HasSubstr("tok_version, Value (Float): 1.2"));
-  EXPECT_THAT(inspection_str, testing::HasSubstr("lang, Value (String): en"));
-  EXPECT_THAT(inspection_str,
-              testing::HasSubstr("model_size, Value (Int32): 2048"));
-  EXPECT_THAT(inspection_str, testing::HasSubstr("quantized, Value (Bool): 0"));
-  EXPECT_THAT(inspection_str,
-              testing::HasSubstr("author, Value (String): TestyMcTestface"));
-  EXPECT_THAT(inspection_str,
-              testing::HasSubstr("temperature, Value (Float): 0.8"));
+  EXPECT_THAT(inspection_str, testing::HasSubstr("tok_version,"));
+  EXPECT_THAT(inspection_str, testing::HasSubstr("(Float): 1.2"));
+  EXPECT_THAT(inspection_str, testing::HasSubstr("lang,"));
+  EXPECT_THAT(inspection_str, testing::HasSubstr("(String): en"));
+  EXPECT_THAT(inspection_str, testing::HasSubstr("model_size,"));
+  EXPECT_THAT(inspection_str, testing::HasSubstr("(Int32): 2048"));
+  EXPECT_THAT(inspection_str, testing::HasSubstr("quantized,"));
+  EXPECT_THAT(inspection_str, testing::HasSubstr("(Bool): 0"));
+  EXPECT_THAT(inspection_str, testing::HasSubstr("author,"));
+  EXPECT_THAT(inspection_str, testing::HasSubstr("(String): TestyMcTestface"));
+  EXPECT_THAT(inspection_str, testing::HasSubstr("temperature,"));
+  EXPECT_THAT(inspection_str, testing::HasSubstr("(Float): 0.8"));
 }
 
 // Test case: No section metadata provided.

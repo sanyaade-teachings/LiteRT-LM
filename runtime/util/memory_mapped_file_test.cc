@@ -146,10 +146,15 @@ TEST(MemoryMappedFile, ModifiesDataButNotFile) {
   auto file = MemoryMappedFile::Create(path.string());
   ASSERT_OK(file);
   EXPECT_EQ((*file)->length(), 7);
+#if defined(__APPLE__)
+  // On MacOS, mmapped-data is readonly and causes SIGBUS on write.
+  CheckContents(**file, "foo bar");
+#else  // defined(__APPLE__)
   char* data = static_cast<char*>((*file)->data());
   data[0] = 'x';
 
   CheckContents(**file, "xoo bar");
+#endif  // defined(__APPLE__)
   EXPECT_EQ(ReadFile(path.string()), "foo bar");
 }
 

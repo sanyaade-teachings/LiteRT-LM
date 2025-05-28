@@ -1,3 +1,0 @@
-# LiteRT symbols to export for accelerator plugins
-# for darwin, symbols need a leading underscore
-_LiteRt*

@@ -231,7 +231,17 @@ http_archive(
 
 load("@rules_android_ndk//:rules.bzl", "android_ndk_repository")
 
-# Set ANDROID_NDK_HOME shell env var.
 android_ndk_repository(name = "androidndk")
 
-register_toolchains("@androidndk//:all")
+# Configure Android NDK only when ANDROID_NDK_HOME is set.
+# Creates current_android_ndk_env.bzl as a workaround since shell environment is available only
+# through repository rule's context.
+load("//:android_ndk_env.bzl", "check_android_ndk_env")
+
+check_android_ndk_env(name = "android_ndk_env")
+
+load("@android_ndk_env//:current_android_ndk_env.bzl", "ANDROID_NDK_HOME_IS_SET")
+
+# Use "@android_ndk_env//:all" as a dummy toolchain target as register_toolchains() does not take
+# an empty string.
+register_toolchains("@androidndk//:all" if ANDROID_NDK_HOME_IS_SET else "@android_ndk_env//:all")

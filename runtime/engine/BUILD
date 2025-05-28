@@ -65,15 +65,27 @@ cc_test(
     ],
 )
 
+exports_files(
+    ["litert_symbols_darwin.exports"],
+    visibility = ["//visibility:private"],
+)
+
 cc_binary(
     name = "litert_lm_main",
     srcs = ["litert_lm_main.cc"],
     # Export LiteRt* symbols for LiteRt accelerator shlibs.
     linkopts = select({
         "//:litert_lm_link_capi_so": [],
+        "@platforms//os:osx": ["-Wl, -exported_symbols_list, $(location :litert_symbols_darwin.exports)"],  # macOS doesn't support --export-dynamic-symbol
+        "@platforms//os:ios": ["-Wl, -exported_symbols_list, $(location :litert_symbols_darwin.exports)"],  # iOS doesn't support --export-dynamic-symbol
         "//conditions:default": ["-Wl,--export-dynamic-symbol=LiteRt*"],
     }) + select({
         "@platforms//os:android": ["-lEGL", "-lGLESv3"],
+        "//conditions:default": [],
+    }),
+    additional_linker_inputs = select({
+        "@platforms//os:osx": ["litert_symbols_darwin.exports"],
+        "@platforms//os:ios": ["litert_symbols_darwin.exports"],
         "//conditions:default": [],
     }),
     deps = [

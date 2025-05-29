@@ -46,7 +46,7 @@ cc_library(
         "//runtime/executor:llm_litert_compiled_model_executor",
         "//runtime/executor:llm_litert_npu_compiled_model_executor",
         "//runtime/framework:thread_options",
-        "//runtime/framework:threadpool_interface",
+        "//runtime/framework:threadpool",
         "//runtime/proto:sampler_params_cc_proto",
         "//runtime/util:file_format_util",
         "//runtime/util:litert_status_util",
@@ -146,8 +146,7 @@ cc_library(
         "//runtime/engine:io_types",
         "//runtime/executor:llm_executor",
         "//runtime/executor:llm_executor_settings",
-        "//runtime/framework:threadpool_interface",
-        "//runtime/framework:threadpool_pthread_impl",  # buildcleaner: keep
+        "//runtime/framework:threadpool",
         "//runtime/proto:sampler_params_cc_proto",
         "//runtime/util:convert_tensor_buffer",
         "//runtime/util:litert_status_util",
@@ -171,8 +170,7 @@ cc_test(
         "//runtime/executor:fake_llm_executor",
         "//runtime/executor:llm_executor",
         "//runtime/framework:thread_options",
-        "//runtime/framework:threadpool_interface",
-        "//runtime/framework:threadpool_pthread_impl",  # buildcleaner: keep
+        "//runtime/framework:threadpool",
         "//runtime/util:test_utils",
     ],
 )
@@ -189,7 +187,7 @@ cc_library(
         "//runtime/engine:engine_settings",
         "//runtime/engine:io_types",
         "//runtime/executor:llm_executor",
-        "//runtime/framework:threadpool_interface",
+        "//runtime/framework:threadpool",
         "//runtime/proto:sampler_params_cc_proto",
         "//runtime/util:litert_status_util",
     ],

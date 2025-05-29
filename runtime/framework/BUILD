@@ -26,29 +26,31 @@ cc_library(
     hdrs = ["thread_options.h"],
 )
 
-cc_library(
-    name = "threadpool_interface",
-    hdrs = ["threadpool.h"],
-    deps = [
-        ":thread_options",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/time",
-    ],
+config_setting(
+    name = "litert_lm_std_thread",
+    define_values = {
+        "litert_lm_std_thread": "true",
+    },
 )
 
 cc_library(
-    name = "threadpool_pthread_impl",
-    srcs = ["threadpool_pthread_impl.cc"],
-    hdrs = ["threadpool.h"],
+    name = "threadpool",
+    srcs = ["threadpool.cc"] + select({
+        "@platforms//os:windows": ["worker_thread_std_thread.cc"],
+        ":litert_lm_std_thread": ["worker_thread_std_thread.cc"],
+        "//conditions:default": ["worker_thread_pthread.cc"],
+    }),
+    hdrs = [
+        "threadpool.h",
+        "worker_thread.h",
+    ],
     deps = [
         ":thread_options",
-        ":threadpool_interface",
         "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/functional:any_invocable",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/status",
-        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/time",
@@ -56,14 +58,14 @@ cc_library(
 )
 
 cc_test(
-    name = "threadpool_pthread_test",
+    name = "threadpool_test",
     srcs = ["threadpool_test.cc"],
     deps = [
         ":thread_options",
-        ":threadpool_interface",
-        ":threadpool_pthread_impl",
+        ":threadpool",
         "@com_google_googletest//:gtest_main",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/time",
+        "//runtime/util:test_utils",
     ],
 )

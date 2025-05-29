@@ -49,6 +49,7 @@ jobs:
             //runtime/core:all \
             //runtime/engine:all \
             //runtime/executor:all \
+            //runtime/framework:all \
             //runtime/util:all \
             --test_output=errors
 

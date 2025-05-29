@@ -15,16 +15,23 @@
 #ifndef THIRD_PARTY_LITERT_LM_RUNTIME_FRAMEWORK_THREADPOOL_H_
 #define THIRD_PARTY_LITERT_LM_RUNTIME_FRAMEWORK_THREADPOOL_H_
 
-#include <functional>
+#include <cstddef>
+#include <deque>
 #include <memory>
 #include <string>
+#include <vector>
 
+#include "absl/base/thread_annotations.h"  // from @com_google_absl
+#include "absl/functional/any_invocable.h"  // from @com_google_absl
 #include "absl/status/status.h"  // from @com_google_absl
-#include "absl/status/statusor.h"  // from @com_google_absl
+#include "absl/synchronization/mutex.h"  // from @com_google_absl
 #include "absl/time/time.h"  // from @com_google_absl
 #include "runtime/framework/thread_options.h"
 
 namespace litert::lm {
+
+// Forward declaration of WorkerThread to avoid circular dependency.
+class WorkerThread;
 
 // A thread pool consists of a set of threads that sit around waiting
 // for callbacks to appear on a queue.  When that happens, one of the
@@ -44,28 +51,27 @@ namespace litert::lm {
 //
 class ThreadPool {
  public:
-  // Create a thread pool that creates and can use up to "num_threads"
+  // Creates a thread pool that creates and can use up to "num_threads"
   // threads.  Any standard thread options, such as stack size, should
   // be passed via "thread_options".  "name_prefix" specifies the
   // thread name prefix.
-  static absl::StatusOr<std::unique_ptr<ThreadPool>> CreateThreadPool(
-      const ThreadOptions& thread_options, const std::string& name_prefix,
-      int num_threads);
+  ThreadPool(const ThreadOptions& thread_options,
+             const std::string& name_prefix, size_t num_threads);
 
   // Waits for closures (if any) to complete. May be called without
   // having called StartWorkers().
-  virtual ~ThreadPool() = default;
+  ~ThreadPool();
 
-  // REQUIRES: StartWorkers has not been called
-  // Actually start the worker threads.
-  virtual void StartWorkers() = 0;
+  // REQUIRES: StartWorkers has not been called.
+  // Actually starts the worker threads.
+  void StartWorkers();
 
-  // REQUIRES: StartWorkers has been called
-  // Add specified callback to queue of pending callbacks.  Eventually a
+  // REQUIRES: StartWorkers has been called.
+  // Adds specified callback to queue of pending callbacks.  Eventually a
   // thread will pull this callback off the queue and execute it. Note that
   // this does not guarantee that the callback is executed in the order it was
   // scheduled.
-  virtual void Schedule(std::function<void()> callback) = 0;
+  void Schedule(absl::AnyInvocable<void() &&> callback);
 
   // Waits until the task queue is empty. The function will return an error if
   // the timeout is reached before the task queue is empty.
@@ -73,26 +79,41 @@ class ThreadPool {
   // queue, and does not guarantee that all scheduled callbacks have finished
   // executing. This is helpful for the caller to get a sense about the status
   // of the pool, but should not be used for synchronization.
-  virtual absl::Status WaitUntilIdle(absl::Duration timeout) = 0;
+  absl::Status WaitUntilIdle(absl::Duration timeout);
 
   // Waits until all the scheduled callbacks are executed and finished. The
   // function will return an error if the timeout is reached before all the
   // callbacks are finished.
-  virtual absl::Status WaitUntilDone(absl::Duration timeout) = 0;
+  absl::Status WaitUntilDone(absl::Duration timeout);
 
   // Provided for debugging and testing only.
   // The number of threads in the pool.
-  virtual int num_threads() const = 0;
+  size_t num_threads() const { return num_threads_; }
 
   // Standard thread options.  Use this accessor to get them.
-  virtual const ThreadOptions& thread_options() const = 0;
+  const ThreadOptions& thread_options() const { return thread_options_; }
 
  private:
-  // The number of threads in the pool.
-  int num_threads_;
+  friend class WorkerThread;
 
   // Thread options.
-  ThreadOptions thread_options_;
+  const ThreadOptions thread_options_;
+  const std::string name_prefix_;
+  // The number of threads in the pool.
+  const size_t num_threads_;
+
+  // The main function of the worker thread.
+  void RunWorker();
+
+  absl::Mutex mutex_;
+  std::vector<std::unique_ptr<WorkerThread>> threads_ ABSL_GUARDED_BY(mutex_);
+  // Whether the pool is stopped.
+  bool stopped_ ABSL_GUARDED_BY(mutex_) = false;
+  // The tasks are stored in a queue using the Schedule() method and will be
+  // executed by the threads.
+  std::deque<absl::AnyInvocable<void() &&>> tasks_ ABSL_GUARDED_BY(mutex_);
+  // Count the number of active tasks that are being executed by the threads.
+  int num_active_tasks_ ABSL_GUARDED_BY(mutex_) = 0;
 };
 
 }  // namespace litert::lm

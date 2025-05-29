@@ -264,12 +264,8 @@ RunStats CreateAndRun(const std::string& prompt) {
   std::shared_ptr<LlmLiteRtNpuCompiledModelExecutor> executor_shared =
       std::move(executor);
 
-  auto worker_thread_pool_or =
-      ThreadPool::CreateThreadPool(ThreadOptions(),
-                                   /*name_prefix=*/"engine",
-                                   /*num_threads=*/1);
-  std::shared_ptr<ThreadPool> worker_thread_pool =
-      std::move(*worker_thread_pool_or);
+  auto worker_thread_pool = std::make_shared<ThreadPool>(
+      ThreadOptions(), /*name_prefix=*/"engine", /*num_threads=*/1);
   worker_thread_pool->StartWorkers();
 
   // Create the session.

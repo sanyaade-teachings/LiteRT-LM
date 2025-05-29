@@ -189,11 +189,8 @@ class EngineImpl : public Engine {
     }
 
     // Creating the thread pool of a single thread to execute the works.
-    auto thread_pool = ThreadPool::CreateThreadPool(ThreadOptions(),
-                                                    /*name_prefix=*/"engine",
-                                                    /*num_threads=*/1);
-    ABSL_CHECK_OK(thread_pool);
-    worker_thread_pool_ = std::move(*thread_pool);
+    worker_thread_pool_ = std::make_shared<ThreadPool>(
+        ThreadOptions(), /*name_prefix=*/"engine", /*num_threads=*/1);
     worker_thread_pool_->StartWorkers();
   }
 

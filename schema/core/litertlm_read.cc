@@ -13,11 +13,11 @@
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/strings/str_format.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
+#include "runtime/util/status_macros.h"  //NOLINT
 #include "schema/core/litertlm_header_schema_generated.h"
 #include "schema/core/litertlm_utils.h"
 #include "sentencepiece_processor.h"  // from @sentencepiece
 #include "tensorflow/lite/model_builder.h"  // from @org_tensorflow
-#include "runtime/util/status_macros.h" //NOLINT
 
 namespace litert {
 namespace litertlm {
@@ -236,6 +236,19 @@ absl::Status ReadSectionIntoSPTokenizer(
   return sp_proc->LoadFromSerializedProto(buffer_view);
 }
 
+absl::Status ReadSectionIntoBinaryData(std::ifstream& input_stream,
+                                       uint64_t begin_offset,
+                                       uint64_t end_offset, std::string* data) {
+  size_t size = end_offset - begin_offset;
+  data->resize(size);
+  input_stream.read(data->data(), size);
+  if (!input_stream) {
+    return absl::InternalError(
+        absl::StrFormat("Could not read %d bytes from stream.", size));
+  }
+  return absl::OkStatus();
+}
+
 absl::Status ReadTFLiteFromSection(
     const std::string& litertlm_path, int section_idx,
     std::unique_ptr<tflite::FlatBufferModel>* tflite_model) {
@@ -258,6 +271,13 @@ absl::Status ReadSPTokenizerFromSection(
   return ReadValueTFromSection<AnySectionDataType_SP_Tokenizer,
                                sentencepiece::SentencePieceProcessor>(
       litertlm_path, section_idx, sp_proc, ReadSectionIntoSPTokenizer);
+}
+
+absl::Status ReadBinaryDataFromSection(const std::string& litertlm_path,
+                                       int section_idx, std::string* data) {
+  return ReadValueTFromSection<AnySectionDataType_GenericBinaryData,
+                               std::string>(litertlm_path, section_idx, data,
+                                            ReadSectionIntoBinaryData);
 }
 
 template <AnySectionDataType SectionT, typename T>
@@ -313,6 +333,14 @@ absl::Status ReadAnySPTokenizer(
   return ReadAnyT<AnySectionDataType_SP_Tokenizer,
                   sentencepiece::SentencePieceProcessor>(
       litertlm_path, sp_proc, ReadSPTokenizerFromSection);
+}
+
+// Read any binary data from the file (convenience function if the caller knows
+// that only 1 binary data block exists in the LiteRT-LM file).
+absl::Status ReadAnyBinaryData(const std::string& litertlm_path,
+                               std::string* data) {
+  return ReadAnyT<AnySectionDataType_GenericBinaryData, std::string>(
+      litertlm_path, data, ReadBinaryDataFromSection);
 }
 
 }  // namespace schema

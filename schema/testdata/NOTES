@@ -12,6 +12,7 @@ blaze run -c opt //third_party/odml/litert_lm/schema:litertlm_export_main -- \
  --tokenizer_file=$PWD/testdata//gemma3_tokenizer.spiece \
  --tflite_file=$PWD/testdata/attention.tflite \
  --llm_metadata=$PWD/testdata/llm_metadata.pb \
+ --binary_data=$PWD/testdata/data.bin \
  --output_path=$PWD/testdata/test_tok_tfl_llm.litertlm \
- --section_metadata="tokenizer:vocab_size=10000,algorithm=bpe;tflite:quantized=true,model_size=1234567;llm_metadata:model=gemma3"
+ --section_metadata="tokenizer:vocab_size=10000,algorithm=bpe;tflite:quantized=true,model_size=1234567;llm_metadata:model=gemma3;binary_data:type=abc"
 

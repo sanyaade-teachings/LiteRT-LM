@@ -91,6 +91,17 @@ TEST(LiteRTLMReadTest, TFLiteRead) {
   ASSERT_TRUE(result.ok());
 }
 
+TEST(LiteRTLMReadTest, TFLiteReadBinaryData) {
+  const std::string input_filename =
+      std::filesystem::path(::testing::SrcDir()) /
+      "litert_lm/schema/testdata/test_tok_tfl_llm.litertlm";
+
+  std::string data;
+  absl::Status result = ReadBinaryDataFromSection(input_filename, 3, &data);
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(data, "Dummy Binary Data Content");
+}
+
 TEST(LiteRTLMReadTest, TFLiteReadAny) {
   const std::string input_filename =
       std::filesystem::path(::testing::SrcDir()) /

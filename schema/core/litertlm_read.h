@@ -152,6 +152,16 @@ absl::Status ReadSPTokenizerFromSection(
 absl::Status ReadAnySPTokenizer(const std::string& litertlm_path,
                                 sentencepiece::SentencePieceProcessor* sp_proc);
 
+// Read binary data from the specified section in the LiteRT-LM file.
+// Returns InvalidArgumentError if binary data is not found in that section.
+absl::Status ReadBinaryDataFromSection(const std::string& litertlm_path,
+                                       int section_idx, std::string* data);
+
+// Read any binary data from the file (convenience function if the caller knows
+// that only 1 binary data block exists in the LiteRT-LM file).
+absl::Status ReadAnyBinaryData(const std::string& litertlm_path,
+                               std::string* data);
+
 }  // end namespace schema
 }  // end namespace litertlm
 }  // end namespace litert

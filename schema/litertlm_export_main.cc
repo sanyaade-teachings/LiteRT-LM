@@ -56,6 +56,9 @@ ABSL_FLAG(
     std::string, llm_metadata, "",
     "The path to the file containing the LlmMetadata proto (binary format).");
 
+ABSL_FLAG(std::string, binary_data, "",
+          "The path to a file containing binary data.");
+
 ABSL_FLAG(std::string, llm_metadata_text, "",
           "The path to the file containing the LlmMetadata text proto.");
 
@@ -74,6 +77,7 @@ ABSL_FLAG(std::string, section_metadata, "",
 namespace {
 
 using ::litert::litertlm::schema::AnySectionDataType;
+using ::litert::litertlm::schema::AnySectionDataType_GenericBinaryData;
 using ::litert::litertlm::schema::AnySectionDataType_LlmMetadataProto;
 using ::litert::litertlm::schema::AnySectionDataType_SP_Tokenizer;
 using ::litert::litertlm::schema::AnySectionDataType_TFLiteModel;
@@ -137,6 +141,7 @@ absl::Status MainHelper(int argc, char** argv) {
   std::string llm_metadata_file = absl::GetFlag(FLAGS_llm_metadata);
   std::string llm_metadata_text_file = absl::GetFlag(FLAGS_llm_metadata_text);
   std::string section_metadata_str = absl::GetFlag(FLAGS_section_metadata);
+  std::string binary_data = absl::GetFlag(FLAGS_binary_data);
 
   ABSL_LOG(INFO) << "tokenizer file is " << tokenizer_file << "\n";
   ABSL_LOG(INFO) << "tflite file is " << tflite_file << "\n";
@@ -145,6 +150,7 @@ absl::Status MainHelper(int argc, char** argv) {
   ABSL_LOG(INFO) << "llm_metadata_text file is " << llm_metadata_text_file
                  << "\n";
   ABSL_LOG(INFO) << "section_metadata is " << section_metadata_str << "\n";
+  ABSL_LOG(INFO) << "binary_data file is " << binary_data << "\n";
 
   // Enforce that at least one input file flag is specified.
   if (tokenizer_file.empty() && tflite_file.empty() &&
@@ -224,6 +230,15 @@ absl::Status MainHelper(int argc, char** argv) {
             llm_metadata_proto);
     sections.push_back(std::move(pbs));
     section_types.push_back(AnySectionDataType_LlmMetadataProto);
+    section_items_list.push_back(
+        {});  // Add an empty vector, to be populated later
+  }
+
+  if (!binary_data.empty()) {
+    std::unique_ptr<SectionStreamBase> fbs =
+        std::make_unique<FileBackedSectionStream>(binary_data);
+    sections.push_back(std::move(fbs));
+    section_types.push_back(AnySectionDataType_GenericBinaryData);
     section_items_list.push_back(
         {});  // Add an empty vector, to be populated later
   }

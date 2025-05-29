@@ -31,6 +31,7 @@ namespace litert::litertlm::schema {
 constexpr char kTokenizerSectionName[] = "tokenizer";
 constexpr char kTfliteSectionName[] = "tflite";
 constexpr char kLlmMetadataSectionName[] = "llm_metadata";
+constexpr char kBinaryDataSectionName[] = "binary_data";
 
 using ::litert::lm::proto::LlmMetadata;
 
@@ -149,10 +150,12 @@ absl::Status LitertLmWrite(const std::vector<std::string>& command_args,
       section_types.push_back(AnySectionDataType_SP_Tokenizer);
       section_name_order.push_back(kTokenizerSectionName);
     } else {
-      return absl::InvalidArgumentError(
-          absl::StrCat("Unsupported file extension for: ", filename,
-                       ". Supported extensions: .tflite, .pb, .proto, .pbtext, "
-                       ".prototext, .spiece"));
+      // TODO(b/421217080) Writer should export what happened.
+      ABSL_LOG(WARNING) << "Unknown extension for: " << filename
+                        << ". Storing as binary data.";
+      sections.push_back(std::make_unique<FileBackedSectionStream>(filename));
+      section_types.push_back(AnySectionDataType_GenericBinaryData);
+      section_name_order.push_back(kBinaryDataSectionName);
     }
   }
 

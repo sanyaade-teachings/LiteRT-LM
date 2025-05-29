@@ -89,11 +89,13 @@ TEST_F(LiteRTLMWriteTest, BasicFileCreationAndValidation) {
   const std::string tflite_model_path = temp_dir_path_ + "/model.tflite";
   const std::string llm_metadata_path = temp_dir_path_ + "/llm_metadata.pbtext";
   const std::string output_litertlm_path = temp_dir_path_ + "/output.litertlm";
+  const std::string binary_data_path = temp_dir_path_ + "/data.bin";
 
   // 2. Create dummy input files.
   CreateDummyFile(tokenizer_path, "Dummy SentencePiece Model Content");
   CreateDummyFile(tflite_model_path,
                   "Dummy TFLite Model Content. Not a real model.");
+  CreateDummyFile(binary_data_path, "Dummy Binary Data Content");
 
   litert::lm::proto::LlmMetadata metadata;
   const std::string start_token = "<start>";
@@ -112,11 +114,12 @@ TEST_F(LiteRTLMWriteTest, BasicFileCreationAndValidation) {
 
   // 3. Prepare arguments for LitertLmWrite.
   const std::vector<std::string> command_args = {
-      tokenizer_path, tflite_model_path, llm_metadata_path};
+      tokenizer_path, tflite_model_path, llm_metadata_path, binary_data_path};
   const std::string section_metadata_str =
       "tokenizer:tok_version=1.2,lang=en;"
       "tflite:model_size=2048,quantized=false;"
-      "llm_metadata:author=TestyMcTestface,temperature=0.8";
+      "llm_metadata:author=TestyMcTestface,temperature=0.8;"
+      "binary_data:type=abc";
 
   // 4. Call LitertLmWrite.
   const absl::Status result =
@@ -146,6 +149,8 @@ TEST_F(LiteRTLMWriteTest, BasicFileCreationAndValidation) {
               testing::HasSubstr("AnySectionDataType_TFLiteModel"));
   EXPECT_THAT(inspection_str,
               testing::HasSubstr("AnySectionDataType_LlmMetadataProto"));
+  EXPECT_THAT(inspection_str,
+              testing::HasSubstr("AnySectionDataType_GenericBinaryData"));
 
   // Check for presence of metadata (adjust based on ProcessLiteRTLMFile's
   // output format). Assuming ProcessLiteRTLMFile prints metadata like "key:
@@ -224,25 +229,6 @@ TEST_F(LiteRTLMWriteTest, MismatchedMetadataOrderTest) {
                                  "Found in metadata: 'tflite'"));
   ASSERT_FALSE(std::filesystem::exists(output_litertlm_path))
       << "Output file should not be created on failure.";
-}
-
-// Test case: Unsupported file extension.
-TEST_F(LiteRTLMWriteTest, InvalidFileExtensionTest) {
-  const std::string invalid_file_path = temp_dir_path_ + "/document.txt";
-  const std::string output_litertlm_path =
-      temp_dir_path_ + "/output_invalid_ext.litertlm";
-  CreateDummyFile(invalid_file_path, "This is just a text file.");
-
-  const std::vector<std::string> command_args = {invalid_file_path};
-  const std::string section_metadata_str =
-      "";  // No metadata needed for this failure.
-
-  const absl::Status result =
-      LitertLmWrite(command_args, section_metadata_str, output_litertlm_path);
-  ASSERT_FALSE(result.ok());
-  EXPECT_THAT(result.message(),
-              testing::HasSubstr("Unsupported file extension for:"));
-  EXPECT_THAT(result.message(), testing::HasSubstr("document.txt"));
 }
 
 // Test case: No input files provided.

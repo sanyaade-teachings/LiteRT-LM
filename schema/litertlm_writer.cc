@@ -13,30 +13,20 @@
 //   --section_metadata="tokenizer:key1=value1,key2=value2;\
 //     tflite:key3=123,key4=true;llm_metadata:key5=abc;tflite:z=9.8"
 
-#include <cstddef>
 #include <cstdint>
 #include <fstream>
 #include <ios>
 #include <iostream>
-#include <iterator>
-#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/init_google.h"
 #include "absl/flags/flag.h"  // from @com_google_absl
-#include "absl/log/absl_check.h"  // from @com_google_absl
 #include "absl/log/absl_log.h"  // from @com_google_absl
 #include "absl/status/status.h"  // from @com_google_absl
-#include "absl/strings/ascii.h"  // from @com_google_absl
-#include "absl/strings/numbers.h"  // from @com_google_absl
-#include "absl/strings/str_cat.h"  // from @com_google_absl
-#include "absl/strings/str_split.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
-#include "third_party/flatbuffers/include/flatbuffers/flatbuffer_builder.h"
 #include "runtime/proto/llm_metadata.pb.h"
 #include "schema/litertlm_writer_utils.h"
-#include "google/protobuf/text_format.h"  // from @com_google_protobuf
 
 ABSL_FLAG(std::string, output_path, "",
           "The path for the output LiteRT-LM file.");

@@ -71,7 +71,7 @@ cc_binary(
     linkopts = select({
         "//:litert_lm_link_capi_so": [],
         # Export LiteRt* symbols for LiteRt accelerator shlibs.
-        "@platforms//os:osx": ["-Wl,-exported_symbol,_LiteRt*"],
+        "@platforms//os:macos": ["-Wl,-exported_symbol,_LiteRt*"],
         "@platforms//os:ios": ["-Wl,-exported_symbol,_LiteRt*"],
         "//conditions:default": ["-Wl,--export-dynamic-symbol=LiteRt*"],
     }) + select({

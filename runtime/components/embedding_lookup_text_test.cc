@@ -114,17 +114,25 @@ TEST_F(EmbeddingLookupTextTest, LookupDecodeVectorBadOutputVector) {
               "The text embedding lookup output vector must be of size")));
 }
 
-TEST_F(EmbeddingLookupTextTest, LookupDecodeVectorBadToken) {
+TEST_F(EmbeddingLookupTextTest, LookupDecodeVectorNegativeToken) {
   std::unique_ptr<EmbeddingLookupText> embedding = GetEmbeddingLookupText();
   ASSERT_NE(embedding, nullptr);
 
   std::vector<float> output_vector(4 * 32);
 
   int32_t token = -1;
-  ASSERT_THAT(embedding->LookupDecode(token, output_vector),
-              testing::status::StatusIs(
-                  absl::StatusCode::kInvalidArgument,
-                  testing::HasSubstr("The token must be non-negative")));
+  ASSERT_OK(embedding->LookupDecode(token, output_vector));
+
+  size_t offset = 0;
+  // Dimensions 0 and 1 both have size 1.
+  for (int idx2 = 0; idx2 < 4; ++idx2) {
+    for (int idx3 = 0; idx3 < 32; ++idx3) {
+      // Dimensions 0 and 1 both have size 1 so offset and expected value can
+      // ignore them.
+      float expected_value = 10000.0 * 0 + 100.0 * idx2 + idx3;
+      ASSERT_NEAR(output_vector[offset++], expected_value, 1e-5);
+    }
+  }
 }
 
 TEST_F(EmbeddingLookupTextTest, LookupDecode) {
@@ -233,17 +241,25 @@ TEST_F(EmbeddingLookupTextTest, LookupPrefillVectorBadOutputVector) {
               "The text embedding lookup output vector must be of size")));
 }
 
-TEST_F(EmbeddingLookupTextTest, LookupPrefillVectorBadToken) {
+TEST_F(EmbeddingLookupTextTest, LookupPrefillVectorNegativeToken) {
   std::unique_ptr<EmbeddingLookupText> embedding = GetEmbeddingLookupText();
   ASSERT_NE(embedding, nullptr);
 
   std::vector<float> output_vector(4 * 32);
 
   int32_t token = -1;
-  ASSERT_THAT(embedding->LookupPrefill(token, output_vector),
-              testing::status::StatusIs(
-                  absl::StatusCode::kInvalidArgument,
-                  testing::HasSubstr("The token must be non-negative")));
+  ASSERT_OK(embedding->LookupPrefill(token, output_vector));
+
+  size_t offset = 0;
+  // Dimensions 0 and 1 both have size 1.
+  for (int idx2 = 0; idx2 < 4; ++idx2) {
+    for (int idx3 = 0; idx3 < 32; ++idx3) {
+      // Dimensions 0 and 1 both have size 1 so offset and expected value can
+      // ignore them.
+      float expected_value = 10000.0 * 0 + 100.0 * idx2 + idx3;
+      ASSERT_NEAR(output_vector[offset++], expected_value, 1e-5);
+    }
+  }
 }
 
 TEST_F(EmbeddingLookupTextTest, GetFloatsPerToken) {
@@ -505,8 +521,9 @@ TEST_F(EmbeddingLookupTextTest, LookupPrefillNegativeToken) {
       for (int idx3 = 0; idx3 < dimensions[3]; ++idx3) {
         float expected_value;
         if (token < 0) {
-          // If the token is negative, the expected value is the filler value.
-          expected_value = filler_value;
+          // If the token is negative, the expected value is the value of token
+          // 0.
+          expected_value = 10000.0 * 0 + 100.0 * idx2 + idx3;
         } else {
           // Since dimension 1 is of size 1, the offset and expected value can
           // ignore it.

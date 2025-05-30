@@ -35,8 +35,8 @@ absl::Status EmbeddingLookupText::LookupInternal(int token,
   }
 
   if (token < 0) {
-    return absl::InvalidArgumentError(
-        "The token must be non-negative for text embedding lookup.");
+    memcpy(buffer.data(), default_embedding_vector_.data(), buffer.size());
+    return absl::OkStatus();
   }
 
   // The input tensor size was verified when the model was loaded.
@@ -203,13 +203,9 @@ absl::Status EmbeddingLookupText::LookupPrefill(absl::Span<const int> tokens,
 
   prefill_output_ptr += byte_offset;
   for (int token : tokens) {
-    // If the token is negative, it is a vision or audio token. We don't need to
-    // handle those here.
-    if (token >= 0) {
       absl::Span<uint8_t> output_buffer(
           reinterpret_cast<uint8_t*>(prefill_output_ptr), bytes_per_token);
       RETURN_IF_ERROR(LookupInternal(token, output_buffer));
-    }
     prefill_output_ptr += bytes_per_token;
   }
 

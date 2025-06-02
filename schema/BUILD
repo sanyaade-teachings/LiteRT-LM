@@ -118,11 +118,11 @@ cc_test(
         "//schema/core:litertlm_print",
         "@com_google_protobuf//:protobuf",
         "@sentencepiece//:sentencepiece_processor",
-        "@org_tensorflow//tensorflow/lite:framework",
-        "@org_tensorflow//tensorflow/lite:framework_stable",
-        "@org_tensorflow//tensorflow/lite/c:common",
-        "@org_tensorflow//tensorflow/lite/kernels:builtin_ops",
-        "@org_tensorflow//tensorflow/lite/schema:schema_fbs",
+        "@litert//tflite:framework",
+        "@litert//tflite:framework_stable",
+        "@litert//tflite/c:common",
+        "@litert//tflite/kernels:builtin_ops",
+        "@litert//tflite/schema:schema_fbs",
     ],
 )
 

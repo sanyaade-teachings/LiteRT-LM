@@ -69,10 +69,10 @@ cc_test(
         "//runtime/proto:llm_metadata_cc_proto",
         "//runtime/util:memory_mapped_file",
         "@sentencepiece//:sentencepiece_processor",
-        "@org_tensorflow//tensorflow/lite:framework",
-        "@org_tensorflow//tensorflow/lite:framework_stable",
-        "@org_tensorflow//tensorflow/lite/c:common",
-        "@org_tensorflow//tensorflow/lite/kernels:builtin_ops",
+        "@litert//tflite:framework",
+        "@litert//tflite:framework_stable",
+        "@litert//tflite/c:common",
+        "@litert//tflite/kernels:builtin_ops",
     ],
 )
 

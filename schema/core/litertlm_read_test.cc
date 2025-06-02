@@ -12,7 +12,7 @@
 #include "runtime/util/memory_mapped_file.h"
 #include "schema/core/litertlm_header_schema_generated.h"
 #include "sentencepiece_processor.h"  // from @sentencepiece
-#include "tensorflow/lite/model_builder.h"  // from @org_tensorflow
+#include "tflite/model_builder.h"  // from @litert
 
 namespace litert {
 namespace lm {

@@ -279,9 +279,8 @@ class LlmExecutorGoogle : public LlmExecutorBase {
   // To use the lora weights, call `RestoreContext()` with the lora_id.
   // Args:
   // lora_id: The unique id to assign to the loaded LoRA model.
-  // lora_rank: The rank of the provided LoRA model. Used for validation.
   // model_assets: Contains the LoRA model to load.
-  virtual absl::Status LoadLoRA(uint32_t lora_id, int lora_rank,
+  virtual absl::Status LoadLoRA(uint32_t lora_id,
                                 const ModelAssets& model_assets) {
     return absl::UnimplementedError(absl::StrCat(
         "LoadLoRA not implemented for backend: ", ExecutorBackendName()));

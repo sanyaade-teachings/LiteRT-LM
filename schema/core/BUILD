@@ -52,6 +52,7 @@ cc_library(
         "//runtime/util:memory_mapped_file",
         "//runtime/util:scoped_file",
         "@sentencepiece//:sentencepiece_processor",
+        "@litert//tflite:framework",
     ],
 )
 

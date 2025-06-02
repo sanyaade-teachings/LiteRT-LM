@@ -13,6 +13,7 @@
 #include "runtime/util/memory_mapped_file.h"
 #include "schema/core/litertlm_header_schema_generated.h"
 #include "sentencepiece_processor.h"  // from @sentencepiece
+#include "tflite/model_builder.h"  // from @litert
 
 namespace litert {
 
@@ -114,6 +115,59 @@ absl::Status ReadHeaderFromLiteRTLM(const std::string& litertlm_path,
 absl::Status ReadHeaderFromLiteRTLM(std::istream& litertlm_stream,
                                     LitertlmHeader* header, int* major_version,
                                     int* minor_version, int* patch_version);
+
+
+// Read a TF Lite from the specified section in the LiteRT-LM file.
+// Returns InvalidArgumentError if no TFLite is found in that section.
+// TFLite libraries expect a caller-provided buffer, so the convention
+// here is: we read the TF Lite at the given section from the LiteRT-LM
+// file. Upon return, the caller provided mapped_file will be the holder
+// of the mmapped buffer (assigned to the passed object via move operations).
+absl::Status ReadTFLiteFromSection(
+    const std::string& litertlm_path, int section_idx,
+    std::unique_ptr<tflite::FlatBufferModel>* tflite_model,
+    std::unique_ptr<MemoryMappedFile>* mapped_file);
+
+// Read any TF Lite from the file (convenience function if the caller knows
+// that only 1 TF Lite file exists in the LiteRT-LM file). This function will
+// not return an error if there are more than 1 TF Lite sections.
+// See above for semantics of the mapped_file.
+absl::Status ReadAnyTFLite(
+    const std::string& litertlm_path,
+    std::unique_ptr<tflite::FlatBufferModel>* tflite_model,
+    std::unique_ptr<MemoryMappedFile>* mapped_file);
+
+// Read a LlmMetadata from the specified section in the LiteRT-LM file.
+// Returns InvalidArgumentError if no LlmMetadata are found in that section.
+absl::Status ReadLlmMetadataFromSection(const std::string& litertlm_path,
+                                        int section_idx,
+                                        LlmMetadata* llm_metadata);
+
+// Read any LlmMetadata from the file (convenience function if the caller
+// knows that only 1 LlmMetadata proto exists in the LiteRT-LM file).
+absl::Status ReadAnyLlmMetadata(const std::string& litertlm_path,
+                                LlmMetadata* llm_metadata);
+
+// Read a SP Tokenizer from the specified section in the LiteRT-LM file.
+// Returns InvalidArgumentError if no SP Tokenizer is found in that section.
+absl::Status ReadSPTokenizerFromSection(
+    const std::string& litertlm_path, int section_idx,
+    sentencepiece::SentencePieceProcessor* sp_proc);
+
+// Read any SP Tokenizer from the file (convenience function if the caller knows
+// that only 1 SP Tokenizer exists in the LiteRT-LM file).
+absl::Status ReadAnySPTokenizer(const std::string& litertlm_path,
+                                sentencepiece::SentencePieceProcessor* sp_proc);
+
+// Read binary data from the specified section in the LiteRT-LM file.
+// Returns InvalidArgumentError if binary data is not found in that section.
+absl::Status ReadBinaryDataFromSection(const std::string& litertlm_path,
+                                       int section_idx, std::string* data);
+
+// Read any binary data from the file (convenience function if the caller knows
+// that only 1 binary data block exists in the LiteRT-LM file).
+absl::Status ReadAnyBinaryData(const std::string& litertlm_path,
+                               std::string* data);
 }  // end namespace schema
 }  // end namespace lm
 }  // end namespace litert

@@ -672,7 +672,7 @@ LlmLiteRtCompiledModelExecutor::Create(
   ASSIGN_OR_RETURN(auto prefill_runner_set,
                    GetPrefillRunnerSetFromModel(
                        *litert_model, kPrefillSignatureRunner,
-                       /*input_tokens_name=*/signatures.input_tokens));
+                       /*input_positions_name=*/signatures.input_positions));
   RET_CHECK(!prefill_runner_set.empty()) << "No prefill runner available.";
 
   return absl::WrapUnique(new LlmLiteRtCompiledModelExecutor(

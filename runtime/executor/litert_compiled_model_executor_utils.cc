@@ -91,6 +91,21 @@ constexpr AttentionMaskDataType kPyTorchCpuOnly_InputAttnMaskDataType =
 // Output: [batch_size, max_seq_len, vocab_size]
 constexpr char kPyTorchCpuOnly_OutputLogits[] = "logits";
 
+// Gemma 3n with external embeddings model signature.
+// Input: [max_seq_len]
+constexpr char kExternalEmbeddingsModel_InputPositions[] = "input_pos";
+// Input: [batch_size, 1, max_seq_len, context_size]
+constexpr char kExternalEmbeddingsModel_InputAttnMask[] = "mask";
+constexpr AttentionMaskDataType kExternalEmbeddingsModel_InputAttnMaskDataType =
+    AttentionMaskDataType::FLOAT;
+// Input: [batch_size, max_seq_len, embedding_dim]
+constexpr char kExternalEmbeddingsModel_Embeddings[] = "embeddings";
+// Input: [batch_size, max_seq_len, num_layers,embedding_dim]
+constexpr char kExternalEmbeddingsModel_PerLayerEmbeddings[] =
+    "per_layer_embeddings";
+// Output: [batch_size, max_seq_len, vocab_size]
+constexpr char kExternalEmbeddingsModel_OutputLogits[] = "logits";
+
 // Gemini V1.5 model signatures.
 // Input: [batch_size, max_seq_len]
 constexpr char kGemini_InputTokens[] = "token_ids";
@@ -138,6 +153,21 @@ bool IsGemini(const std::vector<absl::string_view>& input_names,
          Contains(input_names, kGemini_InputPositions) &&
          Contains(input_names, kGemini_InputAttnMask) &&
          Contains(output_names, kGemini_OutputLogits);
+}
+
+bool IsExternalEmbeddingModel(
+    const std::vector<absl::string_view>& input_names,
+    const std::vector<absl::string_view>& output_names) {
+  // When checking if the model has external embeddings, we need to double check
+  // that the signature does not include any input tokens.
+  return !Contains(input_names, kPyTorch_InputTokens) &&
+         !Contains(input_names, kGemma2JAX_InputTokens) &&
+         !Contains(input_names, kPyTorch_InputTokens) &&
+         Contains(input_names, kExternalEmbeddingsModel_InputPositions) &&
+         Contains(input_names, kExternalEmbeddingsModel_InputAttnMask) &&
+         Contains(input_names, kExternalEmbeddingsModel_Embeddings) &&
+         Contains(input_names, kExternalEmbeddingsModel_PerLayerEmbeddings) &&
+         Contains(output_names, kExternalEmbeddingsModel_OutputLogits);
 }
 
 absl::StatusOr<std::unique_ptr<ModelResources>>
@@ -218,12 +248,25 @@ absl::StatusOr<ModelSignatures> GetModelSignaturesFromInputOutputNames(
     };
   }
 
+  if (IsExternalEmbeddingModel(input_names, output_names)) {
+    return ModelSignatures{
+        .input_positions = kExternalEmbeddingsModel_InputPositions,
+        .input_attn_mask = kExternalEmbeddingsModel_InputAttnMask,
+        .input_attn_mask_data_type =
+            kExternalEmbeddingsModel_InputAttnMaskDataType,
+        .input_embeddings = kExternalEmbeddingsModel_Embeddings,
+        .input_per_layer_embeddings =
+            kExternalEmbeddingsModel_PerLayerEmbeddings,
+        .output_logits = kExternalEmbeddingsModel_OutputLogits,
+    };
+  }
+
   return absl::FailedPreconditionError("Unsupported model signature.");
 }
 
 absl::StatusOr<SortedPrefillSignatureMap> GetPrefillRunnerSetFromModel(
     ::litert::Model& model, const std::string& signature_name_base,
-    const std::string& input_tokens_name) {
+    const std::string& input_positions_name) {
   SortedPrefillSignatureMap prefill_runner_set;
   auto signatures = model.GetSignatures();
   for (auto& signature : *signatures) {
@@ -233,11 +276,11 @@ absl::StatusOr<SortedPrefillSignatureMap> GetPrefillRunnerSetFromModel(
       if (!subgraph) {
         return absl::InternalError(subgraph.Error().Message());
       }
-      auto input_tokens_tensor = subgraph->Input(input_tokens_name);
-      if (!input_tokens_tensor) {
-        return absl::InternalError(input_tokens_tensor.Error().Message());
+      auto input_positions_tensor = subgraph->Input(input_positions_name);
+      if (!input_positions_tensor) {
+        return absl::InternalError(input_positions_tensor.Error().Message());
       }
-      auto ranked_tensor_type = input_tokens_tensor->RankedTensorType();
+      auto ranked_tensor_type = input_positions_tensor->RankedTensorType();
       if (!ranked_tensor_type) {
         return absl::InternalError(ranked_tensor_type.Error().Message());
       }
@@ -261,8 +304,7 @@ absl::StatusOr<SortedPrefillSignatureMap> GetPrefillRunnerSetFromModel(
 
 absl::StatusOr<std::vector<std::pair<std::string, int>>>
 GetOptimizedPrefillWorkGroups(
-    const SortedPrefillSignatureMap& prefill_runner_set,
-    int input_length) {
+    const SortedPrefillSignatureMap& prefill_runner_set, int input_length) {
   std::vector<std::pair<std::string, int>> work_groups;
   // Current strategy:
   // 1. Use the prefill runner with the largest sequence length, until the

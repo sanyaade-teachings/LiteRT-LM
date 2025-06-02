@@ -56,6 +56,14 @@ struct ModelSignatures {
   std::optional<std::string> input_attn_mask;
   // The data type of the attention mask.
   std::optional<AttentionMaskDataType> input_attn_mask_data_type;
+  // Input embeddings signature name. For both prefill and decode. When this
+  // is provided, the embedding model will be used to look up the embeddings and
+  // the input_tokens value must not be set.
+  std::optional<std::string> input_embeddings;
+  // Input per layer embeddings signature name. For both prefill and decode.
+  // When this is provided, the per layer embedding model will be used to look
+  // up the per layer embeddings.
+  std::optional<std::string> input_per_layer_embeddings;
   // Output logits signature name. Necessary for decode.
   std::string output_logits;
 };
@@ -77,7 +85,7 @@ absl::StatusOr<ModelSignatures> GetModelSignaturesFromInputOutputNames(
 // for Gemma2 JAX and "tokens" for Gemma2 PyTorch.
 absl::StatusOr<SortedPrefillSignatureMap> GetPrefillRunnerSetFromModel(
     ::litert::Model& model, const std::string& signature_name_base,
-    const std::string& input_tokens_name);
+    const std::string& input_positions_name);
 
 // Get a list of prefill work groups, each of which contains the signature
 // runner and prefill length for a single prefill call.

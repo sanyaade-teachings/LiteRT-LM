@@ -118,6 +118,7 @@ cc_library(
         "@litert//litert/cc:litert_expected",
         "@litert//litert/cc:litert_macros",
         "@litert//litert/cc:litert_model",
+        "@litert//litert/cc/options:litert_runtime_options",
         "//runtime/components:embedding_lookup_text",
         "//runtime/components:model_resources_litert_lm",
         "//runtime/components:model_resources_task",

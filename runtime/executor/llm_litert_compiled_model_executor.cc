@@ -40,6 +40,7 @@
 #include "litert/cc/options/litert_cpu_options.h"  // from @litert
 #include "litert/cc/options/litert_gpu_options.h"  // from @litert
 #include "runtime/components/embedding_lookup_text.h"
+#include "litert/cc/options/litert_runtime_options.h"  // from @litert
 #include "runtime/components/model_resources.h"
 #include "runtime/components/sampler_factory.h"
 #include "runtime/executor/litert_compiled_model_executor_utils.h"
@@ -597,25 +598,26 @@ LlmLiteRtCompiledModelExecutor::Create(
   switch (backend) {
     case Backend::GPU: {
       // TODO: b/403132820 - Add accelerator compilation options for ML_DRIFT.
-      Expected<GpuOptions> gpu_compilation_options = GpuOptions::Create();
-      gpu_compilation_options->EnableConstantTensorSharing(true);
-      gpu_compilation_options->EnableInfiniteFloatCapping(true);
-      gpu_compilation_options->EnableAllowSrcQuantizedFcConvOps(true);
-      gpu_compilation_options->SetDelegatePrecision(
+      LITERT_ASSIGN_OR_RETURN_ABSL(GpuOptions gpu_compilation_options,
+                                   GpuOptions::Create());
+      gpu_compilation_options.EnableConstantTensorSharing(true);
+      gpu_compilation_options.EnableInfiniteFloatCapping(true);
+      gpu_compilation_options.EnableAllowSrcQuantizedFcConvOps(true);
+      gpu_compilation_options.SetDelegatePrecision(
           LiteRtDelegatePrecision::kLiteRtDelegatePrecisionFp16);
-      gpu_compilation_options->SetPreferTextureWeights(true);
+      gpu_compilation_options.SetPreferTextureWeights(true);
       if (!weight_cache_path.empty()) {
-        gpu_compilation_options->SetSerializationDir(weight_cache_path.c_str());
+        gpu_compilation_options.SetSerializationDir(weight_cache_path.c_str());
         ASSIGN_OR_RETURN(auto model_path,
                          executor_settings.GetModelAssets().GetPath());
         absl::string_view model_name = Basename(model_path);
-        gpu_compilation_options->SetModelCacheKey(model_name.data());
-        gpu_compilation_options->SetSerializeProgramCache(false);
-        gpu_compilation_options->SetSerializeExternalTensors(true);
+        gpu_compilation_options.SetModelCacheKey(model_name.data());
+        gpu_compilation_options.SetSerializeProgramCache(false);
+        gpu_compilation_options.SetSerializeExternalTensors(true);
       }
-      gpu_compilation_options->EnableNoImmutableExternalTensorsMode(true);
+      gpu_compilation_options.EnableNoImmutableExternalTensorsMode(true);
       compilation_options->AddOpaqueOptions(
-          std::move(*gpu_compilation_options));
+          std::move(gpu_compilation_options));
       compilation_options->SetHardwareAccelerators(kLiteRtHwAcceleratorGpu);
       break;
     }
@@ -637,6 +639,10 @@ LlmLiteRtCompiledModelExecutor::Create(
         cpu_compilation_options->SetXNNPackWeightCachePath(
             weight_cache_path.c_str());
       }
+      LITERT_ASSIGN_OR_RETURN_ABSL(RuntimeOptions runtime_options,
+                                   RuntimeOptions::Create());
+      runtime_options.SetShloCompositeInlining(true);
+      compilation_options->AddOpaqueOptions(std::move(runtime_options));
       compilation_options->AddOpaqueOptions(
           std::move(*cpu_compilation_options));
       compilation_options->SetHardwareAccelerators(kLiteRtHwAcceleratorCpu);

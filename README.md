@@ -4,6 +4,10 @@ on-device LLM.
 
 ## How to build and run
 
+`bazel` is used as the build system. Install `bazel` via
+[Bazelisk](https://github.com/bazelbuild/bazelisk) or follow the
+[instructions](https://bazel.build/install) per platform.
+
 ### Linux
 
 `clang` is used to build LiteRT LM on linux. Build `litert_lm_main`, a CLI
@@ -14,7 +18,7 @@ bazel build //runtime/engine:litert_lm_main
 
 bazel-bin/runtime/engine/litert_lm_main \
     --backend=cpu \
-    --model_path=<model task file>
+    --model_path=<model .litertlm or .task file>
 ```
 
 ### Android
@@ -31,19 +35,18 @@ adb push bazel-bin/runtime/engine/litert_lm_main /data/local/tmp
 
 adb shell /data/local/tmp/litert_lm_main \
     --backend=cpu \
-    --model_path=<model task file>
+    --model_path=<model .litertlm or .task file>
 ```
 
-To run on GPU, `libLiteRtGpuAccelerator.so` is required. Download the maven
-package from [TBD]()
+To run on GPU, `libLiteRtGpuAccelerator.so` is required.
 
 ```
-adb push libLiteRtGpuAccelerator.so /data/local/tmp
+adb push prebuilt/android_arm64/*.so /data/local/tmp
 
 adb shell LD_LIBRARY_PATH=/data/local/tmp \
     /data/local/tmp/litert_lm_main \
     --backend=gpu \
-    --model_path=<model task file>
+    --model_path=<model .litertlm or .task file>
 ```
 
 To run on Qualcomm NPU, `libLiteRtDispatch_Qualcomm.so` in the maven package
@@ -58,5 +61,21 @@ adb push <qualcomm runtime shlibs> /data/local/tmp
 adb shell LD_LIBRARY_PATH=/data/local/tmp \
     /data/local/tmp/litert_lm_main \
     --backend=qnn \
-    --model_path=<model tflite file>
+    --model_path=<model .tflite file>
 ```
+
+### MacOS
+
+Xcode command line tools include clang. Run `xcode-select --install` if not
+installed before.
+
+```
+bazel build //runtime/engine:litert_lm_main
+
+bazel-bin/runtime/engine/litert_lm_main \
+    --backend=cpu \
+    --model_path=<model .litertlm or .task file>
+```
+
+If bazel can't figure out the right version of MacOS SDK, append
+`--macos_sdk_version=<sdk version>` in `bazel build`.

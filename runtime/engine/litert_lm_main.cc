@@ -37,8 +37,10 @@
 #include "runtime/engine/engine.h"
 #include "runtime/engine/engine_settings.h"
 #include "runtime/engine/io_types.h"
+#include "runtime/executor/executor_settings_base.h"
 #include "runtime/executor/llm_executor_settings.h"
 #include "runtime/util/status_macros.h"  // NOLINT
+#include "tflite/profiling/memory_usage_monitor.h"  // from @litert
 
 ABSL_FLAG(std::optional<std::string>, backend, "gpu",
           "Executor backend to use for LLM execution (cpu, gpu, etc.)");
@@ -56,17 +58,19 @@ ABSL_FLAG(int, benchmark_decode_tokens, 0,
           "will use this number to set the number of decode steps (regardless "
           "of the input prompt).");
 ABSL_FLAG(bool, async, false, "Run the LLM execution asynchronously.");
+ABSL_FLAG(bool, report_peak_memory_footprint, false,
+          "Report peak memory footprint.");
 
 namespace {
 
 using ::litert::lm::Backend;
-using ::litert::lm::CpuConfig;
 using ::litert::lm::EngineSettings;
-using ::litert::lm::GpuConfig;
 using ::litert::lm::InferenceObservable;
 using ::litert::lm::LlmExecutorSettings;
 using ::litert::lm::ModelAssets;
 
+// Memory check interval in milliseconds.
+constexpr int kMemoryCheckIntervalMs = 50;
 // Timeout duration for waiting until the engine is done with all the tasks.
 const absl::Duration kWaitUntilDoneTimeout = absl::Minutes(10);
 
@@ -76,6 +80,13 @@ absl::Status MainHelper(int argc, char** argv) {
   const std::string model_path = absl::GetFlag(FLAGS_model_path);
   if (model_path.empty()) {
     return absl::InvalidArgumentError("Model path is empty.");
+  }
+  std::unique_ptr<tflite::profiling::memory::MemoryUsageMonitor> mem_monitor;
+  if (absl::GetFlag(FLAGS_report_peak_memory_footprint)) {
+    mem_monitor =
+        std::make_unique<tflite::profiling::memory::MemoryUsageMonitor>(
+            kMemoryCheckIntervalMs);
+    mem_monitor->Start();
   }
   ABSL_LOG(INFO) << "Model path: " << model_path;
   ASSIGN_OR_RETURN(ModelAssets model_assets,  // NOLINT
@@ -127,6 +138,22 @@ absl::Status MainHelper(int argc, char** argv) {
   if (absl::GetFlag(FLAGS_benchmark)) {
     auto benchmark_info = (*session)->GetBenchmarkInfo();
     ABSL_LOG(INFO) << *benchmark_info;
+  }
+
+  if (absl::GetFlag(FLAGS_report_peak_memory_footprint)) {
+#if defined(_WIN32)
+    PROCESS_MEMORY_COUNTERS pmc;
+    ABSL_CHECK(
+        ::GetProcessMemoryInfo(::GetCurrentProcess(), &pmc, sizeof(pmc)));
+    float peak_mem_mb = pmc.PeakWorkingSetSize / (1024.f * 1024);
+#else
+    float peak_mem_mb = 0.0f;
+    if (mem_monitor != nullptr) {
+      mem_monitor->Stop();
+      peak_mem_mb = mem_monitor->GetPeakMemUsageInMB();
+    }
+#endif
+    ABSL_LOG(INFO) << "Peak system ram usage: " << peak_mem_mb << "MB.";
   }
   return absl::OkStatus();
 }

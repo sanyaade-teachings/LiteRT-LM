@@ -92,8 +92,10 @@ cc_binary(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings:string_view",
         "@com_google_absl//absl/time",
+        "//runtime/executor:executor_settings_base",
         "//runtime/executor:llm_executor_settings",
         "//runtime/util:litert_status_util",
+        "@litert//tflite/profiling:memory_usage_monitor",
     ] + select({
         "//conditions:default": ["//runtime/core:engine_impl"],
     }),

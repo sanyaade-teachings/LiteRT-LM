@@ -7,7 +7,7 @@ cc_library(
         "minizip/unzip.c",
         "minizip/zip.c",
     ] + select({
-        "@platforms//os:windows": ["iowin32.c"],
+        "@platforms//os:windows": ["minizip/iowin32.c"],
         "//conditions:default": [],
     }),
     hdrs = [
@@ -23,17 +23,20 @@ cc_library(
     copts = [
         "-DZLIB_MINIZIP_LIB",
         "-std=gnu17",  # Does not compile in C23; uses non-prototype function definitions.
-        "-Wno-dangling-else",
-        "-Wno-format",
-        "-Wno-incompatible-pointer-types",
-        "-Wno-incompatible-pointer-types-discards-qualifiers",
-        "-Wno-parentheses",
     ] + select({
-        "@platforms//os:android": ["-DIOAPI_NO_64"],
         "@platforms//os:windows": [
             "-D_UNICODE",
             "-DUNICODE",
         ],
+        "//conditions:default": [
+            "-Wno-dangling-else",
+            "-Wno-format",
+            "-Wno-incompatible-pointer-types",
+            "-Wno-incompatible-pointer-types-discards-qualifiers",
+            "-Wno-parentheses",
+        ],
+    }) + select({
+        "@platforms//os:android": ["-DIOAPI_NO_64"],
         "//conditions:default": [],
     }),
     deps = ["@zlib//:zlib"],

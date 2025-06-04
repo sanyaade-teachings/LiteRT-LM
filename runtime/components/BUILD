@@ -29,8 +29,14 @@ cc_library(
     deps = [
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/types:span",
-        "@litert//litert/cc:litert_tensor_buffer",
-    ],
+    ] + select({
+        "//:litert_lm_link_capi_so": [
+            "@litert//litert/cc:litert_tensor_buffer",
+        ],
+        "//conditions:default": [
+            "@litert//litert/cc/internal:litert_tensor_buffer",
+        ],
+    }),
 )
 
 cc_library(
@@ -45,15 +51,24 @@ cc_library(
         "@com_google_absl//absl/strings:string_view",
         "@com_google_absl//absl/types:span",
         "@litert//litert/c:litert_common",
-        "@litert//litert/cc:litert_compiled_model",
         "@litert//litert/cc:litert_element_type",
-        "@litert//litert/cc:litert_environment",
         "@litert//litert/cc:litert_macros",
         "@litert//litert/cc:litert_model",
-        "@litert//litert/cc:litert_options",
-        "@litert//litert/cc:litert_tensor_buffer",
         "//runtime/util:litert_status_util",
-    ],
+    ] + select({
+        "//:litert_lm_link_capi_so": [
+            "@litert//litert/cc:litert_compiled_model",
+            "@litert//litert/cc:litert_environment",
+            "@litert//litert/cc:litert_options",
+            "@litert//litert/cc:litert_tensor_buffer",
+        ],
+        "//conditions:default": [
+            "@litert//litert/cc/internal:litert_compiled_model",
+            "@litert//litert/cc/internal:litert_environment",
+            "@litert//litert/cc/internal:litert_options",
+            "@litert//litert/cc/internal:litert_tensor_buffer",
+        ],
+    }),
 )
 
 cc_library(

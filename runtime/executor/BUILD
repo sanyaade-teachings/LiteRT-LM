@@ -118,7 +118,6 @@ cc_library(
         "@litert//litert/cc:litert_expected",
         "@litert//litert/cc:litert_macros",
         "@litert//litert/cc:litert_model",
-        "@litert//litert/cc/options:litert_runtime_options",
         "//runtime/components:embedding_lookup_text",
         "//runtime/components:model_resources_litert_lm",
         "//runtime/components:model_resources_task",
@@ -135,6 +134,7 @@ cc_library(
             "@litert//litert/cc:litert_tensor_buffer",
             "@litert//litert/cc/options:litert_cpu_options",
             "@litert//litert/cc/options:litert_gpu_options",
+            "@litert//litert/cc/options:litert_runtime_options",
         ],
         "//conditions:default": [
             "@litert//litert/cc/internal:litert_compiled_model",
@@ -142,6 +142,7 @@ cc_library(
             "@litert//litert/cc/internal:litert_environment",
             "@litert//litert/cc/internal:litert_gpu_options",
             "@litert//litert/cc/internal:litert_options",
+            "@litert//litert/cc/internal:litert_runtime_options",
             "@litert//litert/cc/internal:litert_tensor_buffer",
         ],
     }),

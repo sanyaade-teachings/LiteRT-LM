@@ -356,7 +356,7 @@ build:windows --host_linkopt=/OPT:ICF
 
 # Force local execution for genrules on Windows
 build:windows --strategy=Genrule=local
-build:windows -genrule_strategy=local
+build:windows --genrule_strategy=local
 build:windows --spawn_strategy=local
 
 # Use Git Bash for genrules

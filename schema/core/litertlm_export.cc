@@ -26,7 +26,7 @@ namespace lm {
 namespace schema {
 
 constexpr int kHeaderBeginByteOffset = 32;
-constexpr int kHeaderEndLocationByteOffset = 16;
+constexpr int kHeaderEndLocationByteOffset = 24;
 constexpr int kBlockSize = 16 * 1024;
 
 absl::Status WriteHeader(
@@ -125,11 +125,11 @@ absl::Status MakeLiteRTLMFromSections(
   // ** 0. Write magic bytes and symver version. **
   output_file.write("LITERTLM", 8);
   output_file.write(reinterpret_cast<const char*>(&LITERTLM_MAJOR_VERSION),
-                    sizeof(uint8_t));
+                    sizeof(uint32_t));
   output_file.write(reinterpret_cast<const char*>(&LITERTLM_MINOR_VERSION),
-                    sizeof(uint8_t));
+                    sizeof(uint32_t));
   output_file.write(reinterpret_cast<const char*>(&LITERTLM_PATCH_VERSION),
-                    sizeof(uint8_t));
+                    sizeof(uint32_t));
 
   // ** 1. Write zero pad until offset kBlockSize. **
   RETURN_IF_ERROR(PadUntilNextPageBlock(output_file, kBlockSize));

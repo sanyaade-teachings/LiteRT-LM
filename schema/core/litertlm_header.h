@@ -19,9 +19,9 @@ namespace schema {
 // MINOR version: increments on added functionality in a backward
 //                compatible manner.
 // PATCH version: increments on backward compatible bug fixes.
-constexpr uint8_t LITERTLM_MAJOR_VERSION = 1;
-constexpr uint8_t LITERTLM_MINOR_VERSION = 0;
-constexpr uint8_t LITERTLM_PATCH_VERSION = 0;
+constexpr uint32_t LITERTLM_MAJOR_VERSION = 1;
+constexpr uint32_t LITERTLM_MINOR_VERSION = 0;
+constexpr uint32_t LITERTLM_PATCH_VERSION = 0;
 
 // Alias for a fully constructed KeyValuePair for LiteRTLM metadata.
 // Users of the CreateKeyValuePair function (see below) will get

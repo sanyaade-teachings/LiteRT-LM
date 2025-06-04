@@ -42,22 +42,16 @@ absl::Status ReadHeaderFromLiteRTLM(std::istream& litertlm_stream,
                         std::string(magic_number, litertlm_stream.gcount())));
   }
 
-  uint8_t major_version_u8, minor_version_u8, patch_version_u8;
-  litertlm_stream.read(reinterpret_cast<char*>(&major_version_u8),
-                       sizeof(uint8_t));
-  litertlm_stream.read(reinterpret_cast<char*>(&minor_version_u8),
-                       sizeof(uint8_t));
-  litertlm_stream.read(reinterpret_cast<char*>(&patch_version_u8),
-                       sizeof(uint8_t));
+  litertlm_stream.read(reinterpret_cast<char*>(&header->major_version),
+                       sizeof(uint32_t));
+  litertlm_stream.read(reinterpret_cast<char*>(&header->minor_version),
+                       sizeof(uint32_t));
+  litertlm_stream.read(reinterpret_cast<char*>(&header->patch_version),
+                       sizeof(uint32_t));
 
   if (!litertlm_stream) {
     return absl::InternalError("Failed to read version bytes.");
   }
-
-  // Store the version as ints.
-  header->major_version = static_cast<int>(major_version_u8);
-  header->minor_version = static_cast<int>(minor_version_u8);
-  header->patch_version = static_cast<int>(patch_version_u8);
 
   // If major version doesn't match our current major version,
   // bail out for now
@@ -68,8 +62,8 @@ absl::Status ReadHeaderFromLiteRTLM(std::istream& litertlm_stream,
                         header->major_version, LITERTLM_MAJOR_VERSION));
   }
 
-  // 1. Skip 5 bytes of padding.
-  litertlm_stream.ignore(5);
+  // 1. Skip 4 bytes of padding.
+  litertlm_stream.ignore(4);
   if (!litertlm_stream) {
     return absl::InternalError("Failed to skip padding after version.");
   }
@@ -82,12 +76,6 @@ absl::Status ReadHeaderFromLiteRTLM(std::istream& litertlm_stream,
     return absl::InternalError("Failed to read header end offset.");
   }
 
-  // 3. Skip 8 bytes of padding.
-  litertlm_stream.ignore(8);
-  if (!litertlm_stream) {
-    return absl::InternalError(
-        "Failed to skip padding after header end offset.");
-  }
 
   // Calculate the header size.
   std::streampos current_position = litertlm_stream.tellg();
@@ -283,7 +271,7 @@ absl::Status ReadSectionIntoBinaryData(const std::string& litertlm_path,
   return absl::OkStatus();
 }
 
-absl::Status ReadTFLiteFromSection(
+absl::Status ReadTFLiteFileFromSection(
     const std::string& litertlm_path, int section_idx,
     std::unique_ptr<tflite::FlatBufferModel>* tflite_model,
     std::unique_ptr<MemoryMappedFile>* mapped_file) {
@@ -360,7 +348,7 @@ absl::Status ReadAnyT(
 }
 
 // Instantiation of ReadAnyT for TFLite models.
-absl::Status ReadAnyTFLite(
+absl::Status ReadAnyTFLiteFile(
     const std::string& litertlm_path,
     std::unique_ptr<tflite::FlatBufferModel>* tflite_model,
     std::unique_ptr<MemoryMappedFile>* mapped_file) {
@@ -370,7 +358,7 @@ absl::Status ReadAnyTFLite(
       litertlm_path, tflite_model,
       std::function<absl::Status(
           const std::string&, int, std::unique_ptr<tflite::FlatBufferModel>*,
-          std::unique_ptr<MemoryMappedFile>*)>(ReadTFLiteFromSection),
+          std::unique_ptr<MemoryMappedFile>*)>(ReadTFLiteFileFromSection),
       std::forward<std::unique_ptr<MemoryMappedFile>*>(mapped_file));
 }
 

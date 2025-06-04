@@ -35,7 +35,7 @@ TEST(LitertLmLoaderTest, InitializeWithValidFile) {
   LitertLmLoader loader(std::move(model_file.value()));
   ASSERT_GT(loader.GetTokenizer().Size(), 0);
   ASSERT_GT(loader.GetTFLiteModel(ModelType::kTfLitePrefillDecode).Size(), 0);
-  ASSERT_EQ(loader.GetLlmMetadata().Size(), 0);
+  ASSERT_GT(loader.GetLlmMetadata().Size(), 0);
 }
 
 }  // namespace

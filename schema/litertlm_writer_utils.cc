@@ -233,13 +233,11 @@ absl::Status LitertLmWrite(const std::vector<std::string>& command_args,
     }
   }
 
-  std::vector<KVPair> system_meta = {
-      CreateKeyValuePair(
-          builder, std::string("arch"),
-          CreateStringValue(builder, builder.CreateString(std::string("all")))),
-      CreateKeyValuePair(builder, std::string("version"),
-                         CreateStringValue(builder, builder.CreateString(
-                                                        std::string("0.1"))))};
+  // Basic system metadata for now.
+  std::vector<KVPair> system_meta = {CreateKeyValuePair(
+      builder, std::string("author"),
+      CreateStringValue(
+          builder, builder.CreateString(std::string("The ODML Authors"))))};
 
   return MakeLiteRTLMFromSections(builder, sections, section_types, system_meta,
                                   section_items_list, output_path);

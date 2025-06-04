@@ -85,7 +85,7 @@ TEST(LiteRTLMReadTest, TFLiteRead) {
   std::unique_ptr<tflite::FlatBufferModel> model;
   std::unique_ptr<MemoryMappedFile> mapped_file;
   absl::Status result =
-      ReadTFLiteFromSection(input_filename, 1, &model, &mapped_file);
+      ReadTFLiteFileFromSection(input_filename, 1, &model, &mapped_file);
   ASSERT_TRUE(result.ok());
   // Verify that buffer backing TFLite is still valid and reading data works.
   ASSERT_EQ(model->GetModel()->subgraphs()->size(), 1);
@@ -110,7 +110,7 @@ TEST(LiteRTLMReadTest, TFLiteReadAny) {
   std::unique_ptr<tflite::FlatBufferModel> tflite_model;
   std::unique_ptr<MemoryMappedFile> mapped_file;
   absl::Status result =
-      ReadAnyTFLite(input_filename, &tflite_model, &mapped_file);
+      ReadAnyTFLiteFile(input_filename, &tflite_model, &mapped_file);
   ASSERT_TRUE(result.ok());
 }
 
@@ -122,7 +122,7 @@ TEST(LiteRTLMReadTest, TFLiteRead_InvalidSection) {
   std::unique_ptr<tflite::FlatBufferModel> tflite_model;
   std::unique_ptr<MemoryMappedFile> mapped_file;
   absl::Status result =
-      ReadTFLiteFromSection(input_filename, 0, &tflite_model, &mapped_file);
+      ReadTFLiteFileFromSection(input_filename, 0, &tflite_model, &mapped_file);
   ASSERT_FALSE(result.ok());
   ASSERT_EQ(result.code(), absl::StatusCode::kInvalidArgument);
 }

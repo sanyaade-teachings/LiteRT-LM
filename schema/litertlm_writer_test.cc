@@ -109,7 +109,7 @@ TEST_F(LiteRTLMWriteTest, BasicFileCreationAndValidation) {
 
   std::string params_pbtext_content;
   ASSERT_TRUE(
-      proto2::TextFormat::PrintToString(metadata, &params_pbtext_content));
+      google::protobuf::TextFormat::PrintToString(metadata, &params_pbtext_content));
   CreateDummyFile(llm_metadata_path, params_pbtext_content);
 
   // 3. Prepare arguments for LitertLmWrite.

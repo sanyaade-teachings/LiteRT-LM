@@ -57,7 +57,7 @@ absl::Status WriteHeader(
 
   uint8_t* buffer = builder.GetBufferPointer();
   size_t size = builder.GetSize();
-  ABSL_VLOG(4) << "Header size is: " << size;
+  ABSL_DLOG(INFO) << "Header size is: " << size;
 
   output_stream.write(reinterpret_cast<const char*>(buffer), size);
   output_stream.flush();
@@ -157,7 +157,7 @@ absl::Status MakeLiteRTLMFromSections(
                               section_types));
   std::streampos header_end_pos = output_file.tellp();
   uint64_t header_end_offset = static_cast<uint64_t>(header_end_pos);
-  ABSL_VLOG(4) << "Header End Offset is " << header_end_offset;
+  ABSL_DLOG(INFO) << "Header End Offset is " << header_end_offset;
 
   // ** 4. Check if header exceeds 16k boundary**
   if (header_end_offset > kBlockSize) {

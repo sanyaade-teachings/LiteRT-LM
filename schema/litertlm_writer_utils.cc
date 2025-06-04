@@ -136,7 +136,7 @@ absl::Status LitertLmWrite(const std::vector<std::string>& command_args,
       }
       std::string proto_text_str((std::istreambuf_iterator<char>(ifs)),
                                  std::istreambuf_iterator<char>());
-      if (!proto2::TextFormat::ParseFromString(proto_text_str,
+      if (!google::protobuf::TextFormat::ParseFromString(proto_text_str,
                                                &llm_metadata_proto)) {
         return absl::InvalidArgumentError(absl::StrCat(
             "Failed to parse LlmMetadata protobuf from text file: ", filename));

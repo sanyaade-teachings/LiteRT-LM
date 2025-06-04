@@ -42,7 +42,10 @@ jobs:
       - name: Run bazel build on Linux
         run: |
           bazel build --disk_cache=~/.cache/bazel-linux \
-          //runtime/engine:litert_lm_main
+            //runtime/engine:litert_lm_main \
+            //schema:litertlm_writer \
+            //schema:litertlm_peek \
+            //schema:litertlm_export_main
 
       - name: Check if litert_lm_main doesn't link libLiteRtRuntimeCApi.so
         # Return exit code 1 if libLiteRtRuntimeCApi.so is required.
@@ -58,6 +61,8 @@ jobs:
             //runtime/executor:all \
             //runtime/framework:all \
             //runtime/util:all \
+            //schema:all \
+            //schema/core:all \
             --test_output=errors
 
       - name: Setup Android NDK

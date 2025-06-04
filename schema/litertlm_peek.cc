@@ -5,12 +5,11 @@
 // Example usage:
 // bazel run :litertlm_peek -- --litertlm_file=/path/to/your/file.litertlm
 
-#include <cstddef>
 #include <iostream>
 #include <string>
 
-#include "base/init_google.h"
 #include "absl/flags/flag.h"  // from @com_google_absl
+#include "absl/flags/parse.h"  // from @com_google_absl
 #include "absl/log/absl_check.h"  // from @com_google_absl
 #include "absl/log/absl_log.h"  // from @com_google_absl
 #include "absl/status/status.h"  // from @com_google_absl
@@ -24,7 +23,7 @@ namespace {
 using litert::lm::schema::ProcessLiteRTLMFile;
 
 absl::Status MainHelper(int argc, char** argv) {
-  InitGoogle(argv[0], &argc, &argv, false);
+  absl::ParseCommandLine(argc, argv);
 
   std::string litertlm_file = absl::GetFlag(FLAGS_litertlm_file);
   ABSL_LOG(INFO) << "LiteRT-LM file: " << litertlm_file << "\n";

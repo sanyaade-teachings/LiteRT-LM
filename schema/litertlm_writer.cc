@@ -20,8 +20,8 @@
 #include <string>
 #include <vector>
 
-#include "base/init_google.h"
 #include "absl/flags/flag.h"  // from @com_google_absl
+#include "absl/flags/parse.h"  // from @com_google_absl
 #include "absl/log/absl_log.h"  // from @com_google_absl
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
@@ -69,11 +69,7 @@ std::string PrettyPrintBytes(uint64_t bytes) {
 }
 
 absl::Status MainHelper(int argc, char** argv) {
-  // Initialize Google libraries and parse flags.
-  // Note: InitGoogle should be called before absl::GetFlag.
-  // The third argument `true` means remove recognized flags from argv.
-  // We change to `false` as we will manually skip flags.
-  InitGoogle(argv[0], &argc, &argv, false);
+  absl::ParseCommandLine(argc, argv);
 
   std::string output_path = absl::GetFlag(FLAGS_output_path);
   std::string section_metadata_str = absl::GetFlag(FLAGS_section_metadata);

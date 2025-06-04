@@ -102,7 +102,7 @@ class FileBackedSectionStream : public SectionStreamBase {
 
     buffer_size_ = static_cast<size_t>(file.tellg());  // Use size_t
     file.seekg(0, std::ios::beg);
-    ABSL_VLOG(4) << "File size: " << buffer_size_ << " bytes.";
+    ABSL_DLOG(INFO) << "File size: " << buffer_size_ << " bytes.";
 
     buffer_.reset(new unsigned char[buffer_size_]);
     if (!file.read(reinterpret_cast<char*>(buffer_.get()), buffer_size_)) {
@@ -110,14 +110,14 @@ class FileBackedSectionStream : public SectionStreamBase {
       return absl::InternalError(
           absl::StrCat("Failed to read all data from file: ", file_path_));
     }
-    ABSL_VLOG(4) << "Successfully read " << buffer_size_
-                   << " bytes from file.";
+    ABSL_DLOG(INFO) << "Successfully read " << buffer_size_
+                    << " bytes from file.";
 
     file.close();
     is_ready_ = true;
     stream_.write(reinterpret_cast<char*>(buffer_.get()), buffer_size_);
     stream_.seekg(0);
-    ABSL_VLOG(4) << "Internal stringstream prepared.";
+    ABSL_DLOG(INFO) << "Internal stringstream prepared.";
     return absl::OkStatus();
   }
 

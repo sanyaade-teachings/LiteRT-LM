@@ -25,8 +25,8 @@
 #include <utility>
 #include <vector>
 
-#include "base/init_google.h"
 #include "absl/flags/flag.h"  // from @com_google_absl
+#include "absl/flags/parse.h"  // from @com_google_absl
 #include "absl/log/absl_check.h"  // from @com_google_absl
 #include "absl/log/absl_log.h"  // from @com_google_absl
 #include "absl/status/status.h"  // from @com_google_absl
@@ -133,7 +133,7 @@ KVPair ConvertKeyValue(flatbuffers::FlatBufferBuilder& builder,
 }
 
 absl::Status MainHelper(int argc, char** argv) {
-  InitGoogle(argv[0], &argc, &argv, false);
+  absl::ParseCommandLine(argc, argv);
 
   std::string tokenizer_file = absl::GetFlag(FLAGS_tokenizer_file);
   std::string tflite_file = absl::GetFlag(FLAGS_tflite_file);
@@ -217,7 +217,7 @@ absl::Status MainHelper(int argc, char** argv) {
       std::string proto_text_str((std::istreambuf_iterator<char>(ifs)),
                                  std::istreambuf_iterator<char>());
 
-      if (!proto2::TextFormat::ParseFromString(proto_text_str,
+      if (!google::protobuf::TextFormat::ParseFromString(proto_text_str,
                                                &llm_metadata_proto)) {
         return absl::InvalidArgumentError(
             "Failed to parse LlmMetadata protobuf from text file.");

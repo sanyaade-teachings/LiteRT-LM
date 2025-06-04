@@ -20,10 +20,9 @@ package_group(
 )
 
 package(
-    default_applicable_licenses = ["//third_party/odml:license"],
     default_hdrs_check = "strict",
     default_visibility = [
-        "//third_party/odml:__subpackages__",
+        "//visibility:public",
     ],
 )
 
@@ -39,8 +38,8 @@ cc_binary(
     srcs = ["litertlm_writer.cc"],
     deps = [
         ":litertlm_writer_utils",
-        "//base",
         "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/status",
@@ -61,8 +60,8 @@ cc_binary(
     name = "litertlm_export_main",
     srcs = ["litertlm_export_main.cc"],
     deps = [
-        "//base",
         "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/status",
@@ -83,8 +82,8 @@ cc_binary(
     name = "litertlm_peek",
     srcs = ["litertlm_peek.cc"],
     deps = [
-        "//base",
         "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/status",
@@ -106,7 +105,6 @@ cc_test(
     ],
     deps = [
         ":litertlm_writer_utils",
-        "//devtools/build/runtime:get_runfiles_dir",
         "@com_google_googletest//:gtest_main",
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",

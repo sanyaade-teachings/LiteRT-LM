@@ -336,7 +336,8 @@ absl::Status InitializeAttentionMask(litert::TensorBuffer& mask,
                                      bool is_f16) {
   auto mask_size = mask.PackedSize();
   RET_CHECK(mask_size) << "Failed to get attention mask buffer size.";
-  auto mask_lock_and_addr = litert::TensorBufferScopedLock::Create(mask);
+  auto mask_lock_and_addr = litert::TensorBufferScopedLock::Create(
+      mask, litert::TensorBuffer::LockMode::kWrite);
   RET_CHECK(mask_lock_and_addr) << "Failed to lock attention mask buffer.";
 
   switch (mask_data_type) {
@@ -368,7 +369,8 @@ absl::Status FillAttentionMask(litert::TensorBuffer& mask, int start_timestep,
           .SetCode(absl::StatusCode::kInvalidArgument)
       << "Attention mask must be 4D.";
   int channel_size = mask_tensor_type->Layout().Dimensions()[3];
-  auto mask_lock_and_addr = litert::TensorBufferScopedLock::Create(mask);
+  auto mask_lock_and_addr = litert::TensorBufferScopedLock::Create(
+      mask, litert::TensorBuffer::LockMode::kWrite);
   RET_CHECK(mask_lock_and_addr) << "Failed to lock attention mask buffer.";
 
   for (int i = 0; i < steps; ++i) {

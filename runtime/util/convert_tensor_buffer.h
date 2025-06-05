@@ -121,7 +121,8 @@ template <typename T>
                                 "Tensor buffer must have 2 dimensions.");
   }
 
-  auto lock_and_addr = ::litert::TensorBufferScopedLock::Create(tensor_buffer);
+  auto lock_and_addr = ::litert::TensorBufferScopedLock::Create(
+      tensor_buffer, TensorBuffer::LockMode::kRead);
   ABSL_DCHECK(lock_and_addr.HasValue());
   auto data_from = absl::MakeConstSpan(static_cast<T*>(lock_and_addr->second),
                                        dimensions[0] * dimensions[1]);
@@ -209,7 +210,8 @@ template <typename T>
 
   auto size = tensor_buffer.Size();
   ABSL_DCHECK(size.HasValue());
-  auto lock_and_addr = ::litert::TensorBufferScopedLock::Create(tensor_buffer);
+  auto lock_and_addr = ::litert::TensorBufferScopedLock::Create(
+      tensor_buffer, TensorBuffer::LockMode::kRead);
   ABSL_DCHECK(lock_and_addr.HasValue());
   return absl::MakeSpan(static_cast<T*>(lock_and_addr->second),
                         *size / sizeof(T));

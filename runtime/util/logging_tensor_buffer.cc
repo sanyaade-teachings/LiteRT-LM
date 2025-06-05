@@ -72,7 +72,8 @@ std::ostream& operator<<(std::ostream& os,
   auto lock_and_addr = ::litert::TensorBufferScopedLock::Create(
       // Though const_cast() here is not ideal, it is actually const when the
       // tensor buffer is in host memory.
-      *const_cast<::litert::TensorBuffer*>(&tensor_buffer));
+      *const_cast<::litert::TensorBuffer*>(&tensor_buffer),
+      TensorBuffer::LockMode::kRead);
 
   switch (tensor_type->ElementType()) {
     case ::litert::ElementType::Int8:

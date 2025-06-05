@@ -164,7 +164,8 @@ absl::Status LlmLiteRtCompiledModelExecutor::PrefillInternal(
                                  prefill_input_pos.PackedSize());
     LITERT_ASSIGN_OR_RETURN_ABSL(
         auto prefill_input_pos_lock_and_addr,
-        ::litert::TensorBufferScopedLock::Create(prefill_input_pos));
+        ::litert::TensorBufferScopedLock::Create(
+            prefill_input_pos, TensorBuffer::LockMode::kWrite));
     auto* prefill_input_pos_ptr =
         static_cast<int32_t*>(prefill_input_pos_lock_and_addr.second);
     bool has_input_attn_mask = signatures_.input_attn_mask.has_value();
@@ -207,7 +208,8 @@ absl::Status LlmLiteRtCompiledModelExecutor::PrefillInternal(
                                    prefill_input_buffer.PackedSize());
       LITERT_ASSIGN_OR_RETURN_ABSL(
           auto prefill_input_lock_and_addr,
-          ::litert::TensorBufferScopedLock::Create(prefill_input_buffer));
+          ::litert::TensorBufferScopedLock::Create(
+              prefill_input_buffer, TensorBuffer::LockMode::kWrite));
       int32_t* prefill_input_ptr =
           static_cast<int32_t*>(prefill_input_lock_and_addr.second);
       memset(prefill_input_ptr, 0, prefill_input_size);
@@ -315,7 +317,8 @@ absl::Status LlmLiteRtCompiledModelExecutor::Decode(
       auto& decode_input_buffer =
           decode_input_buffers_[signatures_.input_tokens];
       auto decode_input_lock_and_addr =
-          ::litert::TensorBufferScopedLock::Create(decode_input_buffer);
+          ::litert::TensorBufferScopedLock::Create(
+              decode_input_buffer, TensorBuffer::LockMode::kWrite);
       RET_CHECK(decode_input_lock_and_addr)
           << "Failed to lock decode input buffer.";
       int32_t* decode_input_ptr =
@@ -342,7 +345,8 @@ absl::Status LlmLiteRtCompiledModelExecutor::Decode(
     auto& decode_input_pos_buffer =
         decode_input_buffers_[signatures_.input_positions];
     auto decode_input_pos_lock_and_addr =
-        ::litert::TensorBufferScopedLock::Create(decode_input_pos_buffer);
+        ::litert::TensorBufferScopedLock::Create(
+            decode_input_pos_buffer, TensorBuffer::LockMode::kWrite);
     RET_CHECK(decode_input_pos_lock_and_addr)
         << "Failed to lock decode input position buffer.";
     auto* decode_input_pos_ptr =
@@ -429,7 +433,8 @@ LlmLiteRtCompiledModelExecutor::DecodeLogits(const ExecutorInputs& inputs) {
       auto& decode_input_buffer =
           decode_input_buffers_[signatures_.input_tokens];
       auto decode_input_lock_and_addr =
-          ::litert::TensorBufferScopedLock::Create(decode_input_buffer);
+          ::litert::TensorBufferScopedLock::Create(
+              decode_input_buffer, TensorBuffer::LockMode::kWrite);
       RET_CHECK(decode_input_lock_and_addr)
           << "Failed to lock decode input buffer.";
       int32_t* decode_input_ptr =
@@ -457,7 +462,8 @@ LlmLiteRtCompiledModelExecutor::DecodeLogits(const ExecutorInputs& inputs) {
     auto& decode_input_pos_buffer =
         decode_input_buffers_[signatures_.input_positions];
     auto decode_input_pos_lock_and_addr =
-        ::litert::TensorBufferScopedLock::Create(decode_input_pos_buffer);
+        ::litert::TensorBufferScopedLock::Create(
+            decode_input_pos_buffer, TensorBuffer::LockMode::kWrite);
     RET_CHECK(decode_input_pos_lock_and_addr)
         << "Failed to lock decode input position buffer.";
     auto* decode_input_pos_ptr =

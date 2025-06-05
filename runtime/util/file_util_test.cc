@@ -44,5 +44,10 @@ TEST(FileUtilTest, Basename) {
   EXPECT_THAT(Basename(model_path), "model.tflite");
 }
 
+TEST(FileUtilTest, Dirname) {
+  std::string model_path = "/path/to/model.tflite";
+  EXPECT_THAT(Dirname(model_path), "/path/to/");
+}
+
 }  // namespace
 }  // namespace litert::lm

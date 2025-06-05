@@ -197,6 +197,112 @@ TEST_F(LiteRTLMWriteTest, MismatchedMetadataOrderTest) {
       << "Output file should not be created on failure.";
 }
 
+// Test case: Metadata for only some sections.
+TEST_F(LiteRTLMWriteTest, MetadataOnSomeSectionsTest) {
+  const std::string tokenizer_path = temp_dir_path_ + "/tokenizer.spiece";
+  const std::string tflite_model_path = temp_dir_path_ + "/model.tflite";
+  const std::string output_litertlm_path =
+      temp_dir_path_ + "/output_some_metadata.litertlm";
+
+  CreateDummyFile(tokenizer_path, "Tokenizer data");
+  CreateDummyFile(tflite_model_path, "TFLite data");
+
+  const std::vector<std::string> command_args = {
+      tokenizer_path,    // File 1: tokenizer
+      tflite_model_path  // File 2: tflite
+  };
+  // Metdata order is tokenizer, then tflite, but tflite metadata is empty.
+  const std::string section_metadata_str =
+      "tokenizer:key2=val2;"
+      "tflite:";
+
+  const absl::Status result =
+      LitertLmWrite(command_args, section_metadata_str, output_litertlm_path);
+  ASSERT_TRUE(result.ok())
+      << "LitertLmWrite Failed when only specifying some section metadata."
+      << result.message();
+
+  VerifyFile(output_litertlm_path);
+
+  std::stringstream inspection_output_ss;
+
+  const absl::Status print_result =
+      ProcessLiteRTLMFile(output_litertlm_path, inspection_output_ss);
+  ASSERT_TRUE(print_result.ok())
+      << "ProcessLiteRTLMFile failed: " << print_result.message();
+
+  const std::string inspection_str = inspection_output_ss.str();
+  ASSERT_FALSE(inspection_str.empty())
+      << "ProcessLiteRTLMFile produced empty output.";
+
+  EXPECT_THAT(inspection_str,
+              testing::HasSubstr("AnySectionDataType_SP_Tokenizer"));
+  EXPECT_THAT(inspection_str,
+              testing::HasSubstr("AnySectionDataType_TFLiteModel"));
+}
+
+// Test case: Specified Metadata is "<null>,<null>"
+TEST_F(LiteRTLMWriteTest, NullMetadataForSection) {
+  // 1. Define paths for temporary input files and the output file.
+  const std::string tokenizer_path = temp_dir_path_ + "/tokenizer.spiece";
+  const std::string tflite_model_path = temp_dir_path_ + "/model.tflite";
+  const std::string output_litertlm_path = temp_dir_path_ + "/output.litertlm";
+  const std::string binary_data_path = temp_dir_path_ + "/data.bin";
+
+  // 2. Create dummy input files.
+  CreateDummyFile(tokenizer_path, "Dummy SentencePiece Model Content");
+  CreateDummyFile(tflite_model_path,
+                  "Dummy TFLite Model Content. Not a real model.");
+  CreateDummyFile(binary_data_path, "Dummy Binary Data Content");
+
+  // 3. Prepare arguments for LitertLmWrite.
+  const std::vector<std::string> command_args = {
+      tokenizer_path, tflite_model_path, binary_data_path};
+  const std::string section_metadata_str =
+      "tokenizer:tok_version=1.2,lang=en;"
+      "tflite:,;"
+      "binary_data:type=abc";
+
+  // 4. Call LitertLmWrite.
+  const absl::Status result =
+      LitertLmWrite(command_args, section_metadata_str, output_litertlm_path);
+  ASSERT_TRUE(result.ok()) << "LitertLmWrite failed: " << result.message();
+
+  // 5. Verify the output file is good.
+  ASSERT_TRUE(std::filesystem::exists(output_litertlm_path))
+      << "Output LiteRT-LM file was not created.";
+  VerifyFile(output_litertlm_path);
+
+  // 6. Inspect the content of the generated .litertlm file.
+  std::stringstream inspection_output_ss;
+  const absl::Status print_result =
+      ProcessLiteRTLMFile(output_litertlm_path, inspection_output_ss);
+  ASSERT_TRUE(print_result.ok())
+      << "ProcessLiteRTLMFile failed: " << print_result.message();
+
+  const std::string inspection_str = inspection_output_ss.str();
+  ASSERT_FALSE(inspection_str.empty())
+      << "ProcessLiteRTLMFile produced empty output.";
+
+  // Check for presence of section types.
+  EXPECT_THAT(inspection_str,
+              testing::HasSubstr("AnySectionDataType_SP_Tokenizer"));
+  EXPECT_THAT(inspection_str,
+              testing::HasSubstr("AnySectionDataType_TFLiteModel"));
+  EXPECT_THAT(inspection_str,
+              testing::HasSubstr("AnySectionDataType_GenericBinaryData"));
+
+  // Check for presence of metadata (adjust based on ProcessLiteRTLMFile's
+  // output format). Assuming ProcessLiteRTLMFile prints metadata like "key:
+  // value".
+  EXPECT_THAT(inspection_str, testing::HasSubstr("tok_version,"));
+  EXPECT_THAT(inspection_str, testing::HasSubstr("(Float): 1.2"));
+  EXPECT_THAT(inspection_str, testing::HasSubstr("lang,"));
+  EXPECT_THAT(inspection_str, testing::HasSubstr("(String): en"));
+  EXPECT_THAT(inspection_str, testing::HasSubstr("type,"));
+  EXPECT_THAT(inspection_str, testing::HasSubstr("(String): abc"));
+}
+
 // Test case: No input files provided.
 TEST_F(LiteRTLMWriteTest, EmptyCommandArgsTest) {
   const std::string output_litertlm_path =

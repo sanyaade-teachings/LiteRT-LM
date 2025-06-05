@@ -217,19 +217,27 @@ absl::Status LitertLmWrite(const std::vector<std::string>& command_args,
       std::vector<std::string> parts = absl::StrSplit(section_part, ':');
       // section_name = parts[0]; // Already validated or not needed here due to
       // order enforcement
+      if (parts[1].empty()) {
+        // No metadata provided; move on.
+        ++current_metadata_section_index;
+        continue;
+      }
       std::vector<std::string> kv_pairs_str = absl::StrSplit(parts[1], ',');
       for (const auto& kv_str : kv_pairs_str) {
-        std::string key, value_str;
-        absl::Status parsed_status = ParseKeyValuePair(kv_str, key, value_str);
-        if (!parsed_status.ok()) {
-          return absl::InvalidArgumentError(absl::StrCat(
-              "Failed to parse key-value pair '", kv_str, "' in section '",
-              parts[0], "': ", parsed_status.message()));
+        if (!kv_str.empty()) {
+          std::string key, value_str;
+          absl::Status parsed_status =
+              ParseKeyValuePair(kv_str, key, value_str);
+          if (!parsed_status.ok()) {
+            return absl::InvalidArgumentError(absl::StrCat(
+                "Failed to parse key-value pair '", kv_str, "' in section '",
+                parts[0], "': ", parsed_status.message()));
+          }
+          section_items_list[current_metadata_section_index].push_back(
+              ConvertKeyValue(builder, key, value_str));
         }
-        section_items_list[current_metadata_section_index].push_back(
-            ConvertKeyValue(builder, key, value_str));
       }
-      current_metadata_section_index++;
+      ++current_metadata_section_index;
     }
   }
 

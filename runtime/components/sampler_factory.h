@@ -5,9 +5,9 @@
 #include <optional>
 
 #include "absl/status/statusor.h"  // from @com_google_absl
-#include "litert/cc/litert_environment.h"  // from @litert
+#include "litert/c/litert_common.h"  // from @litert
 #include "runtime/components/sampler.h"
-#include "runtime/executor/llm_executor_settings.h"
+#include "runtime/executor/executor_settings_base.h"
 #include "runtime/proto/sampler_params.pb.h"
 
 namespace litert::lm {
@@ -20,7 +20,6 @@ namespace litert::lm {
 //   sampler_params: The parameters for the sampler.
 //   The following parameters are optional and only used for GPU backend.
 //   env: The litert environment to use for the sampler.
-//   cache_size: The cache size for the sampler.
 //   vocab_size: The vocabulary size for the sampler.
 //   activation_data_type: The activation data type for the sampler.
 //
@@ -28,7 +27,7 @@ namespace litert::lm {
 //   The created Sampler instance.
 absl::StatusOr<std::unique_ptr<Sampler>> CreateSampler(
     Backend backend, int batch_size, proto::SamplerParameters sampler_params,
-    Environment* env = nullptr, std::optional<int> cache_size = std::nullopt,
+    LiteRtEnvironment env = nullptr,
     std::optional<int> vocab_size = std::nullopt,
     std::optional<ActivationDataType> activation_data_type = std::nullopt);
 

@@ -34,7 +34,6 @@
 #include "litert/cc/litert_compiled_model.h"  // from @litert
 #include "litert/cc/litert_environment.h"  // from @litert
 #include "litert/cc/litert_expected.h"  // from @litert
-#include "litert/cc/litert_macros.h"  // from @litert
 #include "litert/cc/litert_model.h"  // from @litert
 #include "litert/cc/litert_options.h"  // from @litert
 #include "litert/cc/litert_tensor_buffer.h"  // from @litert
@@ -282,9 +281,13 @@ absl::Status LlmLiteRtCompiledModelExecutor::Decode(
   if (decoded_logits_vector_.empty()) {
     decoded_logits_vector_ = std::vector<float>(size / sizeof(float));
   }
-  ASSIGN_OR_RETURN(std::vector<int> output_ids, SampleLogits(decoded_logits_));
-  next_input_token_id_ = output_ids[0];
-  return ToAbslStatus(output_tokens.Write(absl::MakeConstSpan(output_ids)));
+  RETURN_IF_ERROR(SampleLogits(decoded_logits_, output_tokens));
+  LITERT_ASSIGN_OR_RETURN_ABSL(
+      auto lock_and_addr, ::litert::TensorBufferScopedLock::Create(
+                              output_tokens, TensorBuffer::LockMode::kRead));
+  auto output_tokens_ptr = static_cast<int32_t*>(lock_and_addr.second);
+  next_input_token_id_ = output_tokens_ptr[0];
+  return absl::OkStatus();
 }
 
 absl::Status LlmLiteRtCompiledModelExecutor::Decode(
@@ -523,8 +526,8 @@ LlmLiteRtCompiledModelExecutor::DecodeLogits(const ExecutorInputs& inputs) {
   return std::move(*output_logits);
 }
 
-absl::StatusOr<std::vector<int>> LlmLiteRtCompiledModelExecutor::SampleLogits(
-    const TensorBuffer& logits) {
+absl::Status LlmLiteRtCompiledModelExecutor::SampleLogits(
+    const TensorBuffer& logits, TensorBuffer& ids_tensor) {
   ASSIGN_OR_RETURN(auto vocab_size, GetVocabSize());
 
   if (sampler_ == nullptr) {
@@ -549,19 +552,10 @@ absl::StatusOr<std::vector<int>> LlmLiteRtCompiledModelExecutor::SampleLogits(
             std::move(sampler_params), env_.Get(), vocab_size,
             /*activation_data_type=*/ActivationDataType::FLOAT32));
   }
-  LITERT_ASSIGN_OR_RETURN_ABSL(auto logits_tensor,
-                               CreateTensorBuffer<float>({1, vocab_size}));
 
-  std::vector<int> ids_vector(output_batch_size_);
-  // Construct a tensor buffer with the shape of [output_batch_size_] and
-  // populate it with the ids_vector. This tensor buffer will be used as the
-  // output of the sampler.
-  auto ids_tensor = litert::lm::CopyToTensorBuffer<int>(
-      absl::MakeConstSpan(ids_vector), {output_batch_size_});
   RETURN_IF_ERROR(sampler_->SampleToIdAndScoreBuffer(
-      logits, *ids_tensor, /*scores_tensor=*/nullptr));
-  auto ids = litert::lm::CopyFromTensorBuffer<int>(*ids_tensor);
-  return *ids;
+      logits, ids_tensor, /*scores_tensor=*/nullptr));
+  return absl::OkStatus();
 }
 
 absl::StatusOr<int> LlmLiteRtCompiledModelExecutor::GetVocabSize() {

@@ -125,8 +125,9 @@ class LlmLiteRtCompiledModelExecutor : public LlmExecutor {
             std::move(per_layer_embedding_lookup)) {}
 
  private:
-  // Samples output logits and get tokens.
-  absl::StatusOr<std::vector<int>> SampleLogits(const TensorBuffer& logits);
+  // Samples output logits and write to ids_tensor.
+  absl::Status SampleLogits(const TensorBuffer& logits,
+                            TensorBuffer& ids_tensor);
 
   // Prefill internal implementation, for one prefill call to the Interpreter
   // with a certain length.

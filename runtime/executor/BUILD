@@ -118,7 +118,6 @@ cc_library(
         "@litert//litert/c:litert_common",
         "@litert//litert/c:litert_environment_options",
         "@litert//litert/cc:litert_expected",
-        "@litert//litert/cc:litert_macros",
         "@litert//litert/cc:litert_model",
         "//runtime/components:embedding_lookup_text",
         "//runtime/components:model_resources_litert_lm",

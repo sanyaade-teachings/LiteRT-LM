@@ -81,7 +81,10 @@ absl::Status EngineSettings::MaybeUpdateAndValidate(
     }
   }
   // Load the max num tokens from the model file.
-  main_executor_settings_.SetMaxNumTokens(160);
+  // For now, we set the default value to 4096.
+  if (main_executor_settings_.GetMaxNumTokens() == 0) {
+    main_executor_settings_.SetMaxNumTokens(4096);
+  }
 
   // Set the default values for the sampler params.
   if (!metadata.has_sampler_params()) {

@@ -149,8 +149,19 @@ absl::Status MainHelper(int argc, char** argv) {
       (*llm)->CreateSession(session_config);
   ABSL_CHECK_OK(session) << "Failed to create session";
 
+  // When either prefill or decode tokens is set, the input prompt will be
+  // forced to be the specified value and generate a dummy input.
+  const bool is_dummy_input =
+      absl::GetFlag(FLAGS_benchmark_prefill_tokens) > 0 ||
+      absl::GetFlag(FLAGS_benchmark_decode_tokens) > 0;
   const std::string input_prompt = absl::GetFlag(FLAGS_input_prompt);
   if (absl::GetFlag(FLAGS_async)) {
+    if (is_dummy_input) {
+      ABSL_LOG(FATAL)
+          << "Async mode does not support benchmarking with "
+             "specified number of prefill or decode tokens. If you want to "
+             "benchmark the model, please try again with --async=false.";
+    }
     InferenceObservable observable;
     absl::Status status = (*session)->GenerateContentStream(
         {InputText(input_prompt)}, &observable);
@@ -159,7 +170,9 @@ absl::Status MainHelper(int argc, char** argv) {
   } else {
     auto responses = (*session)->GenerateContent({InputText(input_prompt)});
     ABSL_CHECK_OK(responses);
-    ABSL_LOG(INFO) << "Responses: " << *responses;
+    if (!is_dummy_input) {
+      ABSL_LOG(INFO) << "Responses: " << *responses;
+    }
   }
 
   if (absl::GetFlag(FLAGS_benchmark)) {

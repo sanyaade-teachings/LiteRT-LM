@@ -97,7 +97,7 @@ absl::Status EmbeddingLookupText::LookupDecode(int token,
   }
 
   auto decode_output_lock_and_addr = ::litert::TensorBufferScopedLock::Create(
-      *decode_output, TensorBuffer::LockMode::kRead);
+      *decode_output, TensorBuffer::LockMode::kWrite);
   auto decode_output_ptr =
       reinterpret_cast<uint8_t*>(decode_output_lock_and_addr->second);
 

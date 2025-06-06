@@ -146,6 +146,8 @@ cc_library(
             "@litert//litert/cc/internal:litert_runtime_options",
             "@litert//litert/cc/internal:litert_tensor_buffer",
         ],
+    }) + select({
+        "//conditions:default": [],
     }),
 )
 

@@ -207,6 +207,7 @@ absl::Status MainHelper(int argc, char** argv) {
         return absl::InvalidArgumentError(
             "Failed to parse LlmMetadata protobuf from binary file.");
       }
+#if !defined(__ANDROID__)
     } else {  // llm_metadata_text_file is not empty
               // Read text proto from file.
       std::ifstream ifs(llm_metadata_text_file);
@@ -222,6 +223,7 @@ absl::Status MainHelper(int argc, char** argv) {
         return absl::InvalidArgumentError(
             "Failed to parse LlmMetadata protobuf from text file.");
       }
+#endif  // !defined(__ANDROID__)
     }
 
     // Create a ProtoBufSectionStream with the parsed proto.

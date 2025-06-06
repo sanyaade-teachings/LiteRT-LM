@@ -290,6 +290,12 @@ cc_library(
         "//conditions:default": [
             "@litert//litert/cc/internal:litert_tensor_buffer",
         ],
+    }) + select({
+        "@platforms//os:ios": [],
+        "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
+        "//conditions:default": [
+        ],
     }),
 )
 
@@ -326,6 +332,8 @@ cc_test(
             "@litert//litert/cc/internal:litert_gpu_options",
             "@litert//litert/cc/internal:litert_options",
         ],
+    }) + select({
+        "//conditions:default": [],
     }),
 )
 

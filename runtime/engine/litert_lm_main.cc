@@ -45,7 +45,8 @@
 ABSL_FLAG(std::optional<std::string>, backend, "gpu",
           "Executor backend to use for LLM execution (cpu, gpu, etc.)");
 ABSL_FLAG(std::string, model_path, "", "Model path to use for LLM execution.");
-ABSL_FLAG(std::string, input_prompt, "What is the highest building in Paris?",
+ABSL_FLAG(std::string, input_prompt,
+          "What is the tallest building in the world?",
           "Input prompt to use for testing LLM execution.");
 ABSL_FLAG(bool, benchmark, false, "Benchmark the LLM execution.");
 ABSL_FLAG(

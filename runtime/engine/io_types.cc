@@ -13,6 +13,7 @@
 #include <variant>
 #include <vector>
 
+#include "absl/log/log.h"  // from @com_google_absl
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/str_cat.h"  // from @com_google_absl
@@ -313,12 +314,12 @@ void InferenceObservable::OnNext(const Responses& responses) {
 
 // Called when the inference is done and finished successfully.
 void InferenceObservable::OnDone() {
-  std::cout << "Inference Done." << std::endl;
+  LOG(INFO) << "Inference Done." << std::endl;
 }
 
 // Called when an error is encountered during the inference.
 void InferenceObservable::OnError(const absl::Status& status) {
-  std::cout << "Inference Error: " << status.message() << std::endl;
+  LOG(ERROR) << "Inference Error: " << status.message() << std::endl;
 }
 
 }  // namespace litert::lm

@@ -25,15 +25,18 @@
 #include <optional>
 #include <string>
 
+#include "absl/base/log_severity.h"  // from @com_google_absl
 #include "absl/flags/flag.h"  // from @com_google_absl
 #include "absl/flags/parse.h"  // from @com_google_absl
 #include "absl/log/absl_check.h"  // from @com_google_absl
 #include "absl/log/absl_log.h"  // from @com_google_absl
 #include "absl/log/check.h"  // from @com_google_absl
+#include "absl/log/globals.h"  // from @com_google_absl
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "absl/time/time.h"  // from @com_google_absl
+#include "litert/c/litert_logging.h"  // from @litert
 #include "runtime/engine/engine.h"
 #include "runtime/engine/engine_settings.h"
 #include "runtime/engine/io_types.h"
@@ -76,8 +79,33 @@ constexpr int kMemoryCheckIntervalMs = 50;
 // Timeout duration for waiting until the engine is done with all the tasks.
 const absl::Duration kWaitUntilDoneTimeout = absl::Minutes(10);
 
+// Converts an absl::LogSeverityAtLeast to a LiteRtLogSeverity.
+LiteRtLogSeverity AbslMinLogLevelToLiteRtLogSeverity(
+    absl::LogSeverityAtLeast min_log_level) {
+  int min_log_level_int = static_cast<int>(min_log_level);
+  switch (min_log_level_int) {
+    case -1:
+      // ABSL does not support verbose logging, but passes through -1 as a log
+      // level, which we can use to enable verbose logging in LiteRT.
+      return LITERT_VERBOSE;
+    case static_cast<int>(absl::LogSeverityAtLeast::kInfo):
+      return LITERT_INFO;
+    case static_cast<int>(absl::LogSeverityAtLeast::kWarning):
+      return LITERT_WARNING;
+    case static_cast<int>(absl::LogSeverityAtLeast::kError):
+      return LITERT_ERROR;
+    case static_cast<int>(absl::LogSeverityAtLeast::kFatal):
+      return LITERT_SILENT;
+    default:
+      return LITERT_INFO;
+  }
+}
+
 absl::Status MainHelper(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
+  LiteRtSetMinLoggerSeverity(
+      LiteRtGetDefaultLogger(),
+      AbslMinLogLevelToLiteRtLogSeverity(absl::MinLogLevel()));
 
   const std::string model_path = absl::GetFlag(FLAGS_model_path);
   if (model_path.empty()) {

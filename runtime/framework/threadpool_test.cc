@@ -133,7 +133,12 @@ TEST(ThreadPoolTest, WaitUntilIdle) {
   // WaitUntilIdle() should wait until the task queue is empty. Note that when
   // the function returns, the last task is still being executed so the vector
   // will only have 9 elements instead of 10.
-  EXPECT_THAT(v, testing::ElementsAre(0, 1, 2, 3, 4, 5, 6, 7, 8));
+  {
+    absl::MutexLock l(&mu);
+    EXPECT_THAT(v, testing::ElementsAre(0, 1, 2, 3, 4, 5, 6, 7, 8));
+  }
+  // Wait all tasks to be done before destroying v.
+  EXPECT_OK(thread_pool.WaitUntilDone(absl::Seconds(50)));
 }
 
 TEST(ThreadPoolTest, WaitUntilDone) {

@@ -127,7 +127,7 @@ absl::Status LitertLmWrite(const std::vector<std::string>& command_args,
           llm_metadata_proto));
       section_types.push_back(AnySectionDataType_LlmMetadataProto);
       section_name_order.push_back(kLlmMetadataSectionName);
-#if !defined(__ANDROID__)
+#if !defined(__ANDROID__) && !defined(OS_IOS)
     } else if (extension == ".pbtext" || extension == ".prototext") {
       LlmMetadata llm_metadata_proto;
       std::ifstream ifs(filename, std::ios::binary);
@@ -146,7 +146,7 @@ absl::Status LitertLmWrite(const std::vector<std::string>& command_args,
           llm_metadata_proto));
       section_types.push_back(AnySectionDataType_LlmMetadataProto);
       section_name_order.push_back(kLlmMetadataSectionName);
-#endif  // !defined(__ANDROID__)
+#endif  // !defined(__ANDROID__) && !defined(OS_IOS)
     } else if (extension == ".spiece") {
       sections.push_back(std::make_unique<FileBackedSectionStream>(filename));
       section_types.push_back(AnySectionDataType_SP_Tokenizer);

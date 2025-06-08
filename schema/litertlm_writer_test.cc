@@ -48,7 +48,7 @@ class LiteRTLMWriteTest : public ::testing::Test {
   }
 };
 
-#if !defined(__ANDROID__)
+#if !defined(__ANDROID__) && !defined(OS_IOS)
 // Test case: Successful creation with multiple files and metadata.
 TEST_F(LiteRTLMWriteTest, BasicFileCreationAndValidation) {
   // 1. Define paths for temporary input files and the output file.
@@ -135,7 +135,7 @@ TEST_F(LiteRTLMWriteTest, BasicFileCreationAndValidation) {
   EXPECT_THAT(inspection_str, testing::HasSubstr("temperature,"));
   EXPECT_THAT(inspection_str, testing::HasSubstr("(Float): 0.8"));
 }
-#endif  // !defined(__ANDROID__)
+#endif  // !defined(__ANDROID__) && !defined(OS_IOS)
 
 // Test case: No section metadata provided.
 TEST_F(LiteRTLMWriteTest, NoMetadataTest) {

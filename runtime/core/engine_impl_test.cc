@@ -98,20 +98,7 @@ TEST(EngineTest, CreateEngine_WithCache) {
   EXPECT_EQ(responses->GetNumOutputCandidates(), 1);
   EXPECT_FALSE(responses->GetResponseTextAt(0)->empty());
 
-#if 0  // Disabled due to ASAN failure. Further investigation is needed.
-  // 2nd run with the same engine and the same cache.
-  session->reset();
-  session = (*llm)->CreateSession(SessionConfig::CreateDefault());
-  ABSL_CHECK_OK(session);
-
-  ABSL_CHECK_OK((*session)->RunPrefill({InputText("Hello world!")}));
-
-  responses = (*session)->RunDecode();
-  EXPECT_OK(responses);
-  EXPECT_EQ(responses->GetNumOutputCandidates(), 1);
-  EXPECT_FALSE(responses->GetResponseTextAt(0)->empty());
-
-  // 3rd run with a new engine and the same cache.
+  // 2nd run with a new engine and the same cache.
   session->reset();
   llm->reset();
   llm = Engine::CreateEngine(*engine_settings);
@@ -126,7 +113,6 @@ TEST(EngineTest, CreateEngine_WithCache) {
   EXPECT_OK(responses);
   EXPECT_EQ(responses->GetNumOutputCandidates(), 1);
   EXPECT_FALSE(responses->GetResponseTextAt(0)->empty());
-#endif
 }
 
 // TODO (b/397975034): Add more tests for Engine.

@@ -245,12 +245,6 @@ class LlmExecutorGoogle : public LlmExecutorBase {
                      ExecutorBackendName()));
   };
 
-  // Gets the current step of the executor.
-  virtual absl::StatusOr<int> GetCurrentStep() const {
-    return absl::UnimplementedError(absl::StrCat(
-        "GetCurrentStep not implemented for backend: ", ExecutorBackendName()));
-  };
-
   // Sets the current step of the executor. The new step can only be less than
   // or equal to the current step of the executor.
   virtual absl::Status SetCurrentStep(int new_step) {

@@ -284,8 +284,9 @@ absl::Status LlmLiteRtCompiledModelExecutor::Decode(
   }
   RETURN_IF_ERROR(SampleLogits(decoded_logits_, output_tokens));
   LITERT_ASSIGN_OR_RETURN_ABSL(
-      auto lock_and_addr, ::litert::TensorBufferScopedLock::Create(
-                              output_tokens, TensorBuffer::LockMode::kWrite));
+      auto lock_and_addr,
+      ::litert::TensorBufferScopedLock::Create(
+          output_tokens, TensorBuffer::LockMode::kReadWrite));
   auto output_tokens_ptr = static_cast<int32_t*>(lock_and_addr.second);
   if (output_tokens_ptr[0] < 0) {
     ABSL_LOG(WARNING) << "Invalid decode and sample result. The sampled token "
@@ -813,12 +814,13 @@ LlmLiteRtCompiledModelExecutor::Create(
   }
 
   return absl::WrapUnique(new LlmLiteRtCompiledModelExecutor(
-      std::move(*lrt_env), std::move(*litert_model), std::move(*compiled_model),
-      std::move(prefill_input_buffers), std::move(prefill_output_buffers),
-      std::move(decode_input_buffers), std::move(decode_output_buffers),
-      std::move(input_kv_cache_buffers), std::move(output_kv_cache_buffers),
-      std::move(prefill_runner_set), signatures, batch_size, weight_cache_path,
-      std::move(embedding_lookup), std::move(per_layer_embedding_lookup)));
+      executor_settings, std::move(*lrt_env), std::move(*litert_model),
+      std::move(*compiled_model), std::move(prefill_input_buffers),
+      std::move(prefill_output_buffers), std::move(decode_input_buffers),
+      std::move(decode_output_buffers), std::move(input_kv_cache_buffers),
+      std::move(output_kv_cache_buffers), std::move(prefill_runner_set),
+      signatures, batch_size, weight_cache_path, std::move(embedding_lookup),
+      std::move(per_layer_embedding_lookup)));
 }
 
 }  // namespace litert::lm

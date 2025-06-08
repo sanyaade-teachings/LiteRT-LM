@@ -62,6 +62,16 @@ class FakeLlmExecutor : public LlmExecutor {
 
   absl::StatusOr<int> GetVocabSize() override { return vocab_size_; }
 
+  absl::StatusOr<LlmExecutorSettings> GetExecutorSettings() const override {
+    return executor_settings_;
+  };
+  absl::StatusOr<LlmExecutorSettings*> GetMutableExecutorSettings() {
+    return &executor_settings_;
+  };
+  absl::StatusOr<int> GetCurrentStep() const override {
+    return current_step_;
+  }
+
  private:
   int vocab_size_;
   std::vector<std::vector<int>> prefill_tokens_set_;
@@ -72,6 +82,12 @@ class FakeLlmExecutor : public LlmExecutor {
   int prefill_times_;
   // The number of times the Decode function has been called.
   int decode_times_;
+
+  // The executor settings.
+  LlmExecutorSettings executor_settings_;
+
+  // The current step of the executor.
+  int current_step_;
 };
 
 }  // namespace litert::lm

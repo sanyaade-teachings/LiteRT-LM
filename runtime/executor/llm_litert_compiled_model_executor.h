@@ -87,8 +87,8 @@ class LlmLiteRtCompiledModelExecutor : public LlmExecutor {
 
  protected:
   LlmLiteRtCompiledModelExecutor(
-      ::litert::Environment env, ::litert::Model model,
-      ::litert::CompiledModel compiled_model,
+      const LlmExecutorSettings& executor_settings, ::litert::Environment env,
+      ::litert::Model model, ::litert::CompiledModel compiled_model,
       absl::flat_hash_map<absl::string_view, ::litert::TensorBuffer>
           prefill_input_buffers,
       absl::flat_hash_map<absl::string_view, ::litert::TensorBuffer>
@@ -105,7 +105,8 @@ class LlmLiteRtCompiledModelExecutor : public LlmExecutor {
       ModelSignatures signatures, int batch_size, std::string weight_cache_path,
       std::unique_ptr<EmbeddingLookupText> embedding_lookup = nullptr,
       std::unique_ptr<EmbeddingLookupText> per_layer_embedding_lookup = nullptr)
-      : env_(std::move(env)),
+      : executor_settings_(executor_settings),
+        env_(std::move(env)),
         model_(std::move(model)),
         compiled_model_(std::move(compiled_model)),
         prefill_input_buffers_(std::move(prefill_input_buffers)),
@@ -121,8 +122,7 @@ class LlmLiteRtCompiledModelExecutor : public LlmExecutor {
         output_batch_size_(batch_size),
         weight_cache_path_(weight_cache_path),
         embedding_lookup_(std::move(embedding_lookup)),
-        per_layer_embedding_lookup_(
-            std::move(per_layer_embedding_lookup)) {}
+        per_layer_embedding_lookup_(std::move(per_layer_embedding_lookup)) {}
 
  private:
   // Samples output logits and write to ids_tensor.
@@ -138,6 +138,7 @@ class LlmLiteRtCompiledModelExecutor : public LlmExecutor {
   // Caller of this function is responsible for capturing the output.
   absl::Status DecodeInternal(ExecutorInputs inputs);
 
+  LlmExecutorSettings executor_settings_;
   ::litert::Environment env_;
   ::litert::Model model_;
   ::litert::CompiledModel compiled_model_;

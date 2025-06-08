@@ -21,6 +21,7 @@
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "litert/cc/litert_tensor_buffer.h"  // from @litert
 #include "runtime/executor/llm_executor_io_types.h"
+#include "runtime/executor/llm_executor_settings.h"
 
 namespace litert::lm {
 
@@ -81,6 +82,19 @@ class LlmExecutorBase {
   virtual absl::StatusOr<int> GetVocabSize() {
     return absl::UnimplementedError(absl::StrCat(
         "GetVocabSize not implemented for backend: ", ExecutorBackendName()));
+  };
+
+  // Gets the current step of the executor.
+  virtual absl::StatusOr<int> GetCurrentStep() const {
+    return absl::UnimplementedError(absl::StrCat(
+        "GetCurrentStep not implemented for backend: ", ExecutorBackendName()));
+  };
+
+  // Gets the current step of the executor.
+  virtual absl::StatusOr<LlmExecutorSettings> GetExecutorSettings() const {
+    return absl::UnimplementedError(
+        absl::StrCat("GetExecutorSettings not implemented for backend: ",
+                     ExecutorBackendName()));
   };
 
   // ------------Vision APIs------------:

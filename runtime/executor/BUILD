@@ -176,6 +176,7 @@ cc_library(
     srcs = ["fake_llm_executor.cc"],
     hdrs = ["fake_llm_executor.h"],
     deps = [
+        ":executor_settings_base",
         ":llm_executor",
         ":llm_executor_io_types",
         ":llm_executor_settings",
@@ -227,6 +228,7 @@ cc_library(
     hdrs = ["llm_executor_base.h"],
     deps = [
         ":llm_executor_io_types",
+        ":llm_executor_settings",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",

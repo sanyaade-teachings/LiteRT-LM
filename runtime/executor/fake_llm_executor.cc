@@ -12,7 +12,9 @@
 #include "absl/types/span.h"  // from @com_google_absl
 #include "litert/cc/litert_macros.h"  // from @litert
 #include "litert/cc/litert_tensor_buffer.h"  // from @litert
+#include "runtime/executor/executor_settings_base.h"
 #include "runtime/executor/llm_executor_io_types.h"
+#include "runtime/executor/llm_executor_settings.h"
 #include "runtime/util/convert_tensor_buffer.h"
 #include "runtime/util/status_macros.h"
 
@@ -64,7 +66,15 @@ FakeLlmExecutor::FakeLlmExecutor(
       decode_tokens_set_(decode_tokens_set),
       batch_size_(batch_size),
       prefill_times_(0),
-      decode_times_(0) {}
+      decode_times_(0),
+      executor_settings_(
+          LlmExecutorSettings::CreateDefault(
+              ModelAssets::Create("dummy_model_path").value(), Backend::CPU)
+              .value()) {
+  // Set default testing max num tokens to 1024.
+  executor_settings_.SetMaxNumTokens(1024);
+  current_step_ = 0;
+}
 
 absl::Status FakeLlmExecutor::Prefill(const ExecutorInputs& inputs) {
   if (prefill_times_ >= prefill_tokens_set_.size()) {
@@ -78,6 +88,7 @@ absl::Status FakeLlmExecutor::Prefill(const ExecutorInputs& inputs) {
   RETURN_IF_ERROR(CheckEquivalent(
       absl::MakeSpan(prefill_tokens_set_[prefill_times_]), *input_span));
   prefill_times_++;
+  current_step_ += input_span->size();
   return absl::OkStatus();
 }
 
@@ -104,6 +115,7 @@ absl::Status FakeLlmExecutor::Decode(::litert::TensorBuffer& output_tokens) {
     (*tokens_span)[i] = decode_tokens_set_[decode_times_][i];
   }
   decode_times_++;
+  current_step_++;
   return absl::OkStatus();
 }
 
@@ -117,14 +129,15 @@ absl::Status FakeLlmExecutor::Decode(const ExecutorInputs& inputs,
   }
   if (decode_times_ > 0) {
     // Check that the input tokens match the decode tokens from the last call.
-    auto input_span = ReferTensorBufferAsSpan<int>(
-        *(*inputs.GetTextTokenIdsPtr()));
+    auto input_span =
+        ReferTensorBufferAsSpan<int>(*(*inputs.GetTextTokenIdsPtr()));
     RETURN_IF_ERROR(CheckEquivalent(
         absl::MakeSpan(decode_tokens_set_[decode_times_ - 1]), *input_span));
   }
   DecodeIdsToLogits(decode_tokens_set_[decode_times_], vocab_size_,
                     output_logits);
   decode_times_++;
+  current_step_++;
   return absl::OkStatus();
 }
 
@@ -149,6 +162,7 @@ absl::StatusOr<::litert::TensorBuffer> FakeLlmExecutor::DecodeLogits(
   DecodeIdsToLogits(decode_tokens_set_[decode_times_], vocab_size_,
                     output_logits);
   decode_times_++;
+  current_step_++;
   return std::move(output_logits);
 }
 

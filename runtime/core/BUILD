@@ -117,6 +117,7 @@ cc_test(
     deps = [
         ":pipeline",
         "@com_google_googletest//:gtest_main",
+        "@com_google_absl//absl/status",
         "//runtime/components:sentencepiece_tokenizer",
         "//runtime/components:stop_token_detector",
         "//runtime/components:tokenizer",

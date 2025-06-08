@@ -83,6 +83,19 @@ class LlmLiteRtCompiledModelExecutor : public LlmExecutor {
     return "LiteRT Compiled Model";
   }
 
+  // Gets the executor settings.
+  absl::StatusOr<LlmExecutorSettings> GetExecutorSettings() const override {
+    return executor_settings_;
+  }
+
+  // Gets the current step of the executor.
+  // Public API, the return value is the current step that user expects (e.g.
+  // users prefill 100 tokens, then they expect the current step to be 100). It
+  // is different from the internal current step.
+  absl::StatusOr<int> GetCurrentStep() const override {
+    return current_step_ + (next_input_token_id_ == -1 ? 0 : 1);
+  }
+
   absl::StatusOr<int> GetVocabSize() override;
 
  protected:

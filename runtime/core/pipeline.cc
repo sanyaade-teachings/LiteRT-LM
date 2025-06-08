@@ -25,6 +25,7 @@
 #include "absl/log/absl_log.h"  // from @com_google_absl
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
+#include "absl/strings/str_cat.h"  // from @com_google_absl
 #include "absl/strings/str_replace.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "absl/types/span.h"  // from @com_google_absl
@@ -43,9 +44,45 @@
 namespace litert::lm {
 namespace {
 
-// TODO(b/397975034) LLM Executor should return error when reaching the
-// maximum number of kv-cache steps. Remove this once it is supported.
-constexpr int kMaxDecodeStop = 128;
+// TODO(b/423364170): all LLM Executors should respect the max number of tokens
+// returned by the model. We should remove this default value once all Executors
+// are compliant with the max number of tokens.
+constexpr int kDeafultMaxNumTokens = 4096;
+int TryGetMaxNumTokens(std::shared_ptr<LlmExecutor> executor) {
+  auto settings = executor->GetExecutorSettings();
+  if (!settings.ok()) {
+    // If the executor settings are not available, we will use the default
+    // value.
+    ABSL_LOG(WARNING) << "Failed to get executor settings: "
+                      << settings.status();
+    return kDeafultMaxNumTokens;
+  }
+  return settings->GetMaxNumTokens();
+}
+
+// Check whether the decoding loop should stop.
+bool ShouldStop(bool hit_stop_tokens, int benchmark_decode_token_count,
+                int num_decoded_steps, int current_step, int max_num_tokens,
+                InferenceObservable* observer) {
+  // Stopping conditions.
+  if (hit_stop_tokens && benchmark_decode_token_count == 0) {
+    // Only early stop if no decode step
+    // is requested by benchmark.
+    return true;
+  } else if (benchmark_decode_token_count > 0 &&
+             num_decoded_steps >= benchmark_decode_token_count) {
+    // Stop when the number of decode steps is equal to the
+    // benchmark_decode_token_count (when specified).
+    return true;
+  } else if (current_step >= max_num_tokens) {
+    // Reaching maximum number of kv-cache size.
+    if (observer != nullptr) {
+      observer->OnError(absl::InternalError("Maximum kv-cache size reached."));
+    }
+    return true;
+  }
+  return false;
+}
 
 // A wrapper class to run one step of the decode process. It allows us to reduce
 // the code duplication between different decode functions.
@@ -96,8 +133,8 @@ class DecodeExternalSampling {
     LITERT_ASSIGN_OR_RETURN_ABSL(
         scores_span_, ReferTensorBufferAsSpan<float>(scores_tensor_));
     RETURN_IF_ERROR(stop_token_detector_.ProcessTokens(decoded_ids_span));
-    ASSIGN_OR_RETURN(bool should_stop, stop_token_detector_.AllDone());
-    return should_stop;
+    ASSIGN_OR_RETURN(bool hit_stop_tokens, stop_token_detector_.AllDone());
+    return hit_stop_tokens;
   }
 
   absl::Span<float> GetScores() { return scores_span_; }
@@ -162,8 +199,8 @@ class DecodeInternalSamplingOneStep {
     ASSIGN_OR_RETURN(result_tokens_,
                      tokenizer_->TensorBufferToText(output_tokens_));
     RETURN_IF_ERROR(stop_token_detector_.ProcessTokens(output_tokens_span));
-    ASSIGN_OR_RETURN(bool should_stop, stop_token_detector_.AllDone());
-    return should_stop;
+    ASSIGN_OR_RETURN(bool hit_stop_tokens, stop_token_detector_.AllDone());
+    return hit_stop_tokens;
   }
 
   absl::Span<float> GetScores() { return scores_span_; }
@@ -195,7 +232,6 @@ absl::StatusOr<int> Prefill(std::shared_ptr<LlmExecutor> executor,
                             absl::string_view prompt, int bos_token_id,
                             bool wait_for_completion,
                             std::optional<BenchmarkInfo>& benchmark_info) {
-  ABSL_LOG(INFO) << "Prefill: " << prompt << " bos_token_id: " << bos_token_id;
   int benchmark_prefill_token_count = 0;
   if (benchmark_info.has_value()) {
     benchmark_prefill_token_count =
@@ -209,6 +245,13 @@ absl::StatusOr<int> Prefill(std::shared_ptr<LlmExecutor> executor,
     ids.resize(benchmark_prefill_token_count);
   } else {
     ids.insert(ids.begin(), bos_token_id);
+  }
+  const int max_num_tokens = TryGetMaxNumTokens(executor);
+  if (ids.size() >= max_num_tokens) {
+    return absl::InvalidArgumentError(absl::StrCat(
+        "Input token ids are too long. Exceeding the maximum number of tokens "
+        "allowed: ",
+        ids.size(), " >= ", max_num_tokens));
   }
   ASSIGN_OR_RETURN(auto ids_buffer, tokenizer->TokenIdsToTensorBuffer(ids));
   LITERT_ASSIGN_OR_RETURN_ABSL(auto ids_buffer_span,
@@ -247,21 +290,22 @@ absl::StatusOr<Responses> Decode(std::shared_ptr<LlmExecutor> executor,
   // TODO(b/397975034) LLM Executor should return error when reaching the
   // maximum number of kv-cache steps.
   int num_decoded_steps = 0;
+  const int max_num_tokens = TryGetMaxNumTokens(executor);
   DecodeInternalSamplingOneStep run_one_step(
       executor, tokenizer, num_output_candidates, stop_token_detector,
       benchmark_info);
-  for (int i = 0; i < std::max(kMaxDecodeStop, benchmark_decode_token_count);
-       ++i) {
-    auto should_stop = run_one_step.Run();
-    if (!should_stop.ok()) {
-      return should_stop.status();
+  while (true) {
+    auto hit_stop_tokens = run_one_step.Run();
+    if (!hit_stop_tokens.ok()) {
+      return hit_stop_tokens.status();
     }
     response_texts[0] +=
         absl::StrReplaceAll(run_one_step.GetResultTokens()[0], {{"▁", " "}});
     num_decoded_steps++;
 
-    if ((*should_stop) && benchmark_decode_token_count == 0) {
-      // Only early stop if no decode step is requested by benchmark.
+    if (ShouldStop(*hit_stop_tokens, benchmark_decode_token_count,
+      num_decoded_steps, executor->GetCurrentStep().value(), max_num_tokens,
+      /*observer=*/nullptr)) {
       break;
     }
   }
@@ -292,25 +336,27 @@ absl::Status DecodeStreaming(std::shared_ptr<LlmExecutor> executor,
   // TODO(b/397975034) LLM Executor should return error when reaching the
   // maximum number of kv-cache steps.
   int num_decoded_steps = 0;
+  const int max_num_tokens = TryGetMaxNumTokens(executor);
   DecodeInternalSamplingOneStep run_one_step(
       executor, tokenizer, num_output_candidates, stop_token_detector,
       benchmark_info);
-  for (int i = 0; i < std::max(kMaxDecodeStop, benchmark_decode_token_count);
-       ++i) {
+  while (true) {
     Responses responses(num_output_candidates);
     std::vector<std::string>& response_texts =
         responses.GetMutableResponseTexts();
-    auto should_stop = run_one_step.Run();
-    if (!should_stop.ok()) {
-      observer->OnError(should_stop.status());
-      return should_stop.status();
+    auto hit_stop_tokens = run_one_step.Run();
+    if (!hit_stop_tokens.ok()) {
+      observer->OnError(hit_stop_tokens.status());
+      return hit_stop_tokens.status();
     }
     response_texts[0] +=
         absl::StrReplaceAll(run_one_step.GetResultTokens()[0], {{"▁", " "}});
     num_decoded_steps++;
     observer->OnNext(responses);
-    if ((*should_stop) && benchmark_decode_token_count == 0) {
-      // Only early stop if no decode step is requested by benchmark.
+
+    if (ShouldStop(*hit_stop_tokens, benchmark_decode_token_count,
+      num_decoded_steps, executor->GetCurrentStep().value(), max_num_tokens,
+      observer)) {
       break;
     }
   }
@@ -340,12 +386,13 @@ absl::StatusOr<Responses> DecodeCustomSampling(
   std::fill(scores.begin(), scores.end(), 0.0f);
   std::vector<int> num_decoded_tokens(num_output_candidates, 0);
   int num_decode_steps = 0;
+  const int max_num_tokens = TryGetMaxNumTokens(executor);
   DecodeExternalSampling run_one_step(executor, tokenizer,
                                       num_output_candidates, sampler,
                                       stop_token_detector, benchmark_info);
-  for (int i = 0; i < std::max(kMaxDecodeStop, benchmark_decode_token_count);
-       ++i) {
-    ASSIGN_OR_RETURN(bool should_stop, run_one_step.Run(decoded_ids));
+
+  while (true) {
+    ASSIGN_OR_RETURN(bool hit_stop_tokens, run_one_step.Run(decoded_ids));
 
     // Append the results to the final results vector. Note that only the
     // candidates that have not reached the stop token are added to the final
@@ -364,8 +411,9 @@ absl::StatusOr<Responses> DecodeCustomSampling(
       }
     }
     num_decode_steps++;
-    if (should_stop && benchmark_decode_token_count == 0) {
-      // Only early stop if no decode step is requested by benchmark.
+    if (ShouldStop(hit_stop_tokens, benchmark_decode_token_count,
+      num_decode_steps, executor->GetCurrentStep().value(), max_num_tokens,
+      /*observer=*/nullptr)) {
       break;
     }
   }
@@ -402,15 +450,17 @@ absl::Status DecodeCustomSamplingStreaming(
   // TODO(b/397975034) LLM Executor should return error when reaching the
   // maximum number of kv-cache steps.
   int num_decode_steps = 0;
+  const int max_num_tokens = TryGetMaxNumTokens(executor);
   DecodeExternalSampling run_one_step(executor, tokenizer,
                                       num_output_candidates, sampler,
                                       stop_token_detector, benchmark_info);
-  for (int i = 0; i < std::max(kMaxDecodeStop, benchmark_decode_token_count);
-       ++i) {
-    absl::StatusOr<bool> should_stop = run_one_step.Run(decoded_ids);
-    if (!should_stop.ok()) {
-      observer->OnError(should_stop.status());
-      return should_stop.status();
+
+  // Enter the loop to run the decode process.
+  while (true) {
+    absl::StatusOr<bool> hit_stop_tokens = run_one_step.Run(decoded_ids);
+    if (!hit_stop_tokens.ok()) {
+      observer->OnError(hit_stop_tokens.status());
+      return hit_stop_tokens.status();
     }
 
     Responses responses(num_output_candidates);
@@ -432,8 +482,9 @@ absl::Status DecodeCustomSamplingStreaming(
     }
     num_decode_steps++;
     observer->OnNext(responses);
-    if ((*should_stop) && benchmark_decode_token_count == 0) {
-      // Only early stop if no decode step is requested by benchmark.
+    if (ShouldStop(*hit_stop_tokens, benchmark_decode_token_count,
+      num_decode_steps, executor->GetCurrentStep().value(), max_num_tokens,
+      observer)) {
       break;
     }
   }

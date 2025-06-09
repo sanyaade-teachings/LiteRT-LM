@@ -111,6 +111,13 @@ class LlmExecutorBase {
         absl::StrCat("FillVisionEmbeddings not implemented for backend: ",
                      ExecutorBackendName()));
   };
+
+  // Resets all of the internal states (e.g. KVCache). Loaded and used LoRA
+  // models are not affected (remain loaded and in use).
+  virtual absl::Status Reset() {
+    return absl::UnimplementedError(absl::StrCat(
+        "Reset not implemented for backend: ", ExecutorBackendName()));
+  };
 };
 
 }  // namespace litert::lm

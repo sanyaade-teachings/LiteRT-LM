@@ -59,6 +59,18 @@ TEST(EngineTest, CreateEngine_WithoutCache) {
   EXPECT_OK(responses);
   EXPECT_EQ(responses->GetNumOutputCandidates(), 1);
   EXPECT_FALSE(responses->GetResponseTextAt(0)->empty());
+
+  // 2nd run with the same engine.
+  session->reset();  // Destroy the previous first.
+  session = (*llm)->CreateSession(SessionConfig::CreateDefault());
+  ABSL_CHECK_OK(session);
+
+  ABSL_CHECK_OK((*session)->RunPrefill({InputText("Hello world!")}));
+
+  responses = (*session)->RunDecode();
+  EXPECT_OK(responses);
+  EXPECT_EQ(responses->GetNumOutputCandidates(), 1);
+  EXPECT_FALSE(responses->GetResponseTextAt(0)->empty());
 }
 
 TEST(EngineTest, CreateEngine_WithCache) {
@@ -97,8 +109,20 @@ TEST(EngineTest, CreateEngine_WithCache) {
   EXPECT_EQ(responses->GetNumOutputCandidates(), 1);
   EXPECT_FALSE(responses->GetResponseTextAt(0)->empty());
 
-  // 2nd run with a new engine and the same cache.
-  session->reset();
+  // 2nd run with the same engine and the same cache.
+  session->reset();  // Destroy the previous first.
+  session = (*llm)->CreateSession(SessionConfig::CreateDefault());
+  ABSL_CHECK_OK(session);
+
+  ABSL_CHECK_OK((*session)->RunPrefill({InputText("Hello world!")}));
+
+  responses = (*session)->RunDecode();
+  EXPECT_OK(responses);
+  EXPECT_EQ(responses->GetNumOutputCandidates(), 1);
+  EXPECT_FALSE(responses->GetResponseTextAt(0)->empty());
+
+  // 3rd run with a new engine and the same cache.
+  session->reset();  // Destroy the previous first.
   llm->reset();
   llm = Engine::CreateEngine(*engine_settings);
   ABSL_CHECK_OK(llm);

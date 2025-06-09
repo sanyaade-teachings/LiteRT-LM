@@ -96,6 +96,9 @@ class LlmLiteRtCompiledModelExecutor : public LlmExecutor {
     return current_step_ + (next_input_token_id_ == -1 ? 0 : 1);
   }
 
+  // Resets all of the internal states.
+  absl::Status Reset() override;
+
   absl::StatusOr<int> GetVocabSize() override;
 
  protected:

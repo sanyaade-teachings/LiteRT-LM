@@ -205,13 +205,6 @@ class LlmExecutorGoogle : public LlmExecutorBase {
         "CleanCacheAt not implemented for backend: ", ExecutorBackendName()));
   };
 
-  // Resets all of the internal states (e.g. KVCache). Loaded and used LoRA
-  // models are not affected (remain loaded and in use).
-  virtual absl::Status Reset() {
-    return absl::UnimplementedError(absl::StrCat(
-        "Reset not implemented for backend: ", ExecutorBackendName()));
-  };
-
   // Most Getter and Setter APIs are not used in the open source version (except
   // for the GetVocabSize()).
   //

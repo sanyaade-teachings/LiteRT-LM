@@ -54,7 +54,7 @@ class SessionBasic : public Engine::Session {
       std::optional<BenchmarkInfo> benchmark_info,
       ThreadPool* absl_nonnull worker_thread_pool);
 
-  virtual ~SessionBasic() = default;
+  virtual ~SessionBasic();
 
   absl::StatusOr<Responses> GenerateContent(
       const std::vector<InputData>& contents) override;

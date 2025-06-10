@@ -46,27 +46,17 @@ Below are the performance numbers of running each model on various devices. Note
 that the benchmark is measured with 1024 tokens prefill and 256 tokens decode (
 with performance lock on Android devices).
 
-| Model       | Device      | Backend | Prefill      | Decode (tokens/sec) |
-:             :             :         : (tokens/sec) :                     :
-| ----------- | ----------- | ------- | -----------: | ------------------: |
-| Gemma3-1B   | Macbook Pro | CPU     | 603.8        | 83.0                |
-:             : 2023 M3     :         :              :                     :
-| Gemma3-1B   | Samsung S24 | CPU     | 379.7        | 55.9                |
-:             : Ultra       :         :              :                     :
-| Gemma3-1B   | Samsung S24 | GPU     | 2369.0       | 52.5                |
-:             : Ultra       :         :              :                     :
-| Gemma3n-E2B | Macbook Pro | CPU     | 232.5        | 27.6                |
-:             : 2023 M3     :         :              :                     :
-| Gemma3n-E2B | Samsung S24 | CPU     | 110.5        | 16.1                |
-:             : Ultra       :         :              :                     :
-| Gemma3n-E2B | Samsung S24 | GPU     | 816.4        | 15.6                |
-:             : Ultra       :         :              :                     :
-| Gemma3n-E4B | Macbook Pro | CPU     | 170.1        | 20.1                |
-:             : 2023 M3     :         :              :                     :
-| Gemma3n-E4B | Samsung S24 | CPU     | 73.5         | 9.2                 |
-:             : Ultra       :         :              :                     :
-| Gemma3n-E4B | Samsung S24 | GPU     | 548.0        | 9.4                 |
-:             : Ultra       :         :              :                     :
+| Model | Device | Backend | Prefill (tokens/sec) | Decode (tokens/sec) |
+| :--- | :--- | :--- | :--- | :--- |
+| Gemma3-1B | Macbook Pro<br>(2023 M3) | CPU | 603.8 | 83.0 |
+| Gemma3-1B | Samsung S24<br>(Ultra) | CPU | 379.7 | 55.9 |
+| Gemma3-1B | Samsung S24<br>(Ultra) | GPU | 2369.0 | 52.5 |
+| Gemma3n-E2B | Macbook Pro<br>(2023 M3) | CPU | 232.5 | 27.6 |
+| Gemma3n-E2B | Samsung S24<br>(Ultra) | CPU | 110.5 | 16.1 |
+| Gemma3n-E2B | Samsung S24<br>(Ultra) | GPU | 816.4 | 15.6 |
+| Gemma3n-E4B | Macbook Pro<br>(2023 M3) | CPU | 170.1 | 20.1 |
+| Gemma3n-E4B | Samsung S24<br>(Ultra) | CPU | 73.5 | 9.2 |
+| Gemma3n-E4B | Samsung S24<br>(Ultra) | GPU | 548.0 | 9.4 |
 
 ## Quick Start
 

@@ -15,7 +15,7 @@ including:
 *   **Hardware Acceleration** to unlock the full potential of your device's
     hardware
 
-### Status: Preview
+### Status: Early Preview
 
 Expect our first full release of LiteRT-LM late summer / early fall. We heard
 the community feedback regarding Google AI Edge's Gemma 3n LiteRT preview. You

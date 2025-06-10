@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>  // NOLINT: Required for path manipulation.
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -115,25 +116,25 @@ TEST(LitertlmHeaderTest, RoundTripHeader) {
   size_t size = builder.GetSize();
 
   // TODO(talumbau) Use in-memory files or std::tmpfile here.
-  std::ofstream output_file("/tmp/header.bin", std::ios::binary);
+  auto header_path = std::filesystem::path(testing::TempDir()) / "header.bin";
+  std::ofstream output_file(header_path, std::ios::binary);
   output_file.write(reinterpret_cast<const char*>(buffer), size);
 
   std::ofstream::pos_type bytes_written = output_file.tellp();
   ASSERT_GT(bytes_written, 0);
 
   output_file.close();
-  ABSL_LOG(INFO) << "Successfully wrote metadata to /tmp/header.bin";
+  ABSL_LOG(INFO) << "Successfully wrote metadata to " << header_path;
 
   // Now read and verify that we wrote the correct data.
-  std::ifstream input_stream("/tmp/header.bin",
-                             std::ios::binary | std::ios::ate);
+  std::ifstream input_stream(header_path, std::ios::binary | std::ios::ate);
   ASSERT_TRUE(input_stream.is_open());
 
   size_t buffer_size = input_stream.tellg();
   input_stream.seekg(0, std::ios::beg);
   std::vector<char> file_buffer(buffer_size);
   ASSERT_TRUE(!!(input_stream.read(file_buffer.data(), buffer_size)));
-  ABSL_LOG(INFO) << "Successfully read metadata to /tmp/header.bin";
+  ABSL_LOG(INFO) << "Successfully read metadata to " << header_path;
 
   input_stream.close();
 

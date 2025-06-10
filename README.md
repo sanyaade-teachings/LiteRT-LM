@@ -414,45 +414,16 @@ f0`.*
 
 More detailed description about each of the flags are in the following table:
 
-| Flag Name                      | Description          | Default Value       |
-| :----------------------------- | :------------------- | :------------------ |
-| `backend`                      | Executor backend to  | `"gpu"`             |
-:                                : use for LLM          :                     :
-:                                : execution (cpu, gpu, :                     :
-:                                : etc.).               :                     :
-| `model_path`                   | Path to the          | `""`                |
-:                                : `.litertlm` file for :                     :
-:                                : LLM execution.       :                     :
-| `input_prompt`                 | Input prompt to use  | `"What is the       |
-:                                : for testing LLM      : tallest building in :
-:                                : execution.           : the world?"`        :
-| `benchmark`                    | Benchmark the LLM    | `false`             |
-:                                : execution.           :                     :
-| `benchmark_prefill_tokens`     | If benchmark is true | `0`                 |
-:                                : and the value is     :                     :
-:                                : larger than 0, the   :                     :
-:                                : benchmark will use   :                     :
-:                                : this number to set   :                     :
-:                                : the number of        :                     :
-:                                : prefill tokens       :                     :
-:                                : (regardless of the   :                     :
-:                                : input prompt). If    :                     :
-:                                : this is set to be    :                     :
-:                                : non-zero, `async`    :                     :
-:                                : needs to be false.   :                     :
-| `benchmark_decode_tokens`      | If benchmark is true | `0`                 |
-:                                : and the value is     :                     :
-:                                : larger than 0, the   :                     :
-:                                : benchmark will use   :                     :
-:                                : this number to set   :                     :
-:                                : the number of decode :                     :
-:                                : steps (regardless of :                     :
-:                                : the input prompt).   :                     :
-| `async`                        | Run the LLM          | `true`              |
-:                                : execution            :                     :
-:                                : asynchronously.      :                     :
-| `report_peak_memory_footprint` | Report peak memory   | `false`             |
-:                                : footprint.           :                     :
+| Flag Name | Description | Default Value |
+| :--- | :--- | :--- |
+| `backend` | Executor backend to use for LLM execution (e.g., cpu, gpu). | `"gpu"` |
+| `model_path` | Path to the `.litertlm` file for LLM execution. | `""` |
+| `input_prompt` | Input prompt to use for testing LLM execution. | `"What is the tallest building in the world?"` |
+| `benchmark` | Benchmark the LLM execution. | `false` |
+| `benchmark_prefill_tokens` | If benchmark is true and this value is > 0, the benchmark will use this number to set the prefill tokens, regardless of the input prompt. If this is non-zero, `async` must be `false`. | `0` |
+| `benchmark_decode_tokens` | If benchmark is true and this value is > 0, the benchmark will use this number to set the number of decode steps, regardless of the input prompt. | `0` |
+| `async` | Run the LLM execution asynchronously. | `true` |
+| `report_peak_memory_footprint` | Report peak memory footprint. | `false` |
 
 ## LiteRT-LM API <span id="engine"></span>
 

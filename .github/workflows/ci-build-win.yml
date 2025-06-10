@@ -1,5 +1,8 @@
 name: "CI-Win"
 on:
+  push:
+    tags:
+    - v*.*.*
   schedule:
     - cron: "0 10 * * *"  # Run at 2am PST (10am UTC) every day
   workflow_dispatch:  # Manual trigger
@@ -12,10 +15,13 @@ jobs:
   nightly-check:
     name: "Nightly-Win"
     runs-on: windows-latest
+    permissions:
+      contents: write  # For gh release upload.
     env:
       # Clear ANDROID_NDK_HOME as windows-latest has NDK where jobs don't have permission for
       # androidndk rulesto create symlinks.
       ANDROID_NDK_HOME:
+      GH_TOKEN: ${{ github.token }}  # For gh release upload.
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,6 +47,12 @@ jobs:
       - name: Run bazel build on Windows
         run: |
           bazel build --disk_cache=~/.cache/bazel-windows //...
+
+      - name: Update litert_lm_main prebuilt for Windows if new version tag is pushed.
+        if: github.ref_type == 'tag'
+        run: |
+          cp bazel-bin/runtime/engine/litert_lm_main.exe litert_lm_main.windows_x86_64.exe
+          gh release upload ${{ github.ref_name }} litert_lm_main.windows_x86_64.exe --clobber
 
       - name: Run bazel test on Windows
         run: |

@@ -3,6 +3,8 @@ on:
   push:
     branches:
     - main
+    tags:
+    - v*.*.*
   pull_request:
     branches:
     - main
@@ -16,6 +18,10 @@ jobs:
   presubmit:
     name: "Presubmit-Mac"
     runs-on: macos-latest
+    permissions:
+      contents: write  # For gh release upload.
+    env:
+      GH_TOKEN: ${{ github.token }}  # For gh release upload.
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -43,6 +49,12 @@ jobs:
         run: |
           bazel build --disk_cache=~/.cache/bazel-macos //...
 
+      - name: Update litert_lm_main prebuilt for MacOS if new version tag is pushed.
+        if: github.ref_type == 'tag'
+        run: |
+          cp bazel-bin/runtime/engine/litert_lm_main litert_lm_main.macos_arm64
+          gh release upload ${{ github.ref_name }} litert_lm_main.macos_arm64 --clobber
+
       - name: Run bazel test on MacOS
         run: |
           bazel test --disk_cache=~/.cache/bazel-macos --test_output=errors //...
@@ -50,6 +62,12 @@ jobs:
       - name: Run bazel build for iOS Simulator
         run: |
           bazel build --disk_cache=~/.cache/bazel-ios --config=ios_sim_arm64 //...
+
+      - name: Update litert_lm_main prebuilt for iOS Simulatorif new version tag is pushed.
+        if: github.ref_type == 'tag'
+        run: |
+          cp bazel-bin/runtime/engine/litert_lm_main litert_lm_main.ios_sim_arm64
+          gh release upload ${{ github.ref_name }} litert_lm_main.ios_sim_arm64 --clobber
 
       - name: Save bazel cache if new or changed on push.
         uses: actions/cache/save@v4

@@ -80,7 +80,7 @@ absl::Status SessionBasic::PrefillInternal(absl::string_view input,
       absl::StrCat(session_config_.GetPromptTemplates().user().prefix(), input,
                    session_config_.GetPromptTemplates().user().suffix(),
                    session_config_.GetPromptTemplates().model().prefix());
-
+  ABSL_LOG(INFO) << "PrefillInternal: " << formatted_input;
   ASSIGN_OR_RETURN(last_prefill_token_id_,
                    Prefill(executor_, tokenizer_, formatted_input,
                            session_config_.GetStartTokenId(),

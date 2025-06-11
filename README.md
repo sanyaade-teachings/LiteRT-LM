@@ -38,7 +38,7 @@ Currently supported models during our Preview (as `.litertlm` format).
 
 Model       | Quantization      | Context size | Model Size (Mb) | Download link
 :---------- | :---------------: | :----------: | :-------------: | :-----------:
-Gemma3-1B   | 4-bit per-channel | 4096         | 554             | [download](https://huggingface.co/litert-community/Gemma3-1B-IT/blob/main/gemma3-1b-it-int4.litertlm)
+Gemma3-1B   | 4-bit per-channel | 4096         | 557             | [download](https://huggingface.co/litert-community/Gemma3-1B-IT/blob/main/Gemma3-1B-IT_multi-prefill-seq_q4_ekv4096.litertlm)
 Gemma3n-E2B | 4-bit per-channel | 4096         | 2965            | [download](https://huggingface.co/google/gemma-3n-E2B-it-litert-lm-preview)
 Gemma3n-E4B | 4-bit per-channel | 4096         | 4235            | [download](https://huggingface.co/google/gemma-3n-E4B-it-litert-lm-preview)
 
@@ -48,9 +48,9 @@ with performance lock on Android devices).
 
 | Model | Device | Backend | Prefill (tokens/sec) | Decode (tokens/sec) |
 | :--- | :--- | :--- | :--- | :--- |
-| Gemma3-1B | Macbook Pro<br>(2023 M3) | CPU | 603.8 | 83.0 |
-| Gemma3-1B | Samsung S24<br>(Ultra) | CPU | 379.7 | 55.9 |
-| Gemma3-1B | Samsung S24<br>(Ultra) | GPU | 2369.0 | 52.5 |
+| Gemma3-1B | Macbook Pro<br>(2023 M3) | CPU | 422.98 | 66.89 |
+| Gemma3-1B | Samsung S24<br>(Ultra) | CPU | 243.24 | 43.56 |
+| Gemma3-1B | Samsung S24<br>(Ultra) | GPU | 1876.5 | 44.57 |
 | Gemma3n-E2B | Macbook Pro<br>(2023 M3) | CPU | 232.5 | 27.6 |
 | Gemma3n-E2B | Samsung S24<br>(Ultra) | CPU | 110.5 | 16.1 |
 | Gemma3n-E2B | Samsung S24<br>(Ultra) | GPU | 816.4 | 15.6 |

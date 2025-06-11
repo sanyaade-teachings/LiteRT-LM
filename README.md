@@ -69,11 +69,11 @@ models in the
 **Want to try it out first?** Before proceeding with the full setup, you can use
 the pre-built binary below to run the LiteRT-LM immediately:
 
--   [Android Arm64](https://github.com/google-ai-edge/LiteRT-LM/releases/download/v0.6.1/litert_lm_main.android_arm64)
--   [MacOS](https://github.com/google-ai-edge/LiteRT-LM/releases/download/v0.6.1/litert_lm_main.macos_arm64)
--   [Linux x86_64](https://github.com/google-ai-edge/LiteRT-LM/releases/download/v0.6.1/litert_lm_main.linux_x86_64)
--   [Windows x86_64](https://github.com/google-ai-edge/LiteRT-LM/releases/download/v0.6.1/litert_lm_main.windows_x86_64.exe)
--   [iOS Arm64](https://github.com/google-ai-edge/LiteRT-LM/releases/download/v0.6.1/litert_lm_main.ios_sim_arm64)
+-   [Android Arm64](https://github.com/google-ai-edge/LiteRT-LM/releases/latest/download/litert_lm_main.android_arm64)
+-   [MacOS](https://github.com/google-ai-edge/LiteRT-LM/releases/latest/download/litert_lm_main.macos_arm64)
+-   [Linux x86_64](https://github.com/google-ai-edge/LiteRT-LM/releases/latest/download/litert_lm_main.linux_x86_64)
+-   [Windows x86_64](https://github.com/google-ai-edge/LiteRT-LM/releases/latest/download/litert_lm_main.windows_x86_64.exe)
+-   [iOS Arm64](https://github.com/google-ai-edge/LiteRT-LM/releases/latest/download/litert_lm_main.ios_sim_arm64)
 
 *Tip: you may have to explicitly approve the usage of pre-built binaries. For
 example, in MacOS, you should go to **System Settings > Privacy & Security >
@@ -88,7 +88,7 @@ Before you begin, please ensure you have the following installed:
 
 #### Get the Source Code
 
-Current stable branch tag: `v0.6.1`
+Current stable branch tag: [![Latest Release](https://img.shields.io/github/v/release/google-ai-edge/LiteRT-LM)](https://github.com/google-ai-edge/LiteRT-LM/releases/latest)
 
 First, clone the repository to your local machine. We strongly recommend
 checking out the latest stable release tag to ensure you are working with a
@@ -107,16 +107,16 @@ cd LiteRT-LM
 git fetch --tags
 ```
 
-**Checkout the latest stable release (`v0.6.1`):**
+**Checkout the latest stable release ([![Latest Release](https://img.shields.io/github/v/release/google-ai-edge/LiteRT-LM)](https://github.com/google-ai-edge/LiteRT-LM/releases/latest)):**
 
 To start working, create a new branch from the stable tag. This is the
 recommended approach for development.
 
 ```
-git checkout -b my-feature-branch v0.6.1
+git checkout -b <my-feature-branch> <release-tag, e.g. "v0.6.1">
 ```
 
-You are now on a local branch created from the `v0.6.1` tag and ready to work.
+You are now on a local branch created from the tag and ready to work.
 
 #### Install Bazel
 

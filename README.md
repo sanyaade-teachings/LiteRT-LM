@@ -48,13 +48,13 @@ with performance lock on Android devices).
 
 | Model | Device | Backend | Prefill (tokens/sec) | Decode (tokens/sec) |
 | :--- | :--- | :--- | :--- | :--- |
-| Gemma3-1B | Macbook Pro<br>(2023 M3) | CPU | 422.98 | 66.89 |
+| Gemma3-1B | MacBook Pro<br>(2023 M3) | CPU | 422.98 | 66.89 |
 | Gemma3-1B | Samsung S24<br>(Ultra) | CPU | 243.24 | 43.56 |
 | Gemma3-1B | Samsung S24<br>(Ultra) | GPU | 1876.5 | 44.57 |
-| Gemma3n-E2B | Macbook Pro<br>(2023 M3) | CPU | 232.5 | 27.6 |
+| Gemma3n-E2B | MacBook Pro<br>(2023 M3) | CPU | 232.5 | 27.6 |
 | Gemma3n-E2B | Samsung S24<br>(Ultra) | CPU | 110.5 | 16.1 |
 | Gemma3n-E2B | Samsung S24<br>(Ultra) | GPU | 816.4 | 15.6 |
-| Gemma3n-E4B | Macbook Pro<br>(2023 M3) | CPU | 170.1 | 20.1 |
+| Gemma3n-E4B | MacBook Pro<br>(2023 M3) | CPU | 170.1 | 20.1 |
 | Gemma3n-E4B | Samsung S24<br>(Ultra) | CPU | 73.5 | 9.2 |
 | Gemma3n-E4B | Samsung S24<br>(Ultra) | GPU | 548.0 | 9.4 |
 

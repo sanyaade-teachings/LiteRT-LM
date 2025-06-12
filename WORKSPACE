@@ -35,7 +35,44 @@ http_archive(
     url = "https://github.com/bazelbuild/rules_java/releases/download/5.3.5/rules_java-5.3.5.tar.gz",
 )
 
-# Tensorflow
+# Rust (for HuggingFace Tokenizers)
+http_archive(
+    name = "rules_rust",
+    sha256 = "53c1bac7ec48f7ce48c4c1c6aa006f27515add2aeb05725937224e6e00ec7cea",
+    url = "https://github.com/bazelbuild/rules_rust/releases/download/0.61.0/rules_rust-0.61.0.tar.gz",
+)
+
+load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
+
+rules_rust_dependencies()
+
+rust_register_toolchains(extra_target_triples = [
+    # Explicitly add toolchains for mobile. Desktop platforms are supported by default.
+    "aarch64-linux-android",
+    "aarch64-apple-ios",
+    "aarch64-apple-ios-sim",
+])
+
+load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
+
+crate_universe_dependencies()
+
+load("@rules_rust//crate_universe:defs.bzl", "crates_repository")
+
+crates_repository(
+    name = "crate_index",
+    cargo_lockfile = "//:Cargo.lock",
+    lockfile = "//:cargo-bazel-lock.json",
+    manifests = [
+        "//:Cargo.toml",
+    ],
+)
+
+load("@crate_index//:defs.bzl", "crate_repositories")
+
+crate_repositories()
+
+# TensorFlow
 http_archive(
     name = "org_tensorflow",
     sha256 = TENSORFLOW_SHA256,
@@ -233,6 +270,14 @@ http_archive(
     sha256 = LITERT_SHA256,
     strip_prefix = "LiteRT-" + LITERT_REF,
     url = "https://github.com/google-ai-edge/LiteRT/archive/" + LITERT_REF + ".tar.gz",
+)
+
+http_archive(
+    name = "tokenizers_cpp",
+    build_file = "@//:BUILD.tokenizers_cpp",
+    sha256 = "3e0b9ec325a326b0a2cef5cf164ee94a74ac372c5881ae5af634036db0441823",
+    strip_prefix = "tokenizers-cpp-0.1.1",
+    url = "https://github.com/mlc-ai/tokenizers-cpp/archive/refs/tags/v0.1.1.tar.gz",
 )
 
 # Android rules. Need latest rules_android_ndk to use NDK 26+.

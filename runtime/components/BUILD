@@ -183,6 +183,39 @@ cc_test(
 )
 
 cc_library(
+    name = "huggingface_tokenizer",
+    srcs = ["huggingface_tokenizer.cc"],
+    hdrs = ["huggingface_tokenizer.h"],
+    deps = [
+        ":tokenizer",
+        "@com_google_absl//absl/debugging:leak_check",  # See b/402708346
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:string_view",
+        "//runtime/util:litert_status_util",
+        "//runtime/util:memory_mapped_file",
+        "@tokenizers_cpp//:huggingface_tokenizer",
+    ],
+)
+
+cc_test(
+    name = "huggingface_tokenizer_test",
+    srcs = ["huggingface_tokenizer_test.cc"],
+    data = ["//runtime/components/testdata"],
+    deps = [
+        ":huggingface_tokenizer",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "//runtime/util:litert_status_util",
+        "//runtime/util:scoped_file",
+        "//runtime/util:test_utils",
+    ],
+)
+
+cc_library(
     name = "stop_token_detector",
     srcs = ["stop_token_detector.cc"],
     hdrs = ["stop_token_detector.h"],

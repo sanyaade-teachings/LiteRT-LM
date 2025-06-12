@@ -91,6 +91,29 @@ cc_library(
     }),
 )
 
+cc_test(
+    name = "tokenizer_test",
+    srcs = ["tokenizer_test.cc"],
+    deps = [
+        ":tokenizer",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_absl//absl/cleanup",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@litert//litert/cc:litert_layout",
+        "@litert//litert/test:matchers",
+        "//runtime/util:convert_tensor_buffer",
+    ] + select({
+        "//:litert_lm_link_capi_so": [
+            "@litert//litert/cc:litert_tensor_buffer",
+        ],
+        "//conditions:default": [
+            "@litert//litert/cc/internal:litert_tensor_buffer",
+        ],
+    }),
+)
+
 cc_library(
     name = "sampling_cpu_util",
     srcs = ["sampling_cpu_util.cc"],
@@ -156,17 +179,7 @@ cc_test(
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
-        "@litert//litert/cc:litert_layout",
-        "@litert//litert/test:matchers",
-        "//runtime/util:convert_tensor_buffer",
-    ] + select({
-        "//:litert_lm_link_capi_so": [
-            "@litert//litert/cc:litert_tensor_buffer",
-        ],
-        "//conditions:default": [
-            "@litert//litert/cc/internal:litert_tensor_buffer",
-        ],
-    }),
+    ],
 )
 
 cc_library(

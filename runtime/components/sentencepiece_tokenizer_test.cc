@@ -16,10 +16,6 @@
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/str_cat.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
-#include "litert/cc/litert_layout.h"  // from @litert
-#include "litert/cc/litert_tensor_buffer.h"  // from @litert
-#include "litert/test/matchers.h"  // from @litert
-#include "runtime/util/convert_tensor_buffer.h"
 
 namespace litert::lm {
 namespace {
@@ -101,27 +97,6 @@ TEST(SentencePieceTokenizerTest, TextToTokenIds) {
               ::testing::ElementsAre(224, 24, 8, 66, 246, 18, 2295));
 }
 
-TEST(SentencePieceTokenizerTest, TextToTensorBuffer) {
-  auto tokenizer_or =
-      SentencePieceTokenizer::CreateFromFile(GetSentencePieceModelPath());
-  EXPECT_TRUE(tokenizer_or.ok());
-  auto tokenizer = std::move(tokenizer_or.value());
-
-  absl::string_view text = "Hello World!";
-  auto ids_or = tokenizer->TextToTokenIds(text);
-  EXPECT_TRUE(ids_or.ok());
-
-  auto tensor_or = tokenizer->TokenIdsToTensorBuffer(ids_or.value());
-  auto tensor = std::move(tensor_or.value());
-  LITERT_ASSERT_OK_AND_ASSIGN(auto tensor_type, tensor.TensorType());
-  EXPECT_EQ(tensor_type.Layout().Dimensions(), ::litert::Dimensions({1, 7}));
-
-  auto copied_data = CopyFromTensorBuffer2D<int>(tensor);
-  EXPECT_TRUE(copied_data.HasValue());
-  EXPECT_THAT((*copied_data)[0],
-              ::testing::ElementsAre(90, 547, 58, 735, 210, 466, 2294));
-}
-
 TEST(SentencePieceTokenizerTest, TokenIdsToText) {
   auto tokenizer_or =
       SentencePieceTokenizer::CreateFromFile(GetSentencePieceModelPath());
@@ -133,28 +108,6 @@ TEST(SentencePieceTokenizerTest, TokenIdsToText) {
   EXPECT_TRUE(text_or.ok());
 
   EXPECT_EQ(text_or.value(), "▁Hello▁World!");
-}
-
-TEST(SentencePieceTokenizerTest, TensorBufferToText) {
-  auto tokenizer_or =
-      SentencePieceTokenizer::CreateFromFile(GetSentencePieceModelPath());
-  EXPECT_TRUE(tokenizer_or.ok());
-  auto tokenizer = std::move(tokenizer_or.value());
-
-  const std::vector<int> ids = {90,  547, 58, 735, 210, 466, 2294,
-                                224, 24,  8,  66,  246, 18,  2295};
-  LITERT_ASSERT_OK_AND_ASSIGN(TensorBuffer tensor_buffer,
-                              CopyToTensorBuffer<int>(ids, {2, 7}));
-  LITERT_ASSERT_OK_AND_ASSIGN(auto tensor_buffer_type,
-                              tensor_buffer.TensorType());
-  EXPECT_EQ(tensor_buffer_type.Layout().Dimensions(),
-            ::litert::Dimensions({2, 7}));
-
-  auto texts_or = tokenizer->TensorBufferToText(tensor_buffer);
-  EXPECT_TRUE(texts_or.ok());
-  EXPECT_EQ(texts_or.value().size(), 2);
-  EXPECT_EQ(texts_or.value()[0], "▁Hello▁World!");
-  EXPECT_EQ(texts_or.value()[1], "▁How's▁it▁going?");
 }
 
 TEST(SentencePieceTokenizerTest, BosId) {

@@ -27,6 +27,24 @@
 namespace litert::lm {
 namespace {
 
+using LiteRtTopKOpenClSampler_Sampler = void;
+using LiteRtTopKOpenClSampler_ActivationDataType = void;
+using LiteRtTopKOpenClSampler_SamplerParameters = void;
+
+extern "C" int (*LiteRtTopKOpenClSampler_Create_Static)(
+    LiteRtEnvironment env, int batch_size, int vocab_size,
+    const LiteRtTopKOpenClSampler_ActivationDataType* activation_data_type,
+    const LiteRtTopKOpenClSampler_SamplerParameters* sampler_params,
+    LiteRtTopKOpenClSampler_Sampler** sampler_out, char** error_msg) = nullptr;
+
+extern "C" void (*LiteRtTopKOpenClSampler_Destroy_Static)(
+    LiteRtTopKOpenClSampler_Sampler* sampler) = nullptr;
+
+extern "C" int (*LiteRtTopKOpenClSampler_SampleToIdAndScoreBuffer_Static)(
+    LiteRtTopKOpenClSampler_Sampler* sampler, LiteRtTensorBuffer logits_tensor,
+    LiteRtTensorBuffer ids_tensor, const LiteRtTensorBuffer* scores_tensor,
+    char** error_msg) = nullptr;
+
 absl::Status CreateStatus(int error_code, const char* error_msg) {
   absl::StatusCode code = static_cast<absl::StatusCode>(error_code);
   return absl::Status(code, error_msg);
@@ -47,8 +65,25 @@ class TopKOpenClCApiSampler : public Sampler {
       std::optional<ActivationDataType> activation_data_type,
       proto::SamplerParameters sampler_params) {
     // Load Sampler C API library and get the symbols.
-    ASSIGN_OR_RETURN(std::unique_ptr<TopKOpenClSamplerCApi> capi,
-                     GetTopKOpenClSamplerCApi());
+    std::unique_ptr<TopKOpenClSamplerCApi> capi;
+    auto capi_or = GetTopKOpenClSamplerCApi();
+    if (capi_or.ok()) {
+      capi = std::move(capi_or.value());
+      ABSL_LOG(INFO) << "Dynamically loaded LiteRtTopKOpenClSampler C API.";
+    } else {
+      if (capi_or.status().code() != absl::StatusCode::kUnavailable) {
+        // Directly return if the error is not due to unavailable dynamic
+        // loading.
+        return capi_or.status();
+      }
+      // If dynamic loading is unavailable, try static loading.
+      auto static_capi_or = GetStaticTopKOpenClSamplerCApi();
+      if (!static_capi_or.ok()) {
+        return capi_or.status();
+      }
+      capi = std::move(static_capi_or.value());
+      ABSL_LOG(INFO) << "Statically linked LiteRtTopKOpenClSampler C API.";
+    }
 
     // Create sampler.
     LiteRtTopKOpenClSampler_Sampler* sampler = nullptr;
@@ -81,9 +116,6 @@ class TopKOpenClCApiSampler : public Sampler {
   }
 
  private:
-  using LiteRtTopKOpenClSampler_Sampler = void;
-  using LiteRtTopKOpenClSampler_ActivationDataType = void;
-  using LiteRtTopKOpenClSampler_SamplerParameters = void;
   using LiteRtTopKOpenClSampler_Create =
       int (*)(LiteRtEnvironment env, int batch_size, int vocab_size,
               const LiteRtTopKOpenClSampler_ActivationDataType* absl_nullable
@@ -101,13 +133,14 @@ class TopKOpenClCApiSampler : public Sampler {
               char** absl_nullable error_msg);
 
   struct TopKOpenClSamplerCApi {
-    SharedLibrary lib;
+    std::optional<SharedLibrary> lib;
     LiteRtTopKOpenClSampler_Create create_func;
     LiteRtTopKOpenClSampler_Destroy destroy_func;
     LiteRtTopKOpenClSampler_SampleToIdAndScoreBuffer sample_func;
 
     TopKOpenClSamplerCApi(
-        SharedLibrary lib, LiteRtTopKOpenClSampler_Create create_func,
+        std::optional<SharedLibrary> lib,
+        LiteRtTopKOpenClSampler_Create create_func,
         LiteRtTopKOpenClSampler_Destroy destroy_func,
         LiteRtTopKOpenClSampler_SampleToIdAndScoreBuffer sample_func)
         : lib(std::move(lib)),
@@ -152,6 +185,24 @@ class TopKOpenClCApiSampler : public Sampler {
     return std::make_unique<TopKOpenClSamplerCApi>(
         std::move(lib), sampler_create_func, sampler_destroy_func,
         sampler_sample_func);
+  }
+
+  // Statically linking the C API functions if available. It is now used as a
+  // fallback when dynamic loading is unavailable.
+  // _Static function pointers should be populated statically at initialization
+  // if static linking is enabled.
+  static absl::StatusOr<std::unique_ptr<TopKOpenClSamplerCApi>>
+  GetStaticTopKOpenClSamplerCApi() {
+    if (LiteRtTopKOpenClSampler_Create_Static == nullptr ||
+        LiteRtTopKOpenClSampler_Destroy_Static == nullptr ||
+        LiteRtTopKOpenClSampler_SampleToIdAndScoreBuffer_Static == nullptr) {
+      return absl::UnavailableError(
+          "Static LiteRtTopKOpenClSampler C API not available.");
+    }
+    return std::make_unique<TopKOpenClSamplerCApi>(
+        /*lib=*/std::nullopt, LiteRtTopKOpenClSampler_Create_Static,
+        LiteRtTopKOpenClSampler_Destroy_Static,
+        LiteRtTopKOpenClSampler_SampleToIdAndScoreBuffer_Static);
   }
 
   std::unique_ptr<TopKOpenClSamplerCApi> capi_;

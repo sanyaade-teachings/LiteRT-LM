@@ -33,6 +33,13 @@
 namespace litert::lm {
 namespace {
 
+#if defined(__ANDROID__)
+// Must be longer than # of prefill tokens which is 4.
+constexpr int kMaxNumTokens = 8;
+#else
+constexpr int kMaxNumTokens = 16;
+#endif
+
 TEST(EngineTest, CreateEngine_WithoutCache) {
   auto task_path =
       std::filesystem::path(::testing::SrcDir()) /
@@ -42,7 +49,8 @@ TEST(EngineTest, CreateEngine_WithoutCache) {
   auto engine_settings =
       EngineSettings::CreateDefault(*model_assets, Backend::CPU);
   ASSERT_OK(engine_settings);
-  engine_settings->GetMutableMainExecutorSettings().SetMaxNumTokens(160);
+  engine_settings->GetMutableMainExecutorSettings().SetMaxNumTokens(
+      kMaxNumTokens);
   engine_settings->GetMutableMainExecutorSettings().SetCacheDir(":nocache");
 
   absl::StatusOr<std::unique_ptr<Engine>> llm =
@@ -89,7 +97,8 @@ TEST(EngineTest, CreateEngine_WithCache) {
   auto engine_settings =
       EngineSettings::CreateDefault(*model_assets, Backend::CPU);
   ASSERT_OK(engine_settings);
-  engine_settings->GetMutableMainExecutorSettings().SetMaxNumTokens(160);
+  engine_settings->GetMutableMainExecutorSettings().SetMaxNumTokens(
+      kMaxNumTokens);
   engine_settings->GetMutableMainExecutorSettings().SetCacheDir(
       cache_path.string());
 

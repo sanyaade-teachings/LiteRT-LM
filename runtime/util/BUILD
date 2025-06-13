@@ -37,7 +37,7 @@ cc_library(
             "@litert//litert/cc:litert_tensor_buffer",
         ],
         "//conditions:default": [
-            "@litert//litert/cc/internal:litert_tensor_buffer",
+            "@litert//litert/cc:litert_tensor_buffer",
         ],
     }),
 )
@@ -59,7 +59,7 @@ cc_test(
             "@litert//litert/cc:litert_tensor_buffer",
         ],
         "//conditions:default": [
-            "@litert//litert/cc/internal:litert_tensor_buffer",
+            "@litert//litert/cc:litert_tensor_buffer",
         ],
     }),
 )
@@ -183,7 +183,7 @@ cc_library(
             "@litert//litert/cc:litert_tensor_buffer",
         ],
         "//conditions:default": [
-            "@litert//litert/cc/internal:litert_tensor_buffer",
+            "@litert//litert/cc:litert_tensor_buffer",
         ],
     }),
 )
@@ -203,7 +203,7 @@ cc_test(
             "@litert//litert/cc:litert_tensor_buffer",
         ],
         "//conditions:default": [
-            "@litert//litert/cc/internal:litert_tensor_buffer",
+            "@litert//litert/cc:litert_tensor_buffer",
         ],
     }),
 )
@@ -217,7 +217,7 @@ cc_library(
             "@litert//litert/cc:litert_tensor_buffer",
         ],
         "//conditions:default": [
-            "@litert//litert/cc/internal:litert_tensor_buffer",
+            "@litert//litert/cc:litert_tensor_buffer",
         ],
     }),
 )

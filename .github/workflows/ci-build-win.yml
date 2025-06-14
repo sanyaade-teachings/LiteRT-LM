@@ -40,8 +40,9 @@ jobs:
           path: |
             ~/.cache/bazel
             ~/.cache/bazel-windows
-          key: ${{ github.workflow }}-${{ hashFiles('**/WORKSPACE', '**/.bazelrc') }}-${{ hashFiles('**/BUILD*') }}
+          key: ${{ github.workflow }}-${{ hashFiles('**/WORKSPACE', '**/.bazelrc') }}-${{ hashFiles('**/BUILD*') }}-{{ github.sha }}
           restore-keys: |
+            ${{ github.workflow }}-${{ hashFiles('**/WORKSPACE', '**/.bazelrc') }}-${{ hashFiles('**/BUILD*') }}-
             ${{ github.workflow }}-${{ hashFiles('**/WORKSPACE', '**/.bazelrc') }}-
             ${{ github.workflow }}-
 
@@ -67,9 +68,9 @@ jobs:
 
       - name: Save bazel cache if new or changed on push.
         uses: actions/cache/save@v4
-        if: steps.bazel-cache.outputs.cache-hit != 'true' || github.event_name == 'schedule'
+        if: steps.bazel-cache.outputs.cache-hit != 'true'
         with:
           path: |
             ~/.cache/bazel
             ~/.cache/bazel-windows
-          key: ${{ github.workflow }}-${{ hashFiles('**/WORKSPACE', '**/.bazelrc') }}-${{ hashFiles('**/BUILD*') }}
+          key: ${{ github.workflow }}-${{ hashFiles('**/WORKSPACE', '**/.bazelrc') }}-${{ hashFiles('**/BUILD*') }}-{{ github.sha }}

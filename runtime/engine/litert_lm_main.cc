@@ -110,7 +110,7 @@ absl::Status MainHelper(int argc, char** argv) {
 
   if (argc <= 1) {
     ABSL_LOG(INFO)
-        << "Example usage: ./litert_lm_main --model=<model_path> "
+        << "Example usage: ./litert_lm_main --model_path=<model_path> "
            "[--input_prompt=<input_prompt>] [--backend=<cpu|gpu>] "
            "[--benchmark] [--benchmark_prefill_tokens=<num_prefill_tokens>] "
            "[--benchmark_decode_tokens=<num_decode_tokens>] "

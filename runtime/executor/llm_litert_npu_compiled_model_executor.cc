@@ -52,11 +52,9 @@ using ::litert::lm::GetOptimizedPrefillWorkGroups;
 using ::litert::lm::ReferTensorBufferAsSpan;
 using ::litert::lm::SortedPrefillSignatureMap;
 
-// Names of the signature runners, used to get the signature runners from the
-// interpreter.
-constexpr char kPrefillSignatureRunner[] = "prefill_128";
+constexpr char kPrefillSignature[] = "prefill_128";
 constexpr int kPrefillSize = 128;
-constexpr char kDecodeSignatureRunner[] = "decode";
+constexpr char kDecodeSignature[] = "decode";
 constexpr char cache_k25[] = "kv_cache_k_25";
 constexpr char cache_v25[] = "kv_cache_v_25";
 
@@ -114,14 +112,14 @@ struct CacheUpdateSignatures {
 
 absl::StatusOr<LlmLiteRtNpuCompiledModelExecutor::EmbedderContext>
 LlmLiteRtNpuCompiledModelExecutor::CreateEmbedderContextWithBufferSharing(
-    ::litert::Environment& env, const litert::Model& embedder_lrt_model,
+    ::litert::Environment& env, const litert::Model& embedder_model,
     absl::flat_hash_map<absl::string_view, ::litert::TensorBuffer>&
         gemma_prefill_input_buffers,
     absl::flat_hash_map<absl::string_view, ::litert::TensorBuffer>&
         gemma_decode_input_buffers) {
   LITERT_ASSIGN_OR_RETURN(
       CompiledModel embedder_compiled_model,
-      CompiledModel::Create(env, embedder_lrt_model, kLiteRtHwAcceleratorCpu));
+      CompiledModel::Create(env, embedder_model, kLiteRtHwAcceleratorCpu));
 
   absl::flat_hash_map<absl::string_view, ::litert::TensorBuffer>
       prefill_input_buffers;
@@ -161,10 +159,10 @@ LlmLiteRtNpuCompiledModelExecutor::CreateEmbedderContextWithBufferSharing(
 
 absl::StatusOr<LlmLiteRtNpuCompiledModelExecutor::NpuAuxiliaryContext>
 LlmLiteRtNpuCompiledModelExecutor::CreateNpuAuxiliaryContext(
-    ::litert::Environment& env, const litert::Model& npu_auxiliary_lrt_model) {
-  LITERT_ASSIGN_OR_RETURN(auto npu_auxiliary_compiled_model,
-                          CompiledModel::Create(env, npu_auxiliary_lrt_model,
-                                                kLiteRtHwAcceleratorCpu));
+    ::litert::Environment& env, const litert::Model& npu_auxiliary_model) {
+  LITERT_ASSIGN_OR_RETURN(
+      auto npu_auxiliary_compiled_model,
+      CompiledModel::Create(env, npu_auxiliary_model, kLiteRtHwAcceleratorCpu));
   NpuAuxiliaryContext npu_auxiliary_context(
       std::move(npu_auxiliary_compiled_model));
   return npu_auxiliary_context;
@@ -324,12 +322,12 @@ LlmLiteRtNpuCompiledModelExecutor::CreateLlmInferenceContextWithBufferSharing(
     // fail). Luckily these buffers are not used, so we can simply create new
     // ones to satisfy the compiled model run API.  We can remove this
     // workaround once we have a model that removes these buffers.
-    LITERT_ASSIGN_OR_RETURN(decode_input_buffers[cache_k25],
-                            llm_compiled_model.CreateInputBuffer(
-                                kDecodeSignatureRunner, cache_k25));
-    LITERT_ASSIGN_OR_RETURN(decode_input_buffers[cache_v25],
-                            llm_compiled_model.CreateInputBuffer(
-                                kDecodeSignatureRunner, cache_v25));
+    LITERT_ASSIGN_OR_RETURN(
+        decode_input_buffers[cache_k25],
+        llm_compiled_model.CreateInputBuffer(kDecodeSignature, cache_k25));
+    LITERT_ASSIGN_OR_RETURN(
+        decode_input_buffers[cache_v25],
+        llm_compiled_model.CreateInputBuffer(kDecodeSignature, cache_v25));
   }
   absl::flat_hash_map<absl::string_view, ::litert::TensorBuffer>
       decode_output_buffers;
@@ -344,7 +342,7 @@ LlmLiteRtNpuCompiledModelExecutor::CreateLlmInferenceContextWithBufferSharing(
     LITERT_ASSIGN_OR_RETURN(
         decode_output_buffers[LlmSignatures::kDecodeLogitsOutput],
         llm_compiled_model.CreateOutputBuffer(
-            kDecodeSignatureRunner, LlmSignatures::kDecodeLogitsOutput));
+            kDecodeSignature, LlmSignatures::kDecodeLogitsOutput));
   }
   return InferenceContext(
       std::move(prefill_input_buffers), std::move(prefill_output_buffers),
@@ -861,18 +859,17 @@ LlmLiteRtNpuCompiledModelExecutor::Create(
       Environment env,
       ::litert::Environment::Create(absl::MakeConstSpan(environment_options)));
   ASSIGN_OR_RETURN(
-      auto model_shared_ptr,
+      const litert::Model* llm_model,
       resources.GetTFLiteModel(litert::lm::ModelType::kTfLitePrefillDecode));
   // If the model is fully AOT compiled for NPU, NPU accelerator is used
   // automatically.
   LITERT_ASSIGN_OR_RETURN(
-      CompiledModel compiled_model_llm,
-      CompiledModel::Create(env, *model_shared_ptr, kLiteRtHwAcceleratorCpu));
+      CompiledModel llm_compiled_model,
+      CompiledModel::Create(env, *llm_model, kLiteRtHwAcceleratorNpu));
 
-  // Allocate all input and output buffers for the LLM model that is meant
-  // to run on the QC NPU chip. The buffers will be using 'FastRPC'. Later on,
-  // the buffers will be duplicated into the output buffer maps of the embedder,
-  // mask, and rope signatures.
+  // Allocate all input and output buffers of the LLM model that are meant to be
+  // used by the NPU chip first, so that we can later duplicate the buffers into
+  // the output buffer maps of the embedder, mask, and rope signatures.
 
   absl::flat_hash_map<absl::string_view, TensorBuffer>
       gemma_prefill_input_buffers;
@@ -884,8 +881,7 @@ LlmLiteRtNpuCompiledModelExecutor::Create(
   absl::flat_hash_map<absl::string_view, TensorBuffer>
       decode_output_kv_cache_slice_buffers;
 
-  auto prefill_signature =
-      model_shared_ptr->FindSignature(kPrefillSignatureRunner);
+  auto prefill_signature = llm_model->FindSignature(kPrefillSignature);
   constexpr absl::string_view kv_cache_k_root_name = "kv_cache_k_";
   constexpr absl::string_view kv_cache_v_root_name = "kv_cache_v_";
   constexpr absl::string_view kv_cache_slice_k_root_name = "kv_slice_k_";
@@ -894,48 +890,47 @@ LlmLiteRtNpuCompiledModelExecutor::Create(
   for (auto input_name : prefill_signature->InputNames()) {
     if (absl::StartsWith(input_name, kv_cache_k_root_name) ||
         absl::StartsWith(input_name, kv_cache_v_root_name)) {
-      LITERT_ASSIGN_OR_RETURN(input_kv_cache_buffers[input_name],
-                              compiled_model_llm.CreateInputBuffer(
-                                  kPrefillSignatureRunner, input_name));
+      LITERT_ASSIGN_OR_RETURN(
+          input_kv_cache_buffers[input_name],
+          llm_compiled_model.CreateInputBuffer(kPrefillSignature, input_name));
     } else {
-      LITERT_ASSIGN_OR_RETURN(gemma_prefill_input_buffers[input_name],
-                              compiled_model_llm.CreateInputBuffer(
-                                  kPrefillSignatureRunner, input_name));
+      LITERT_ASSIGN_OR_RETURN(
+          gemma_prefill_input_buffers[input_name],
+          llm_compiled_model.CreateInputBuffer(kPrefillSignature, input_name));
     }
   }
-  auto decode_signature =
-      model_shared_ptr->FindSignature(kDecodeSignatureRunner);
+  auto decode_signature = llm_model->FindSignature(kDecodeSignature);
   for (auto input_name : decode_signature->InputNames()) {
     if (absl::StartsWith(input_name, kv_cache_k_root_name) ||
         absl::StartsWith(input_name, kv_cache_v_root_name)) {
       continue;
     }
-    LITERT_ASSIGN_OR_RETURN(gemma_decode_input_buffers[input_name],
-                            compiled_model_llm.CreateInputBuffer(
-                                kDecodeSignatureRunner, input_name));
+    LITERT_ASSIGN_OR_RETURN(
+        gemma_decode_input_buffers[input_name],
+        llm_compiled_model.CreateInputBuffer(kDecodeSignature, input_name));
   }
   for (auto output_name : prefill_signature->OutputNames()) {
     if (absl::StartsWith(output_name, kv_cache_slice_k_root_name) ||
         absl::StartsWith(output_name, kv_cache_slice_v_root_name)) {
       LITERT_ASSIGN_OR_RETURN(
           prefill_output_kv_cache_slice_buffers[output_name],
-          compiled_model_llm.CreateOutputBuffer(kPrefillSignatureRunner,
+          llm_compiled_model.CreateOutputBuffer(kPrefillSignature,
                                                 output_name));
     }
   }
   for (auto output_name : decode_signature->OutputNames()) {
     if (absl::StartsWith(output_name, kv_cache_slice_k_root_name) ||
         absl::StartsWith(output_name, kv_cache_slice_v_root_name)) {
-      LITERT_ASSIGN_OR_RETURN(decode_output_kv_cache_slice_buffers[output_name],
-                              compiled_model_llm.CreateOutputBuffer(
-                                  kDecodeSignatureRunner, output_name));
+      LITERT_ASSIGN_OR_RETURN(
+          decode_output_kv_cache_slice_buffers[output_name],
+          llm_compiled_model.CreateOutputBuffer(kDecodeSignature, output_name));
     }
   }
 
   ASSIGN_OR_RETURN(
       auto llm_inference_context,
       CreateLlmInferenceContextWithBufferSharing(
-          env, compiled_model_llm, input_kv_cache_buffers,
+          env, llm_compiled_model, input_kv_cache_buffers,
           prefill_output_kv_cache_slice_buffers,
           decode_output_kv_cache_slice_buffers, gemma_prefill_input_buffers,
           gemma_decode_input_buffers));
@@ -1000,23 +995,20 @@ LlmLiteRtNpuCompiledModelExecutor::Create(
           std::move(decode_input_pos)));
 
   RETURN_IF_ERROR(WarmupInference(
-      compiled_model_llm, llm_inference_context,
+      llm_compiled_model, llm_inference_context,
       npu_auxiliary_context.npu_auxiliary_compiled_model, rope_context,
       mask_context, cache_update_inference_context));
 
   // For now we only support one prefill length in the model.
   SortedPrefillSignatureMap prefill_runner_set;
-  prefill_runner_set[kPrefillSize] = kPrefillSignatureRunner;
-  // TODO(b/423997573): Support litertlm file format for NPU. Then we can
-  // remove the dummy model path.
+  prefill_runner_set[kPrefillSize] = kPrefillSignature;
   auto executor = absl::WrapUnique(new LlmLiteRtNpuCompiledModelExecutor(
       executor_settings, std::move(embedder_context),
       std::move(npu_auxiliary_context), std::move(mask_context),
-      std::move(rope_context), std::move(env), model_shared_ptr,
-      std::move(compiled_model_llm), std::move(llm_inference_context),
+      std::move(rope_context), std::move(env), std::move(llm_compiled_model),
+      std::move(llm_inference_context),
       std::move(cache_update_inference_context),
       std::move(prefill_runner_set)));
-  ABSL_LOG(INFO) << "Executor created.";
   return executor;
 };
 

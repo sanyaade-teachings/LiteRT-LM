@@ -163,7 +163,6 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
       EmbedderContext embedder_context,
       NpuAuxiliaryContext npu_auxiliary_context, InferenceContext mask_context,
       InferenceContext rope_context, ::litert::Environment llm_env,
-      const ::litert::Model* llm_model,
       ::litert::CompiledModel llm_compiled_model,
       InferenceContext llm_inference_context,
       InferenceContext cache_update_inference_context,
@@ -174,7 +173,6 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
         mask_context_(std::move(mask_context)),
         rope_context_(std::move(rope_context)),
         env_(std::move(llm_env)),
-        llm_model_(llm_model),
         llm_compiled_model_(std::move(llm_compiled_model)),
         llm_inference_context_(std::move(llm_inference_context)),
         cache_update_inference_context_(
@@ -274,7 +272,6 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
   InferenceContext mask_context_;
   InferenceContext rope_context_;
   ::litert::Environment env_;
-  const ::litert::Model* llm_model_;
   ::litert::CompiledModel llm_compiled_model_;
 
   InferenceContext llm_inference_context_;

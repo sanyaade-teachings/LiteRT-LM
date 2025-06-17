@@ -16,6 +16,7 @@ package(
     default_hdrs_check = "strict",
     default_visibility = [
         "//:__subpackages__",
+        "//third_party/odml/vogo:__subpackages__",
     ],
 )
 

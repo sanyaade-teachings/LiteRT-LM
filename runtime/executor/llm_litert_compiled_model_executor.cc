@@ -139,12 +139,15 @@ absl::Status LlmLiteRtCompiledModelExecutor::Prefill(
     }
     auto positions_buffer = compiled_model_.CreateInputBuffer(
         prefill_signature, signatures_.input_positions);
-    auto attn_mask_buffer = compiled_model_.CreateInputBuffer(
-        prefill_signature, signatures_.input_attn_mask.value());
     prefill_input_buffers_[signatures_.input_positions] =
         std::move(*positions_buffer);
-    prefill_input_buffers_[signatures_.input_attn_mask.value()] =
-        std::move(*attn_mask_buffer);
+
+    if (signatures_.input_attn_mask.has_value()) {
+      auto attn_mask_buffer = compiled_model_.CreateInputBuffer(
+          prefill_signature, signatures_.input_attn_mask.value());
+      prefill_input_buffers_[signatures_.input_attn_mask.value()] =
+          std::move(*attn_mask_buffer);
+    }
     RETURN_IF_ERROR(PrefillInternal(prefill_signature,
                                     ids.subspan(/*pos=*/0, prefill_length)));
     ids = ids.subspan(/*pos=*/prefill_length);

@@ -86,11 +86,20 @@ class LitertLmLoader {
       : model_file_(std::move(model_file)) {
     ABSL_CHECK_OK(Initialize());
   }
-  // Returns the tokenizer section buffer.
-  litert::BufferRef<uint8_t> GetTokenizer() {
-    return section_buffers_[BufferKey(
-        schema::AnySectionDataType_SP_Tokenizer)];
+
+  // Returns the tokenizer section buffer for the SentencePiece tokenizer.
+  // If not found, returns std::nullopt.
+  std::optional<litert::BufferRef<uint8_t>> GetSentencePieceTokenizer() {
+    auto section_key = BufferKey(schema::AnySectionDataType_SP_Tokenizer);
+    if (!section_buffers_.contains(section_key)) {
+      return std::nullopt;
+    }
+    return section_buffers_[section_key];
   }
+
+  // Returns the tokenizer section buffer for the HuggingFace tokenizer.
+  // If not found, returns std::nullopt.
+  std::optional<litert::OwningBufferRef<uint8_t>> GetHuggingFaceTokenizer();
 
   // Returns the TFLite model section buffer.
   litert::BufferRef<uint8_t> GetTFLiteModel(ModelType model_type) {

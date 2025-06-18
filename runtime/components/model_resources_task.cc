@@ -30,6 +30,7 @@
 #include "litert/cc/litert_model.h"  // from @litert
 #include "runtime/components/model_resources.h"
 #include "runtime/components/sentencepiece_tokenizer.h"
+#include "runtime/components/tokenizer.h"
 #include "runtime/util/metadata_util.h"
 #include "runtime/util/model_asset_bundle_resources.h"
 #include "runtime/util/status_macros.h"  // NOLINT
@@ -69,7 +70,7 @@ absl::StatusOr<const litert::Model*> ModelResourcesTask::GetTFLiteModel(
   return model_map_[model_type].get();
 }
 
-absl::StatusOr<SentencePieceTokenizer*> ModelResourcesTask::GetTokenizer() {
+absl::StatusOr<Tokenizer*> ModelResourcesTask::GetTokenizer() {
   if (tokenizer_ == nullptr) {
     ASSIGN_OR_RETURN(auto string_view,  // NOLINT
                      model_asset_bundle_resources_->GetFile("TOKENIZER_MODEL"));

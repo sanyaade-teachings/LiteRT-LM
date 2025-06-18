@@ -23,6 +23,22 @@ package(
 
 licenses(["notice"])
 
+config_setting(
+    name = "disable_huggingface_tokenizer",
+    define_values = {
+        "DISABLE_HUGGINGFACE_TOKENIZER": "1",
+    },
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "disable_sentencepiece_tokenizer",
+    define_values = {
+        "DISABLE_SENTENCEPIECE_TOKENIZER": "1",
+    },
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
     name = "embedding_lookup",
     hdrs = ["embedding_lookup.h"],
@@ -409,10 +425,18 @@ cc_library(
     name = "model_resources_litert_lm",
     srcs = ["model_resources_litert_lm.cc"],
     hdrs = ["model_resources_litert_lm.h"],
+    local_defines = select({
+        ":disable_huggingface_tokenizer": ["DISABLE_HUGGINGFACE_TOKENIZER"],
+        "//conditions:default": [],
+    }) + select({
+        ":disable_sentencepiece_tokenizer": ["DISABLE_SENTENCEPIECE_TOKENIZER"],
+        "//conditions:default": [],
+    }),
     deps = [
         ":model_resources_task",
-        ":sentencepiece_tokenizer",
+        ":tokenizer",
         "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
@@ -423,7 +447,13 @@ cc_library(
         "//runtime/proto:llm_metadata_cc_proto",
         "//runtime/util:litert_lm_loader",
         "//runtime/util:litert_status_util",
-    ],
+    ] + select({
+        ":disable_huggingface_tokenizer": [],
+        "//conditions:default": [":huggingface_tokenizer"],
+    }) + select({
+        ":disable_sentencepiece_tokenizer": [],
+        "//conditions:default": [":sentencepiece_tokenizer"],
+    }),
 )
 
 cc_library(
@@ -435,6 +465,7 @@ cc_library(
     ],
     deps = [
         ":sentencepiece_tokenizer",
+        ":tokenizer",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/memory",

@@ -27,9 +27,17 @@
 #include "litert/cc/litert_macros.h"  // from @litert
 #include "litert/cc/litert_model.h"  // from @litert
 #include "runtime/components/model_resources.h"
-#include "runtime/components/sentencepiece_tokenizer.h"
+#include "runtime/components/tokenizer.h"
 #include "runtime/util/litert_lm_loader.h"
 #include "runtime/util/status_macros.h"  //NOLINT
+
+#ifndef DISABLE_SENTENCEPIECE_TOKENIZER
+#include "runtime/components/sentencepiece_tokenizer.h"
+#endif  // !DISABLE_SENTENCEPIECE_TOKENIZER
+
+#ifndef DISABLE_HUGGINGFACE_TOKENIZER
+#include "runtime/components/huggingface_tokenizer.h"
+#endif  // !DISABLE_HUGGINGFACE_TOKENIZER
 
 namespace litert::lm {
 
@@ -56,15 +64,50 @@ absl::StatusOr<const litert::Model*> ModelResourcesLitertLm::GetTFLiteModel(
   return model_map_[model_type].get();
 }
 
-absl::StatusOr<SentencePieceTokenizer*> ModelResourcesLitertLm::GetTokenizer() {
-  if (tokenizer_ == nullptr) {
-    auto buffer_ref = litert_lm_loader_->GetTokenizer();
+absl::StatusOr<Tokenizer*> ModelResourcesLitertLm::GetTokenizer() {
+#if DISABLE_SENTENCEPIECE_TOKENIZER && DISABLE_HUGGINGFACE_TOKENIZER
+  return absl::UnimplementedError(
+      "Tokenizers cannot be used. Both DISABLE_SENTENCEPIECE_TOKENIZER and "
+      "DISABLE_HUGGINGFACE_TOKENIZER enabled during build.");
+#endif  // !DISABLE_SENTENCEPIECE_TOKENIZER && !DISABLE_HUGGINGFACE_TOKENIZER
+
+  if (tokenizer_ != nullptr) {
+    return tokenizer_.get();
+  }
+
+  auto sp_tokenizer = litert_lm_loader_->GetSentencePieceTokenizer();
+#ifndef DISABLE_SENTENCEPIECE_TOKENIZER
+  if (sp_tokenizer) {
     ASSIGN_OR_RETURN(  // NOLINT
         auto tokenizer,
-        SentencePieceTokenizer::CreateFromBuffer(buffer_ref.StrView()));
+        SentencePieceTokenizer::CreateFromBuffer(sp_tokenizer->StrView()));
     tokenizer_ = std::move(tokenizer);
+    return tokenizer_.get();
   }
-  return tokenizer_.get();
+#endif  // !DISABLE_SENTENCEPIECE_TOKENIZER
+
+  auto hf_tokenizer = litert_lm_loader_->GetHuggingFaceTokenizer();
+#ifndef DISABLE_HUGGINGFACE_TOKENIZER
+  if (hf_tokenizer) {
+    std::string json_data(hf_tokenizer->StrData(), hf_tokenizer->Size());
+    ASSIGN_OR_RETURN(  // NOLINT
+        auto tokenizer, HuggingFaceTokenizer::CreateFromJson(json_data));
+    tokenizer_ = std::move(tokenizer);
+    return tokenizer_.get();
+  }
+#endif  // !DISABLE_HUGGINGFACE_TOKENIZER
+
+  if (sp_tokenizer) {
+    return absl::UnimplementedError(
+        "SentencePiece tokenizer found, but LiteRT LM was built with "
+        "--define=DISABLE_SENTENCEPIECE_TOKENIZER.");
+  } else if (hf_tokenizer) {
+    return absl::UnimplementedError(
+        "HuggingFace tokenizer found, but LiteRT LM was built with "
+        "--define=DISABLE_HUGGINGFACE_TOKENIZER.");
+  } else {
+    return absl::NotFoundError("No tokenizer found in the model.");
+  }
 }
 
 absl::StatusOr<const proto::LlmMetadata*>

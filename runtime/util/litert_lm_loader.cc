@@ -19,9 +19,11 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "absl/log/absl_check.h"  // from @com_google_absl
 #include "absl/log/absl_log.h"  // from @com_google_absl
@@ -33,6 +35,7 @@
 #include "runtime/components/model_resources.h"
 #include "runtime/util/memory_mapped_file.h"
 #include "runtime/util/scoped_file.h"
+#include "runtime/util/status_macros.h"  // NOLINT
 #include "schema/core/litertlm_header_schema_generated.h"
 #include "schema/core/litertlm_read.h"
 
@@ -132,6 +135,28 @@ absl::Status LitertLmLoader::Initialize() {
   ABSL_CHECK_OK(MapSections());
 
   return absl::OkStatus();
+}
+
+std::optional<litert::OwningBufferRef<uint8_t>>
+LitertLmLoader::GetHuggingFaceTokenizer() {
+  auto section_key = BufferKey(schema::AnySectionDataType_HF_Tokenizer_Zlib);
+  if (!section_buffers_.contains(section_key)) {
+    return std::nullopt;
+  }
+  const auto& section = section_buffers_[section_key];
+
+  std::vector<uint8_t> hf_tokenizer_data;
+  auto status = schema::DecompressData(section.Data(), section.Size(),
+                                       &hf_tokenizer_data);
+  if (!status.ok()) {
+    ABSL_LOG(ERROR) << "Failed to decompress HuggingFace tokenizer data: "
+                    << status;
+    return std::nullopt;
+  }
+
+  return OwningBufferRef<uint8_t>{
+      static_cast<const uint8_t*>(hf_tokenizer_data.data()),
+      hf_tokenizer_data.size()};
 }
 
 }  // namespace litert::lm

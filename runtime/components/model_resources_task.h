@@ -22,6 +22,7 @@
 #include "litert/cc/litert_model.h"  // from @litert
 #include "runtime/components/model_resources.h"
 #include "runtime/components/sentencepiece_tokenizer.h"
+#include "runtime/components/tokenizer.h"
 #include "runtime/proto/llm_metadata.pb.h"
 #include "runtime/util/model_asset_bundle_resources.h"
 
@@ -35,7 +36,7 @@ class ModelResourcesTask : public ModelResources {
 
   absl::StatusOr<const litert::Model*> GetTFLiteModel(
       ModelType model_type) override;
-  absl::StatusOr<SentencePieceTokenizer*> GetTokenizer() override;
+  absl::StatusOr<Tokenizer*> GetTokenizer() override;
   absl::StatusOr<const proto::LlmMetadata*> GetLlmMetadata() override;
 
  private:

@@ -10,6 +10,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/status/status.h"  // from @com_google_absl
+#include "absl/status/statusor.h"  // from @com_google_absl
+#include "absl/strings/string_view.h"  // from @com_google_absl
 #include "runtime/components/sentencepiece_tokenizer.h"
 #include "runtime/components/stop_token_detector.h"
 #include "runtime/components/tokenizer.h"
@@ -26,6 +28,14 @@ using ::testing::status::StatusIs;
 
 constexpr char kTestdataDir[] =
     "litert_lm/runtime/components/testdata/";
+
+class BytePairEncodingTokenizer : public Tokenizer {
+ public:
+  MOCK_METHOD(absl::StatusOr<std::vector<int>>, TextToTokenIds,
+              (absl::string_view text), (override));
+  MOCK_METHOD(absl::StatusOr<std::string>, TokenIdsToText,
+              (const std::vector<int>& token_ids), (override));
+};
 
 // Test observer to collect the streaming results.
 class TestObserver : public InferenceObservable {
@@ -138,6 +148,41 @@ TEST_F(PipelineTest, DecodeStreamingReachMaxNumTokens) {
                             benchmark_info, &observer));
   // The response is truncated at the max number of tokens.
   EXPECT_EQ(observer.GetResponses()[0], " How's");
+}
+
+TEST_F(PipelineTest, DecodeBytePairEncodingTokens) {
+  auto tokenizer = std::make_unique<BytePairEncodingTokenizer>();
+  // Pretend the first token is incomplete.
+  EXPECT_CALL(*tokenizer, TokenIdsToText(std::vector<int>{224}))
+      .WillOnce(
+          testing::Return(absl::DataLossError("Incomplete BPE sequence")));
+
+  // Now  return a valid token from two tokens.
+  EXPECT_CALL(*tokenizer, TokenIdsToText(std::vector<int>{224, 24}))
+      .WillOnce(testing::Return(" How"));
+
+  // Rest proceeds as normal.
+  EXPECT_CALL(*tokenizer, TokenIdsToText(std::vector<int>{8}))
+      .WillOnce(testing::Return("'s"));
+  EXPECT_CALL(*tokenizer, TokenIdsToText(std::vector<int>{66}))
+      .WillOnce(testing::Return(" "));
+  EXPECT_CALL(*tokenizer, TokenIdsToText(std::vector<int>{246}))
+      .WillOnce(testing::Return("it"));
+  EXPECT_CALL(*tokenizer, TokenIdsToText(std::vector<int>{18}))
+      .WillOnce(testing::Return(" "));
+  EXPECT_CALL(*tokenizer, TokenIdsToText(std::vector<int>{2295}))
+      .WillOnce(testing::Return("going"));
+  EXPECT_CALL(*tokenizer, TokenIdsToText(std::vector<int>{2294}))
+      .WillOnce(testing::Return("?!"));
+
+  std::optional<BenchmarkInfo> benchmark_info;
+  StopTokenDetector stop_token_detector(1);
+  EXPECT_OK(stop_token_detector.AddStopTokenSequence({2294}));
+  auto responses =
+      Decode(*executor_, *tokenizer, stop_token_detector, benchmark_info);
+  EXPECT_OK(responses);
+  // The response is truncated at the max number of tokens.
+  EXPECT_EQ(*(responses->GetResponseTextAt(0)), " How's it going?!");
 }
 
 class PipelineCustomSamplingTest : public testing::Test {

@@ -85,6 +85,17 @@ bool ShouldStop(bool hit_stop_tokens, int benchmark_decode_token_count,
   return false;
 }
 
+// The result of a invocation of the decode process for a single batch of
+// tokens.
+// kPartial indicates that at least one output candidate needs to be re-decoded
+// with additional tokens, while kDone indicates that all output candidates are
+// complete. kContinue represents the steady state of the decoding loop.
+enum DecodeResult {
+  kPartial,   // BPE token encountered, need more tokens to complete decoding.
+  kContinue,  // Next token decoded, but no stop token encountered.
+  kDone,      // Stop token encountered, decoding is complete.
+};
+
 // A wrapper class to run one step of the decode process. It allows us to reduce
 // the code duplication between different decode functions.
 // TODO(b/417568021): Refactor the class to make it more readable.
@@ -107,7 +118,7 @@ class DecodeExternalSampling {
 
   // Runs one step of the decode process with sampling done externally from the
   // Executor.
-  absl::StatusOr<bool> Run(litert::TensorBuffer& decoded_ids) {
+  absl::StatusOr<DecodeResult> Run(litert::TensorBuffer& decoded_ids) {
     LITERT_ASSIGN_OR_RETURN(auto duplicate_decoded_ids,
                             decoded_ids.Duplicate());
     ExecutorInputs inputs(ExecutorTextData(std::move(duplicate_decoded_ids)),
@@ -125,8 +136,15 @@ class DecodeExternalSampling {
     if (benchmark_info_.has_value()) {
       RETURN_IF_ERROR(benchmark_info_->TimeMarkDelta("sampling"));
     }
-    ASSIGN_OR_RETURN(result_tokens_,
-                     tokenizer_.TensorBufferToText(decoded_ids));
+    ASSIGN_OR_RETURN(auto token_ids,
+                     tokenizer_.TensorBufferToTokenIds(decoded_ids));
+    auto decode_result =
+        tokenizer_.TokenIdsToTexts(num_output_candidates_, token_ids);
+    if (Tokenizer::IsIncompleteBpeSequence(decode_result)) {
+      return kContinue;
+    }
+    ASSIGN_OR_RETURN(auto decoded_text, decode_result);
+    result_tokens_ = decoded_text;
 
     // Update the stop_tokens_found vector with the latest decoded ids.
     LITERT_ASSIGN_OR_RETURN_ABSL(auto decoded_ids_span,
@@ -135,7 +153,7 @@ class DecodeExternalSampling {
         scores_span_, ReferTensorBufferAsSpan<float>(scores_tensor_));
     RETURN_IF_ERROR(stop_token_detector_.ProcessTokens(decoded_ids_span));
     ASSIGN_OR_RETURN(bool hit_stop_tokens, stop_token_detector_.AllDone());
-    return hit_stop_tokens;
+    return hit_stop_tokens ? kDone : kPartial;
   }
 
   absl::Span<float> GetScores() { return scores_span_; }
@@ -181,7 +199,8 @@ class DecodeInternalSamplingOneStep {
 
   // Runs one step of the decode process with sampling done externally from the
   // Executor.
-  absl::StatusOr<bool> Run() {
+  absl::StatusOr<DecodeResult> Run(
+      const std::vector<std::vector<int>>& previous_token_ids) {
     if (benchmark_info_.has_value()) {
       RETURN_IF_ERROR(
           benchmark_info_->TimeMarkDelta("executor_decode_and_sample"));
@@ -197,11 +216,22 @@ class DecodeInternalSamplingOneStep {
       return absl::InternalError("Unexpected number of decoded tokens.");
     }
 
-    ASSIGN_OR_RETURN(result_tokens_,
-                     tokenizer_.TensorBufferToText(output_tokens_));
+    ASSIGN_OR_RETURN(auto token_ids,
+                     tokenizer_.TensorBufferToTokenIds(output_tokens_));
+    ASSIGN_OR_RETURN(token_ids_, previous_token_ids.empty()
+                                     ? token_ids
+                                     : tokenizer_.MergeTokenIds(
+                                           previous_token_ids, token_ids));
+    auto decoded_result =
+        tokenizer_.TokenIdsToTexts(num_output_candidates_, token_ids_);
+    if (Tokenizer::IsIncompleteBpeSequence(decoded_result)) {
+      return kContinue;
+    }
+    ASSIGN_OR_RETURN(result_tokens_, decoded_result);
+
     RETURN_IF_ERROR(stop_token_detector_.ProcessTokens(output_tokens_span));
     ASSIGN_OR_RETURN(bool hit_stop_tokens, stop_token_detector_.AllDone());
-    return hit_stop_tokens;
+    return hit_stop_tokens ? kDone : kPartial;
   }
 
   absl::Span<float> GetScores() { return scores_span_; }
@@ -214,6 +244,10 @@ class DecodeInternalSamplingOneStep {
     return stop_token_detector_.GetStopTokensFound();
   }
 
+  const std::vector<std::vector<int>>& GetTokenIds() const {
+    return token_ids_;
+  }
+
  private:
   LlmExecutor& executor_;
   Tokenizer& tokenizer_;
@@ -221,6 +255,7 @@ class DecodeInternalSamplingOneStep {
   std::optional<BenchmarkInfo> benchmark_info_;
   std::vector<bool> stop_tokens_found_;
   litert::TensorBuffer output_tokens_;
+  std::vector<std::vector<int>> token_ids_;
   std::vector<std::string> result_tokens_;
   absl::Span<float> scores_span_;
   StopTokenDetector stop_token_detector_;
@@ -293,16 +328,24 @@ absl::StatusOr<Responses> Decode(LlmExecutor& executor, Tokenizer& tokenizer,
   DecodeInternalSamplingOneStep run_one_step(
       &executor, &tokenizer, num_output_candidates, stop_token_detector,
       benchmark_info);
+
+  // List of tokens from the previous step. Used for merging the current and
+  // previous token ids if needed for BPE encoding.
+  std::vector<std::vector<int>> previous_token_ids;
   while (true) {
-    auto hit_stop_tokens = run_one_step.Run();
-    if (!hit_stop_tokens.ok()) {
-      return hit_stop_tokens.status();
+    ASSIGN_OR_RETURN(DecodeResult decode_result,
+                     run_one_step.Run(previous_token_ids));
+    if (decode_result == kContinue) {
+      previous_token_ids = run_one_step.GetTokenIds();
+      continue;
     }
+
+    previous_token_ids.resize(0);
     response_texts[0] +=
         absl::StrReplaceAll(run_one_step.GetResultTokens()[0], {{"▁", " "}});
     num_decoded_steps++;
 
-    if (ShouldStop(*hit_stop_tokens, benchmark_decode_token_count,
+    if (ShouldStop(decode_result == kDone, benchmark_decode_token_count,
                    num_decoded_steps, executor.GetCurrentStep().value(),
                    max_num_tokens,
                    /*observer=*/nullptr)) {
@@ -339,21 +382,28 @@ absl::Status DecodeStreaming(LlmExecutor& executor, Tokenizer& tokenizer,
   DecodeInternalSamplingOneStep run_one_step(
       &executor, &tokenizer, num_output_candidates, stop_token_detector,
       benchmark_info);
+
+  // List of tokens from the previous step. Used for merging the current and
+  // previous token ids if needed for BPE encoding.
+  std::vector<std::vector<int>> previous_token_ids;
   while (true) {
     Responses responses(num_output_candidates);
     std::vector<std::string>& response_texts =
         responses.GetMutableResponseTexts();
-    auto hit_stop_tokens = run_one_step.Run();
-    if (!hit_stop_tokens.ok()) {
-      observer->OnError(hit_stop_tokens.status());
-      return hit_stop_tokens.status();
+    ASSIGN_OR_RETURN(DecodeResult decode_result,
+                     run_one_step.Run(previous_token_ids));
+    if (decode_result == kContinue) {
+      previous_token_ids = run_one_step.GetTokenIds();
+      continue;
     }
+
+    previous_token_ids.resize(0);
     response_texts[0] +=
         absl::StrReplaceAll(run_one_step.GetResultTokens()[0], {{"▁", " "}});
     num_decoded_steps++;
     observer->OnNext(responses);
 
-    if (ShouldStop(*hit_stop_tokens, benchmark_decode_token_count,
+    if (ShouldStop(decode_result == kDone, benchmark_decode_token_count,
                    num_decoded_steps, executor.GetCurrentStep().value(),
                    max_num_tokens, observer)) {
       break;
@@ -390,8 +440,11 @@ absl::StatusOr<Responses> DecodeCustomSampling(
                                       num_output_candidates, sampler,
                                       stop_token_detector, benchmark_info);
 
+  // List of tokens from the previous step. Used for merging the current and
+  // previous token ids if needed for BPE encoding.
+  std::vector<std::vector<int>> previous_token_ids;
   while (true) {
-    ASSIGN_OR_RETURN(bool hit_stop_tokens, run_one_step.Run(decoded_ids));
+    ASSIGN_OR_RETURN(DecodeResult decode_result, run_one_step.Run(decoded_ids));
 
     // Append the results to the final results vector. Note that only the
     // candidates that have not reached the stop token are added to the final
@@ -410,7 +463,7 @@ absl::StatusOr<Responses> DecodeCustomSampling(
       }
     }
     num_decode_steps++;
-    if (ShouldStop(hit_stop_tokens, benchmark_decode_token_count,
+    if (ShouldStop(decode_result == kDone, benchmark_decode_token_count,
                    num_decode_steps, executor.GetCurrentStep().value(),
                    max_num_tokens,
                    /*observer=*/nullptr)) {
@@ -457,10 +510,10 @@ absl::Status DecodeCustomSamplingStreaming(
 
   // Enter the loop to run the decode process.
   while (true) {
-    absl::StatusOr<bool> hit_stop_tokens = run_one_step.Run(decoded_ids);
-    if (!hit_stop_tokens.ok()) {
-      observer->OnError(hit_stop_tokens.status());
-      return hit_stop_tokens.status();
+    absl::StatusOr<DecodeResult> decode_result = run_one_step.Run(decoded_ids);
+    if (!decode_result.ok()) {
+      observer->OnError(decode_result.status());
+      return decode_result.status();
     }
 
     Responses responses(num_output_candidates);
@@ -482,7 +535,7 @@ absl::Status DecodeCustomSamplingStreaming(
     }
     num_decode_steps++;
     observer->OnNext(responses);
-    if (ShouldStop(*hit_stop_tokens, benchmark_decode_token_count,
+    if (ShouldStop(*decode_result == kDone, benchmark_decode_token_count,
                    num_decode_steps, executor.GetCurrentStep().value(),
                    max_num_tokens, observer)) {
       break;

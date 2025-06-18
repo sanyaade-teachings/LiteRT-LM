@@ -17,6 +17,18 @@
 
 namespace litert::lm {
 
+// Replacement character (U+FFFD) in UTF-8.
+// This character is used to represent incomplete BPE sequences (see below
+// https://github.com/huggingface/tokenizers/blob/76abe0f77d409aec1687ead442cedaa0a8c058e8/tokenizers/src/decoders/byte_fallback.rs#L25)
+const char kReplacementCharacter[] = "\xef\xbf\xbd";
+
+// Checks if the decoded string ends with the replacement character, which
+// indicates that the set of token IDs passed to the tokenizer is part of a BPE
+// sequence and needs more tokens to be decoded.
+static bool has_bpe_suffix(const std::string& decoded) {
+  return decoded.ends_with(kReplacementCharacter);
+}
+
 absl::StatusOr<std::unique_ptr<HuggingFaceTokenizer>>
 HuggingFaceTokenizer::CreateFromFile(absl::string_view json_path) {
   ASSIGN_OR_RETURN(auto memory_mapped_file,  // NOLINT
@@ -56,7 +68,14 @@ absl::StatusOr<std::string> HuggingFaceTokenizer::TokenIdsToText(
     // Disable leak check as Google's default leak checker does not properly
     // support Rust's lazy_static initialization.
     // TODO(b/379364190) - Remove this once the leak checker is fixed.
-    return tokenizer_->Decode(token_ids);
+    std::string decoded = tokenizer_->Decode(token_ids);
+    if (has_bpe_suffix(decoded)) {
+      return absl::DataLossError(
+          "The set of token IDs passed to the tokenizer is part of a BPE "
+          "sequence and needs more tokens to be decoded.");
+    } else {
+      return decoded;
+    }
   }
 }
 

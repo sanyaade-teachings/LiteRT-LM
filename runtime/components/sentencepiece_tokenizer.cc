@@ -44,7 +44,7 @@ absl::StatusOr<std::vector<int>> SentencePieceTokenizer::TextToTokenIds(
   return ids;
 }
 
-// Decodes the given TensorBuffer of token ids into a vector of strings.
+// Decodes the given TensorBuffer of token ids into a string.
 absl::StatusOr<std::string> SentencePieceTokenizer::TokenIdsToText(
     const std::vector<int>& token_ids) {
   std::string text = "";

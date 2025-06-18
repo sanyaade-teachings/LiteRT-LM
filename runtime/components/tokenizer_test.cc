@@ -49,11 +49,8 @@ TEST(TokenizerTest, TextToTensorBuffer) {
               ::testing::ElementsAre(90, 547, 58, 735, 210, 466, 2294));
 }
 
-TEST(TokenizerTest, TensorBufferToText) {
+TEST(TokenizerTest, TensorBufferToTokenIds) {
   auto tokenizer = std::make_unique<MockTokenizer>();
-  EXPECT_CALL(*tokenizer, TokenIdsToText(::testing::_))
-      .WillOnce(testing::Return("▁Hello▁World!"))
-      .WillOnce(testing::Return("▁How's▁it▁going?"));
 
   const std::vector<int> ids = {90,  547, 58, 735, 210, 466, 2294,
                                 224, 24,  8,  66,  246, 18,  2295};
@@ -64,11 +61,41 @@ TEST(TokenizerTest, TensorBufferToText) {
   EXPECT_EQ(tensor_buffer_type.Layout().Dimensions(),
             ::litert::Dimensions({2, 7}));
 
-  auto texts_or = tokenizer->TensorBufferToText(tensor_buffer);
-  EXPECT_TRUE(texts_or.ok());
-  EXPECT_EQ(texts_or.value().size(), 2);
-  EXPECT_EQ(texts_or.value()[0], "▁Hello▁World!");
-  EXPECT_EQ(texts_or.value()[1], "▁How's▁it▁going?");
+  auto token_ids = Tokenizer::TensorBufferToTokenIds(tensor_buffer);
+  EXPECT_TRUE(token_ids.ok());
+  EXPECT_EQ(token_ids.value().size(), 2);
+  EXPECT_EQ(token_ids.value()[0],
+            std::vector<int>({90, 547, 58, 735, 210, 466, 2294}));
+  EXPECT_EQ(token_ids.value()[1],
+            std::vector<int>({224, 24, 8, 66, 246, 18, 2295}));
+}
+
+TEST(TokenizerTest, TokenIdsToTexts) {
+  auto tokenizer = std::make_unique<MockTokenizer>();
+  EXPECT_CALL(*tokenizer, TokenIdsToText(::testing::_))
+      .WillOnce(testing::Return("▁Hello▁World!"))
+      .WillOnce(testing::Return("▁How's▁it▁going?"));
+
+  const std::vector<std::vector<int>> ids = {{90, 547, 58, 735, 210, 466, 2294},
+                                             {224, 24, 8, 66, 246, 18, 2295}};
+
+  auto texts = tokenizer->TokenIdsToTexts(/*batch_size=*/2, ids);
+  EXPECT_TRUE(texts.ok());
+  EXPECT_EQ(texts.value().size(), 2);
+  EXPECT_EQ(texts.value()[0], "▁Hello▁World!");
+  EXPECT_EQ(texts.value()[1], "▁How's▁it▁going?");
+}
+
+TEST(TokenizerTest, MergeTokenIds) {
+  const std::vector<std::vector<int>> previous_ids = {{90, 547, 58, 735},
+                                                      {224, 24}};
+  const std::vector<std::vector<int>> current_ids = {{210, 466, 2294},
+                                                     {8, 66, 246, 18, 2295}};
+  auto merged = Tokenizer::MergeTokenIds(previous_ids, current_ids);
+  EXPECT_TRUE(merged.ok());
+  EXPECT_EQ(merged->size(), 2);
+  EXPECT_EQ((*merged)[0], std::vector<int>({90, 547, 58, 735, 210, 466, 2294}));
+  EXPECT_EQ((*merged)[1], std::vector<int>({224, 24, 8, 66, 246, 18, 2295}));
 }
 
 TEST(SentencePieceTokenizerTest, BosId) {

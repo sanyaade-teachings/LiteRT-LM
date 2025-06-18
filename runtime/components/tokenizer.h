@@ -14,13 +14,14 @@
 
 namespace litert::lm {
 
+typedef std::vector<int> TokenIds;
+
 class Tokenizer {
  public:
   virtual ~Tokenizer() = default;
 
   // Encodes the given text into a sequence of token ids.
-  virtual absl::StatusOr<std::vector<int>> TextToTokenIds(
-      absl::string_view text) = 0;
+  virtual absl::StatusOr<TokenIds> TextToTokenIds(absl::string_view text) = 0;
 
   // Returns BOS id.
   virtual absl::StatusOr<int> BosId() const {
@@ -35,7 +36,7 @@ class Tokenizer {
   // Helper function to convert a vector of token ids into a 1D
   // litert::TensorBuffer of shape [batch_size(==1), num_tokens].
   absl::StatusOr<TensorBuffer> TokenIdsToTensorBuffer(
-      const std::vector<int>& token_ids) {
+      const TokenIds& token_ids) {
     LITERT_ASSIGN_OR_RETURN(auto tensor,
                             CopyToTensorBuffer<int>(
                                 absl::MakeConstSpan(token_ids),
@@ -44,34 +45,71 @@ class Tokenizer {
   }
 
   // Decodes the given sequence of token ids into a string.
+  // Returns absl::DataLossError if any of the tokens are part of an incomplete
+  // BPE sequence.
   virtual absl::StatusOr<std::string> TokenIdsToText(
-      const std::vector<int>& token_ids) = 0;
+      const TokenIds& token_ids) = 0;
 
-  // Decodes the given sequence of token ids into a string. The input is a 2D
-  // litert::TensorBuffer shape [batch_size, decode_steps]. The output is a
-  // vector of strings, each of which is a decoded string of the corresponding
-  // batch.
-  absl::StatusOr<std::vector<std::string>> TensorBufferToText(
+  // Converts a tensor buffer of token ids into a vector of token ids. The input
+  // is a 2D litert::TensorBuffer shape [batch_size, decode_steps].
+  static absl::StatusOr<std::vector<TokenIds>> TensorBufferToTokenIds(
       const TensorBuffer& token_ids_tensor) {
     LITERT_ASSIGN_OR_RETURN(auto tensor_type, token_ids_tensor.TensorType());
     auto dims = tensor_type.Layout().Dimensions();
-    const int batch_size = dims[0];
     if (dims.size() != 2) {
       return absl::InvalidArgumentError(
           "The input tensor must have 2 dimensions.");
     }
-    auto token_ids_or =
-        CopyFromTensorBuffer2D<int>(token_ids_tensor);
+    auto token_ids = CopyFromTensorBuffer2D<int>(token_ids_tensor);
+    return token_ids.Value();
+  }
+
+  // Merges the previous and next token ids, by appending each next token
+  // id to the corresponding previous token id row by row.
+  static absl::StatusOr<std::vector<TokenIds>> MergeTokenIds(
+      const std::vector<TokenIds>& previous_token_ids,
+      const std::vector<TokenIds>& next_token_ids) {
+    std::vector<TokenIds> merged_token_ids(next_token_ids.size());
+    if (previous_token_ids.size() != next_token_ids.size()) {
+      return absl::InvalidArgumentError(
+          "The previous and next token ids must have the same size.");
+    }
+    for (int i = 0; i < previous_token_ids.size(); ++i) {
+      merged_token_ids[i] = previous_token_ids[i];
+      merged_token_ids[i].insert(merged_token_ids[i].end(),
+                                 next_token_ids[i].begin(),
+                                 next_token_ids[i].end());
+    }
+    return merged_token_ids;
+  }
+
+  // Decodes the given sequence of token ids into a string. The input is a 2D
+  // vector of token ids, each of which is a sequence of token ids. The output
+  // Tokenizer is a vector of strings, each of which is a decoded string of the
+  // corresponding batch.
+  // Returns absl::DataLossError if any of the tokens are part of an incomplete
+  // BPE sequence.
+  absl::StatusOr<std::vector<std::string>> TokenIdsToTexts(
+      int batch_size, const std::vector<TokenIds>& token_ids) {
     std::vector<std::string> decoded_strings(batch_size);
+    if (token_ids.size() != batch_size) {
+      return absl::InvalidArgumentError(
+          "The token ID vector must have the same number of rows as the batch "
+          "size.");
+    }
     for (int i = 0; i < batch_size; ++i) {
-      const std::vector<int>& token_ids = (*token_ids_or)[i];
-      auto text_or = this->TokenIdsToText(token_ids);
-      if (!text_or.ok()) {
-        return text_or.status();
+      auto text = this->TokenIdsToText(token_ids[i]);
+      if (!text.ok()) {
+        return text.status();
       }
-      decoded_strings[i] = text_or.value();
+      decoded_strings[i] = text.value();
     }
     return decoded_strings;
+  }
+
+  template <typename T>
+  static bool IsIncompleteBpeSequence(const absl::StatusOr<T>& result) {
+    return result.status().code() == absl::StatusCode::kDataLoss;
   }
 };
 

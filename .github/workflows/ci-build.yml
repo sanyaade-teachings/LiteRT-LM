@@ -10,7 +10,7 @@ on:
     - main
   schedule:
     - cron: "0 10 * * *"  # Run at 2am PST (10am UTC) every day to refresh the cache.
-  workflow_dispatch:   # Manual trigger
+  workflow_dispatch:  # Manual trigger
     inputs:
       REFRESH_CACHE:
         description: 'Refresh cache to remove unused files'
@@ -26,6 +26,7 @@ jobs:
     name: "Presubmit"
     runs-on: Linux_runner_8_core
     permissions:
+      actions: write  # For gh cache delete.
       contents: write  # For gh release upload.
     env:
       GH_TOKEN: ${{ github.token }}  # For gh release upload.
@@ -36,29 +37,30 @@ jobs:
         uses: actions/checkout@v4
 
       - name : Set up cache keys
+        id: cache-keys
         run: |
-          export CACHE_RESTORE_KEY_2="${{ github.workflow }}"
-          export CACHE_RESTORE_KEY_1="$CACHE_RESTORE_KEY_2-${{ hashFiles('**/WORKSPACE', '**/.bazelrc') }}"
-          export CACHE_RESTORE_KEY_0="$CACHE_RESTORE_KEY_1-${{ hashFiles('**/BUILD*') }}"
-          export CACHE_KEY="$CACHE_RESTORE_KEY_0-${{ github.sha }}"
-          echo "CACHE_RESTORE_KEY_2=$CACHE_RESTORE_KEY_2" >> "$GITHUB_ENV"
-          echo "CACHE_RESTORE_KEY_1=$CACHE_RESTORE_KEY_1" >> "$GITHUB_ENV"
-          echo "CACHE_RESTORE_KEY_0=$CACHE_RESTORE_KEY_0" >> "$GITHUB_ENV"
-          echo "CACHE_KEY=$CACHE_KEY" >> "$GITHUB_ENV"
+          CACHE_RESTORE_KEY_2="${{ github.workflow }}"
+          CACHE_RESTORE_KEY_1="$CACHE_RESTORE_KEY_2-${{ hashFiles('**/WORKSPACE', '**/.bazelrc') }}"
+          CACHE_RESTORE_KEY_0="$CACHE_RESTORE_KEY_1-${{ hashFiles('**/BUILD*') }}"
+          CACHE_KEY="$CACHE_RESTORE_KEY_0-${{ github.sha }}"
+          echo "CACHE_RESTORE_KEY_2=$CACHE_RESTORE_KEY_2" >> "$GITHUB_OUTPUT"
+          echo "CACHE_RESTORE_KEY_1=$CACHE_RESTORE_KEY_1" >> "$GITHUB_OUTPUT"
+          echo "CACHE_RESTORE_KEY_0=$CACHE_RESTORE_KEY_0" >> "$GITHUB_OUTPUT"
+          echo "CACHE_KEY=$CACHE_KEY" >> "$GITHUB_OUTPUT"
 
       - name: Restore bazel cache if cache is not being refreshed.
-        if: ${{ env.REFRESH_CACHE }} != 'true'
+        if: ! env.REFRESH_CACHE
         uses: actions/cache/restore@v4
         id: bazel-cache
         with:
           path: |
             ~/.cache/bazel-linux
             ~/.cache/bazel-android
-          key: ${{ env.CACHE_KEY }}
+          key: ${{ steps.cache-keys.outputs.CACHE_KEY }}
           restore-keys: |
-            ${{ env.CACHE_RESTORE_KEY_0 }}-
-            ${{ env.CACHE_RESTORE_KEY_1 }}-
-            ${{ env.CACHE_RESTORE_KEY_2 }}-
+            ${{ steps.cache-keys.outputs.CACHE_RESTORE_KEY_0 }}-
+            ${{ steps.cache-keys.outputs.CACHE_RESTORE_KEY_1 }}-
+            ${{ steps.cache-keys.outputs.CACHE_RESTORE_KEY_2 }}-
 
       - name: Check cache hit
         run: |
@@ -68,7 +70,7 @@ jobs:
 
       - name: Run bazel build on Linux
         run: |
-          bazel build --disk_cache=~/.cache/bazel-linux --strip=always //...
+          bazel build --disk_cache=~/.cache/bazel-linux //...
 
       - name: Check if litert_lm_main doesn't link libLiteRtRuntimeCApi.so
         # Return exit code 1 if libLiteRtRuntimeCApi.so is required.
@@ -83,7 +85,7 @@ jobs:
 
       - name: Run bazel test on Linux
         run: |
-          bazel test --disk_cache=~/.cache/bazel-linux --strip=always --test_output=errors //...
+          bazel test --disk_cache=~/.cache/bazel-linux --test_output=errors //...
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
@@ -94,7 +96,7 @@ jobs:
 
       - name: Run bazel build for Android
         run: |
-          bazel build --disk_cache=~/.cache/bazel-android --config=android_arm64 --strip=always //...
+          bazel build --disk_cache=~/.cache/bazel-android --config=android_arm64 //...
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
 
@@ -105,15 +107,14 @@ jobs:
           gh release upload ${{ github.ref_name }} litert_lm_main.android_arm64 --clobber
 
       - name: Remove cache if cache is being refreshed.
-        if: ${{ env.REFRESH_CACHE }} == 'true'
-        run: gh cache delete ${{ env.CACHE_KEY }} || echo "Cache not found"
+        if: env.REFRESH_CACHE
+        run: gh cache delete ${{ steps.cache-keys.outputs.CACHE_KEY }} || echo "Cache not found"
 
-      - name: Save bazel cache if it's new and not triggered by pull request.
+      - name: Save bazel cache if it's new or being refreshed.
         uses: actions/cache/save@v4
-        if: steps.bazel-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request'
+        if: env.REFRESH_CACHE || steps.bazel-cache.outputs.cache-hit != 'true'
         with:
           path: |
             ~/.cache/bazel-linux
             ~/.cache/bazel-android
-          key: ${{ env.CACHE_KEY }}
-
+          key: ${{ steps.cache-keys.outputs.CACHE_KEY }}

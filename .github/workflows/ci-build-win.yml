@@ -66,7 +66,9 @@ jobs:
       - name: Run bazel build on Windows
         run: |
           bazel build --disk_cache=~/.cache/bazel-windows `
-            --define=DISABLE_HUGGINGFACE_TOKENIZER=1 "--" //... `
+            --define=DISABLE_HUGGINGFACE_TOKENIZER=1 "--" `
+            //... `
+            //runtime/engine:litert_lm_main `
             -//runtime/components:huggingface_tokenizer `
             -//runtime/components:huggingface_tokenizer_test
 
@@ -79,7 +81,8 @@ jobs:
       - name: Run bazel test on Windows
         run: |
           bazel test --disk_cache=~/.cache/bazel-windows `
-            --define=DISABLE_HUGGINGFACE_TOKENIZER=1 --test_output=errors "--" //... `
+            --define=DISABLE_HUGGINGFACE_TOKENIZER=1 --test_output=errors "--" `
+            //... `
             -//runtime/components:huggingface_tokenizer_test
 
       - name: Remove cache if cache is being refreshed.

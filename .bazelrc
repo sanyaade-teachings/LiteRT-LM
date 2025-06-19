@@ -40,7 +40,7 @@
 #
 # Default build options. These are applied first and unconditionally.
 
-build --define=DISABLE_HUGGINGFACE_TOKENIZER=1
+# Shlibs built from the source tree should resolve symbols in the exectuable.
 build --define=resolve_symbols_in_exec=true
 
 # For projects which use TensorFlow as part of a Bazel build process, putting

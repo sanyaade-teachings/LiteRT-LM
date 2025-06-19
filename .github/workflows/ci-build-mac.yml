@@ -70,7 +70,9 @@ jobs:
 
       - name: Run bazel build on MacOS
         run: |
-          bazel build --disk_cache=~/.cache/bazel-macos //...
+          bazel build --disk_cache=~/.cache/bazel-macos \
+            //... \
+            //runtime/engine:litert_lm_main
 
       - name: Update litert_lm_main prebuilt for MacOS if new version tag is pushed.
         if: github.ref_type == 'tag'
@@ -84,9 +86,14 @@ jobs:
 
       - name: Run bazel build for iOS Simulator
         run: |
-          bazel build --disk_cache=~/.cache/bazel-ios --config=ios_sim_arm64 //...
+          bazel build --disk_cache=~/.cache/bazel-ios --config=ios_sim_arm64 \
+            --define=DISABLE_HUGGINGFACE_TOKENIZER=1 -- \
+            //... \
+            //runtime/engine:litert_lm_main \
+            -//runtime/components:huggingface_tokenizer \
+            -//runtime/components:huggingface_tokenizer_test
 
-      - name: Update litert_lm_main prebuilt for iOS Simulatorif new version tag is pushed.
+      - name: Update litert_lm_main prebuilt for iOS Simulator if new version tag is pushed.
         if: github.ref_type == 'tag'
         run: |
           cp bazel-bin/runtime/engine/litert_lm_main litert_lm_main.ios_sim_arm64

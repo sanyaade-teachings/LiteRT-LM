@@ -281,7 +281,10 @@ cc_library(
         "//conditions:default": [
             "@litert//litert/cc/internal:litert_compiled_model",
             "@litert//litert/cc/internal:litert_environment",
+            "@litert//litert/cc/internal:litert_google_tensor_options",
+            "@litert//litert/cc/internal:litert_mediatek_options",
             "@litert//litert/cc/internal:litert_options",
+            "@litert//litert/cc/internal:litert_qualcomm_options",
             "@litert//litert/cc/internal:litert_tensor_buffer",
         ],
     }),

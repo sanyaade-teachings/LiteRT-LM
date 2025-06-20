@@ -13,7 +13,7 @@
 #include <gtest/gtest.h>
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
-#include "absl/strings/str_format.h"  // from @com_google_absl
+#include "absl/strings/str_cat.h"  // from @com_google_absl
 #include "runtime/proto/llm_metadata.pb.h"
 #include "runtime/util/memory_mapped_file.h"
 #include "runtime/util/test_utils.h"  // NOLINT
@@ -35,7 +35,7 @@ absl::StatusOr<std::string> ReadFileToString(const std::string& filename) {
   std::ifstream input_stream(input_filename, std::ios::binary);
   if (!input_stream.is_open()) {
     return absl::InternalError(
-        absl::StrFormat("Could not open file: %s", input_filename));
+        absl::StrCat("Could not open file: ", input_filename.string()));
   }
 
   std::string content;

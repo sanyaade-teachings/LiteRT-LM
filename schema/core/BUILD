@@ -69,7 +69,7 @@ cc_test(
         "@com_google_googletest//:gtest_main",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/strings",
         "//runtime/proto:llm_metadata_cc_proto",
         "//runtime/util:memory_mapped_file",
         "//runtime/util:test_utils",

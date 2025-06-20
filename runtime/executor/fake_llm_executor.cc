@@ -104,6 +104,11 @@ absl::Status FakeLlmExecutor::Prefill(
 }
 
 absl::Status FakeLlmExecutor::Decode(::litert::TensorBuffer& output_tokens) {
+  return Decode(output_tokens, ExecutorDecodeParams());
+}
+absl::Status FakeLlmExecutor::Decode(
+    ::litert::TensorBuffer& output_tokens,
+    const ExecutorDecodeParams& /*decode_params*/) {
   if (decode_times_ >= decode_tokens_set_.size()) {
     return absl::InvalidArgumentError(absl::StrCat(
         "Decode function has been called more times than the number of "

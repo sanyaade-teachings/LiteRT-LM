@@ -16,6 +16,7 @@
 
 #include <atomic>
 #include <ios>
+#include <memory>
 #include <optional>
 #include <ostream>
 #include <string>
@@ -509,6 +510,14 @@ std::ostream& operator<<(std::ostream& os,
     os << "nullptr";
   }
   os << "\n"
+     << "}";
+  return os;
+}
+
+// --- ExecutorDecodeParams Implementation ---
+std::ostream& operator<<(std::ostream& os,
+                         const ExecutorDecodeParams& params) {
+  os << "ExecutorDecodeParams: {\n"
      << "}";
   return os;
 }

@@ -16,6 +16,7 @@
 #define THIRD_PARTY_ODML_LITERT_LM_RUNTIME_EXECUTOR_LLM_EXECUTOR_IO_TYPES_H_
 
 #include <atomic>
+#include <memory>
 #include <optional>
 #include <ostream>
 
@@ -249,6 +250,13 @@ class ExecutorPrefillParams {
   const std::atomic_bool* cancel_ = nullptr;
 };
 std::ostream& operator<<(std::ostream& os, const ExecutorPrefillParams& params);
+
+// Class to host the parameters for Decode.
+class ExecutorDecodeParams {
+ public:
+  ExecutorDecodeParams() = default;
+};
+std::ostream& operator<<(std::ostream& os, const ExecutorDecodeParams& params);
 
 }  // namespace litert::lm
 

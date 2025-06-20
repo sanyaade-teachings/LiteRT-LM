@@ -53,6 +53,15 @@ class LlmExecutorBase {
   // tensor buffer of shape `[batch, sequence_length]` of int32_t.
   virtual absl::Status Decode(::litert::TensorBuffer& output_tokens) = 0;
 
+  // Advanced API to allow customized decode parameters. On success, fills
+  // output tokens tensor buffer of shape `[batch, sequence_length]` of int32_t.
+  virtual absl::Status Decode(::litert::TensorBuffer& output_tokens,
+                              const ExecutorDecodeParams& decode_params) {
+    return absl::UnimplementedError(absl::StrCat(
+        "Decode with decode params not implemented for backend: ",
+        ExecutorBackendName()));
+  };
+
   // [Deprecated]Basic API to trigger the "decode" process but without sampling.
   // Input is token ids with shape `[batch, sequence_length]`
   // Output is logits with shape `[batch, sequence_length, vocab_size]` of

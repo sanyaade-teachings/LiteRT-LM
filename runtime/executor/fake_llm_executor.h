@@ -49,6 +49,8 @@ class FakeLlmExecutor : public LlmExecutor {
                        const ExecutorPrefillParams& prefill_params) override;
 
   absl::Status Decode(::litert::TensorBuffer& output_tokens) override;
+  absl::Status Decode(::litert::TensorBuffer& output_tokens,
+                      const ExecutorDecodeParams& decode_params) override;
 
   absl::Status Decode(const ExecutorInputs& inputs,
                       ::litert::TensorBuffer& output_logits) override;

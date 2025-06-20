@@ -32,7 +32,7 @@ absl::StatusOr<std::string> ReadFileToString(const std::string& filename) {
       "litert_lm/schema/testdata" /
       filename;
 
-  std::ifstream input_stream(input_filename, std::ios::binary);
+  std::ifstream input_stream(input_filename);
   if (!input_stream.is_open()) {
     return absl::InternalError(
         absl::StrCat("Could not open file: ", input_filename.string()));

@@ -118,6 +118,9 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
   // profiling.
   LatencyStats GetLatencyStats() const;
 
+  // Resets all of the internal states.
+  absl::Status Reset() override;
+
  private:
   // Holds the tensor buffers maps for the inference of a precompiled model,
   // both for prefill and decode.
@@ -293,8 +296,6 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
   // e.g. for output_batch_size=2, the layout is:
   // {batch_0_seq_0, batch_1_seq_0, batch_0_seq_1, batch_1_seq_1, ...}
   std::vector<int> sampled_ids_;
-  // Output batch size for the sampled ids.
-  int output_batch_size_ = 0;
 
   // Internal timestep.
   int current_step_ = 0;

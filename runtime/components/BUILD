@@ -229,7 +229,6 @@ cc_test(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "//runtime/util:litert_status_util",
-        "//runtime/util:scoped_file",
         "//runtime/util:test_utils",
     ],
 )

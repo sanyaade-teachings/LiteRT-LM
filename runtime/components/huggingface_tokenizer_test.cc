@@ -2,16 +2,12 @@
 
 #include <fcntl.h>
 
-#include <cstdint>
-#include <cstdio>
 #include <filesystem>  // NOLINT: Required for path manipulation.
+#include <fstream>
+#include <iterator>
 #include <string>
 #include <utility>
 #include <vector>
-
-#if defined(_WIN32)
-#include <windows.h>
-#endif
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -19,7 +15,6 @@
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/str_cat.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
-#include "runtime/util/scoped_file.h"
 #include "runtime/util/status_macros.h"  // NOLINT
 #include "runtime/util/test_utils.h"     // NOLINT
 
@@ -35,33 +30,16 @@ std::string GetHuggingFaceModelPath() {
       .string();
 }
 
-absl::StatusOr<std::string> GetContents(absl::string_view path) {
-  ASSIGN_OR_RETURN(auto file, ScopedFile::Open(path));  // NOLINT
-  ASSIGN_OR_RETURN(auto contents_length, file.GetSize());  // NOLINT
-
-  std::string contents(contents_length, '\0');
-  char* contents_ptr = contents.data();
-  while (contents_length > 0) {
-#if defined(_WIN32)
-    DWORD read_bytes = 0;
-    if (!ReadFile(file.file(), contents_ptr,
-                  static_cast<DWORD>(contents_length),
-                  &read_bytes, nullptr)) {
-      read_bytes = -1;
-    }
-#else
-    ssize_t read_bytes = read(file.file(), contents_ptr, contents_length);
-#endif  // _WIN32
-    if (read_bytes < 0) {
-      return absl::InternalError(absl::StrCat("Failed to read: ", path));
-    } else if (read_bytes == 0) {
-      return absl::InternalError(absl::StrCat("File is empty: ", path));
-    }
-    contents_ptr += static_cast<size_t>(read_bytes);
-    contents_length -= static_cast<size_t>(read_bytes);
+absl::StatusOr<std::string> GetContents(const std::string& path) {
+  std::ifstream input_stream(path);
+  if (!input_stream.is_open()) {
+    return absl::InternalError(absl::StrCat("Could not open file: ", path));
   }
 
-  return std::move(contents);
+  std::string content;
+  content.assign((std::istreambuf_iterator<char>(input_stream)),
+                 (std::istreambuf_iterator<char>()));
+  return std::move(content);
 }
 
 TEST(HuggingFaceTokenizerTtest, CreateFromFile) {

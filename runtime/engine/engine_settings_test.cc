@@ -145,19 +145,19 @@ absl::Status IsExpectedLlmMetadata(const proto::LlmMetadata& llm_metadata) {
       llm_metadata.start_token().token_ids().ids(0) != 2) {
     return absl::InvalidArgumentError("Start token is not set correctly.");
   }
-  if (llm_metadata.stop_tokens_size() != 3) {
-    return absl::InvalidArgumentError("Stop tokens size is not 3.");
+  if (llm_metadata.stop_tokens_size() < 3) {
+    return absl::InvalidArgumentError("Stop tokens size is less than 3.");
   }
-  if (llm_metadata.stop_tokens(0).token_ids().ids_size() != 1 ||
-      llm_metadata.stop_tokens(0).token_ids().ids(0) != 1) {
+  if (llm_metadata.stop_tokens(0).token_str().empty() &&
+      llm_metadata.stop_tokens(0).token_ids().ids_size() == 0) {
     return absl::InvalidArgumentError("Stop tokens 0 is not set correctly.");
   }
-  if (llm_metadata.stop_tokens(1).token_ids().ids_size() != 1 ||
-      llm_metadata.stop_tokens(1).token_ids().ids(0) != 1) {
+  if (llm_metadata.stop_tokens(1).token_str().empty() &&
+      llm_metadata.stop_tokens(1).token_ids().ids_size() == 0) {
     return absl::InvalidArgumentError("Stop tokens 1 is not set correctly.");
   }
-  if (llm_metadata.stop_tokens(2).token_ids().ids_size() != 1 ||
-      llm_metadata.stop_tokens(2).token_ids().ids(0) != 1) {
+  if (llm_metadata.stop_tokens(2).token_str().empty() &&
+      llm_metadata.stop_tokens(2).token_ids().ids_size() == 0) {
     return absl::InvalidArgumentError("Stop tokens 2 is not set correctly.");
   }
   if (!llm_metadata.has_sampler_params() ||

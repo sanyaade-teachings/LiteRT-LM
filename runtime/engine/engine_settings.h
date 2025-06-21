@@ -3,6 +3,7 @@
 
 #include <optional>
 #include <ostream>
+#include <string>
 #include <vector>
 
 #include "absl/base/nullability.h"  // from @com_google_absl
@@ -123,6 +124,11 @@ class SessionConfig {
   const std::vector<std::vector<int>>& GetStopTokenIds() const;
   std::vector<std::vector<int>>& GetMutableStopTokenIds();
 
+  // Stop token strings:
+  // Getters for the stop token strings.
+  const std::vector<std::string>& GetStopTokenStrs() const;
+  std::vector<std::string>& GetMutableStopTokenStrs();
+
   // Set the start token ids.
   int GetStartTokenId() const;
   void SetStartTokenId(int start_token_id);
@@ -155,6 +161,9 @@ class SessionConfig {
   // dimension is the index of the stop token in the session, and the second
   // dimension is the sequence of token ids that constitutes the stop token.
   std::vector<std::vector<int>> stop_token_ids_;
+
+  // Stop token strings for the session.
+  std::vector<std::string> stop_token_strs_;
 
   // Start token id for the session.
   int start_token_id_;

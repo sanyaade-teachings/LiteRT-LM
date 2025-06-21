@@ -34,6 +34,21 @@ StopTokenDetector::StopTokenDetector(size_t batch_size) {
   ResetBatch(batch_size);
 }
 
+absl::Status StopTokenDetector::AddStopTokenSequenceStr(
+    const std::string& stop_sequence_str) {
+  if (stop_sequence_str.empty()) {
+    return absl::InvalidArgumentError(
+        "Cannot add an empty stop token sequence.");
+  }
+  if (std::find(stop_sequences_storage_str_.begin(),
+                stop_sequences_storage_str_.end(),
+                stop_sequence_str) != stop_sequences_storage_str_.end()) {
+    return absl::AlreadyExistsError(absl::StrFormat(
+        "Stop token sequence %s already exists.", stop_sequence_str));
+  }
+  stop_sequences_storage_str_.push_back(stop_sequence_str);
+  return absl::OkStatus();
+}
 absl::Status StopTokenDetector::AddStopTokenSequence(
     const std::vector<int>& stop_sequence) {
   if (stop_sequence.empty()) {
@@ -66,6 +81,36 @@ void StopTokenDetector::ResetBatch(size_t batch_size) {
   batch_item_match_progress_.assign(
       new_batch_size, std::vector<int>(stop_sequences_storage_.size(), 0));
   matched_stop_sequence_length_.assign(new_batch_size, 0);
+}
+
+// Processes the latest incoming token for each sequence in the batch.
+absl::Status StopTokenDetector::ProcessTokenStrs(
+    const std::vector<std::string>& latest_token_strings) {
+  if (latest_token_strings.size() != stop_token_found_.size()) {
+    return absl::InvalidArgumentError(
+        absl::StrFormat("Size of latest_token_strings (%d) does not match "
+                        "configured batch size (%d).",
+                        latest_token_strings.size(), stop_token_found_.size()));
+  }
+  if (stop_sequences_storage_str_
+          .empty()) {  // No stop sequences to check against.
+    // It is OK if there is no stop sequence to check against. Some models
+    // don't have stop sequences in string format. They will be handled in
+    // ProcessTokens().
+    return absl::OkStatus();
+  }
+  for (size_t i = 0; i < latest_token_strings.size(); ++i) {
+    const std::string& token_string = latest_token_strings[i];
+    bool found = std::any_of(stop_sequences_storage_str_.begin(),
+                             stop_sequences_storage_str_.end(),
+                             [&token_string](const std::string& str) {
+                               return str == token_string;
+                             });
+    if (found) {
+      stop_token_found_[i] = true;
+    }
+  }
+  return absl::OkStatus();
 }
 
 // Processes the latest incoming token for each sequence in the batch.

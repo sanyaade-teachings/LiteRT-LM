@@ -146,6 +146,7 @@ class DecodeExternalSampling {
     ASSIGN_OR_RETURN(auto decoded_text, decode_result);
     result_tokens_ = decoded_text;
 
+    RETURN_IF_ERROR(stop_token_detector_.ProcessTokenStrs(result_tokens_));
     // Update the stop_tokens_found vector with the latest decoded ids.
     LITERT_ASSIGN_OR_RETURN_ABSL(auto decoded_ids_span,
                                  ReferTensorBufferAsSpan<int>(decoded_ids));
@@ -228,6 +229,7 @@ class DecodeInternalSamplingOneStep {
       return kContinue;
     }
     ASSIGN_OR_RETURN(result_tokens_, decoded_result);
+    RETURN_IF_ERROR(stop_token_detector_.ProcessTokenStrs(result_tokens_));
 
     RETURN_IF_ERROR(stop_token_detector_.ProcessTokens(output_tokens_span));
     ASSIGN_OR_RETURN(bool hit_stop_tokens, stop_token_detector_.AllDone());

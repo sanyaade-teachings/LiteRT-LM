@@ -59,6 +59,10 @@ absl::StatusOr<std::unique_ptr<SessionBasic>> SessionBasic::Create(
     RETURN_IF_ERROR(
         stop_token_detector.AddStopTokenSequence(stop_token_sequence));
   }
+  for (const auto& stop_token_sequence : session_config.GetStopTokenStrs()) {
+    RETURN_IF_ERROR(
+        stop_token_detector.AddStopTokenSequenceStr(stop_token_sequence));
+  }
   return absl::WrapUnique(new SessionBasic(
       executor, tokenizer, std::move(sampler), session_config, benchmark_info,
       worker_thread_pool, stop_token_detector));

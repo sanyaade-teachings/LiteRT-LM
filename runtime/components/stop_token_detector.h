@@ -2,6 +2,7 @@
 #define THIRD_PARTY_ODML_LITERT_LM_RUNTIME_COMPONENTS_STOP_TOKEN_DETECTOR_H_
 
 #include <cstddef>
+#include <string>
 #include <vector>
 
 #include "absl/status/status.h"  // from @com_google_absl
@@ -40,6 +41,11 @@ class StopTokenDetector {
   //   - InvalidArgumentError if sequence is empty or added before.
   absl::Status AddStopTokenSequence(const std::vector<int>& stop_sequence);
 
+  // Adds a new stop token sequence as a string.
+  //   - stop_sequence_str: The stop sequence string to add. Must not be empty.
+  //   - InvalidArgumentError if sequence is empty or added before.
+  absl::Status AddStopTokenSequenceStr(const std::string& stop_sequence_str);
+
   // Resets detector state for a new batch size or clears existing state. Note
   // that this does not clear the stop sequences themselves.
   //   - batch_size: The new number of sequences in the batch. If zeros is
@@ -51,6 +57,13 @@ class StopTokenDetector {
   //     match batch_size.
   // Returns an error status on precondition failure.
   absl::Status ProcessTokens(absl::Span<const int> latest_tokens);
+
+  // Processes the latest incoming string for each sequence in the batch.
+  //   - latest_token_strings: vector of token strings, one per batch sequence.
+  //     Size must match batch_size.
+  // Returns an error status on precondition failure.
+  absl::Status ProcessTokenStrs(
+      const std::vector<std::string>& latest_token_strings);
 
   // Returns a const reference to the vector containing the lengths of the
   // matched stop token sequences for all batch items. If a batch item has not
@@ -72,6 +85,7 @@ class StopTokenDetector {
  private:
   // Stores all added stop sequences.
   std::vector<std::vector<int>> stop_sequences_storage_;
+  std::vector<std::string> stop_sequences_storage_str_;
 
   // batch_item_match_progress_[i][k]: current match length for batch item 'i'
   // against stop_sequences_storage_[k].

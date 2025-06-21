@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <ostream>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -58,15 +59,28 @@ absl::Status EngineSettings::MaybeUpdateAndValidate(
   }
 
   // Convert the start/stop tokens from string to token ids.
-  for (auto& stop_token : *metadata.mutable_stop_tokens()) {
+  auto stop_tokens = *metadata.mutable_stop_tokens();
+  for (auto& stop_token : stop_tokens) {
     if (stop_token.has_token_str()) {
       auto stop_token_ids = tokenizer.TextToTokenIds(stop_token.token_str());
       if (stop_token_ids.ok()) {
-        stop_token.mutable_token_ids()->mutable_ids()->Add(
-            stop_token_ids->begin(), stop_token_ids->end());
+        metadata.mutable_stop_tokens()
+            ->Add()
+            ->mutable_token_ids()
+            ->mutable_ids()
+            ->Add(stop_token_ids->begin(), stop_token_ids->end());
       }
     }
   }
+  // Add the EOS token to the stop tokens.
+  if (tokenizer.EosId().ok() && tokenizer.EosId().value() > 0) {
+    ABSL_LOG(INFO) << "The tokenizer eos id: " << tokenizer.EosId().value();
+    proto::TokenUnion eos_token;
+    eos_token.mutable_token_ids()->mutable_ids()->Add(
+        tokenizer.EosId().value());
+    *metadata.mutable_stop_tokens()->Add() = eos_token;
+  }
+
   if (metadata.start_token().has_token_str()) {
     auto start_token_ids =
         tokenizer.TextToTokenIds(metadata.start_token().token_str());
@@ -232,7 +246,13 @@ absl::Status SessionConfig::MaybeUpdateAndValidate(
         }
       }
     }
-
+    if (stop_token_strs_.empty()) {
+      for (const auto& stop_token : llm_metadata.stop_tokens()) {
+        if (stop_token.has_token_str()) {
+          stop_token_strs_.push_back(stop_token.token_str());
+        }
+      }
+    }
     // Set the prompt template.
     if (llm_metadata.has_prompt_templates()) {
       prompt_templates_ = llm_metadata.prompt_templates();
@@ -282,6 +302,15 @@ const std::vector<std::vector<int>>& SessionConfig::GetStopTokenIds() const {
 std::vector<std::vector<int>>& SessionConfig::GetMutableStopTokenIds() {
   return stop_token_ids_;
 }
+
+const std::vector<std::string>& SessionConfig::GetStopTokenStrs() const {
+  return stop_token_strs_;
+}
+
+std::vector<std::string>& SessionConfig::GetMutableStopTokenStrs() {
+  return stop_token_strs_;
+}
+
 int SessionConfig::GetStartTokenId() const { return start_token_id_; }
 
 void SessionConfig::SetStartTokenId(int start_token_id) {

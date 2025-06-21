@@ -1,6 +1,7 @@
 #include "runtime/components/stop_token_detector.h"
 
 #include <cstddef>
+#include <string>
 #include <vector>
 
 #include <gmock/gmock.h>
@@ -110,6 +111,85 @@ TEST(StopTokenDetectorTest, ResetBatch) {
   // Batch is not done after reset.
   EXPECT_FALSE(detector.AllDone().value());
   EXPECT_EQ(0, detector.GetStepsBeforeStopTokens()[0]);
+}
+
+TEST(StopTokenDetectorTest, ProcessTokenStrsSingleStopToken) {
+  StopTokenDetector detector(2);  // Batch size 2
+  EXPECT_OK(detector.AddStopTokenSequenceStr({"stop"}));
+
+  std::vector<std::string> tokens_item0 = {"a", "b", "stop", "c", "d"};
+  std::vector<std::string> tokens_item1 = {"x", "y", "z", "stop", "end"};
+
+  // Simulate processing token by token
+  size_t i;
+  for (i = 0; i < tokens_item0.size(); ++i) {
+    std::vector<std::string> current_batch_tokens = {tokens_item0[i],
+                                                     tokens_item1[i]};
+    EXPECT_TRUE(detector.ProcessTokenStrs(current_batch_tokens).ok());
+    if (detector.AllDone().value()) {
+      break;
+    }
+  }
+  // Stop token, "stop", is found for all batch items at step 3.
+  EXPECT_EQ(i, 3);
+
+  // steps_before_stop_tokens is not updated in ProcessTokenStrs.
+  const auto& steps_before_stop_tokens = detector.GetStepsBeforeStopTokens();
+  EXPECT_EQ(2, steps_before_stop_tokens.size());
+  EXPECT_EQ(0, steps_before_stop_tokens[0]);
+  EXPECT_EQ(0, steps_before_stop_tokens[1]);
+}
+
+TEST(StopTokenDetectorTest, ProcessTokenStrsMultipleStopTokens) {
+  StopTokenDetector detector(2);  // Batch size 2
+  EXPECT_OK(detector.AddStopTokenSequenceStr({"stop"}));
+  EXPECT_OK(detector.AddStopTokenSequenceStr({"end"}));
+
+  std::vector<std::string> tokens_item0 = {"a",    "b", "end", "of",
+                                           "text", "c", "d"};
+  std::vector<std::string> tokens_item1 = {"x", "y", "z", "stop", "end"};
+
+  // Simulate processing token by token
+  size_t i;
+  for (i = 0; i < tokens_item0.size(); ++i) {
+    std::vector<std::string> current_batch_tokens = {tokens_item0[i],
+                                                     tokens_item1[i]};
+    EXPECT_TRUE(detector.ProcessTokenStrs(current_batch_tokens).ok());
+    if (detector.AllDone().value()) {
+      break;
+    }
+  }
+  // Stop tokens are found for all batch items at step 4.
+  EXPECT_EQ(i, 3);
+
+  // steps_before_stop_tokens is not updated in ProcessTokenStrs.
+  const auto& steps_before_stop_tokens = detector.GetStepsBeforeStopTokens();
+  EXPECT_EQ(2, steps_before_stop_tokens.size());
+  EXPECT_EQ(0, steps_before_stop_tokens[0]);
+  EXPECT_EQ(0, steps_before_stop_tokens[1]);
+}
+
+TEST(StopTokenDetectorTest, ProcessTokenStrsNoStopToken) {
+  StopTokenDetector detector(2);  // Batch size 2
+  EXPECT_OK(detector.AddStopTokenSequenceStr({"stop"}));
+
+  std::vector<std::string> tokens_item0 = {"a", "b", "c", "d", "e"};
+  std::vector<std::string> tokens_item1 = {"x", "y", "z", "p", "q"};
+
+  // Simulate processing token by token
+  size_t i;
+  for (i = 0; i < tokens_item0.size(); ++i) {
+    std::vector<std::string> current_batch_tokens = {tokens_item0[i],
+                                                     tokens_item1[i]};
+    EXPECT_TRUE(detector.ProcessTokenStrs(current_batch_tokens).ok());
+    EXPECT_FALSE(detector.AllDone().value());
+  }
+
+  // steps_before_stop_tokens is not updated in ProcessTokenStrs.
+  const auto& steps_before_stop_tokens = detector.GetStepsBeforeStopTokens();
+  EXPECT_EQ(2, steps_before_stop_tokens.size());
+  EXPECT_EQ(0, steps_before_stop_tokens[0]);
+  EXPECT_EQ(0, steps_before_stop_tokens[1]);
 }
 
 }  // namespace

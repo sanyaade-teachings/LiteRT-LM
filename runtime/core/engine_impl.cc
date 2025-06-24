@@ -119,7 +119,7 @@ class EngineImpl : public Engine {
 
       std::filesystem::path path(model_path);
       ABSL_CHECK(std::filesystem::exists(path));
-      auto executor = odml::infra::LlmLiteRtNpuCompiledModelExecutor::Create(
+      auto executor = LlmLiteRtNpuCompiledModelExecutor::Create(
           engine_settings_.GetMainExecutorSettings(), *litert_model_resources_,
           path.parent_path().string());
       ABSL_CHECK_OK(executor);

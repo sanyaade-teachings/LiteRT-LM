@@ -1,6 +1,5 @@
 #include "runtime/executor/llm_litert_npu_compiled_model_executor.h"
 
-#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <limits>
@@ -22,7 +21,6 @@
 #include "absl/time/time.h"  // from @com_google_absl
 #include "absl/types/span.h"  // from @com_google_absl
 #include "litert/c/litert_common.h"  // from @litert
-#include "litert/c/litert_model.h"  // from @litert
 #include "litert/cc/litert_compiled_model.h"  // from @litert
 #include "litert/cc/litert_environment.h"  // from @litert
 #include "litert/cc/litert_layout.h"  // from @litert
@@ -30,7 +28,6 @@
 #include "litert/cc/litert_model.h"  // from @litert
 #include "litert/cc/litert_tensor_buffer.h"  // from @litert
 #include "runtime/components/model_resources.h"
-#include "runtime/executor/executor_settings_base.h"
 #include "runtime/executor/litert_compiled_model_executor_utils.h"
 #include "runtime/executor/llm_executor_io_types.h"
 #include "runtime/executor/llm_executor_settings.h"
@@ -38,19 +35,12 @@
 #include "runtime/util/litert_status_util.h"
 #include "runtime/util/status_macros.h"  // NOLINT
 
-namespace odml::infra {
+namespace litert::lm {
 
 namespace {
 using ::litert::CompiledModel;
 using ::litert::Environment;
-using ::litert::Model;
 using ::litert::TensorBuffer;
-using ::litert::lm::CopyFromTensorBuffer;
-using ::litert::lm::ExecutorInputs;
-using ::litert::lm::ExecutorPrefillParams;
-using ::litert::lm::GetOptimizedPrefillWorkGroups;
-using ::litert::lm::ReferTensorBufferAsSpan;
-using ::litert::lm::SortedPrefillSignatureMap;
 
 constexpr char kPrefillSignature[] = "prefill_128";
 constexpr int kPrefillSize = 128;
@@ -538,8 +528,8 @@ absl::Status LlmLiteRtNpuCompiledModelExecutor::Decode(
   LITERT_ASSIGN_OR_RETURN(auto logits_buffer_int16,
                           CopyFromTensorBuffer<int16_t>(decoded_logits));
   int max_index = 0;
-  int16_t max_value = logits_buffer_int16[0];
-  for (int i = 1; i < logits_buffer_int16.size(); ++i) {
+  int16_t max_value = std::numeric_limits<int16_t>::min();
+  for (int i = 0; i < logits_buffer_int16.size(); ++i) {
     if (logits_buffer_int16[i] > max_value) {
       max_value = logits_buffer_int16[i];
       max_index = i;
@@ -1015,4 +1005,4 @@ LlmLiteRtNpuCompiledModelExecutor::Create(
   return executor;
 };
 
-}  // namespace odml::infra
+}  // namespace litert::lm

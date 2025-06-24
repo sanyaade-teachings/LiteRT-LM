@@ -42,7 +42,7 @@ ABSL_FLAG(std::string, litert_dispatch_lib_path, "",
 ABSL_FLAG(std::string, prompt, "", "Prompt to run.");
 ABSL_FLAG(int, num_runs, 1, "Number of times to run the benchmark.");
 
-using odml::infra::LlmLiteRtNpuCompiledModelExecutor;
+using litert::lm::LlmLiteRtNpuCompiledModelExecutor;
 
 using litert::lm::InputText;
 using litert::lm::ThreadOptions;
@@ -209,7 +209,7 @@ RunStats CreateAndRun(const std::string& prompt) {
   auto executor_settings = litert::lm::LlmExecutorSettings::CreateDefault(
                                model_assets, litert::lm::Backend::NPU)
                                .value();
-  auto executor = odml::infra::LlmLiteRtNpuCompiledModelExecutor::Create(
+  auto executor = LlmLiteRtNpuCompiledModelExecutor::Create(
       executor_settings, **model_resources,
       absl::GetFlag(FLAGS_litert_dispatch_lib_path));
   auto end = absl::Now();

@@ -38,7 +38,7 @@
 #include "runtime/executor/llm_executor_io_types.h"
 #include "runtime/executor/llm_executor_settings.h"
 
-namespace odml::infra {
+namespace litert::lm {
 
 // Component intended to be used with an NPU variant of Gemma3.
 class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
@@ -122,7 +122,7 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
   absl::Status Reset() override;
 
  private:
-  // Holds the tensor buffers maps for the inference of a precompiled model,
+  // Holds the tensor buffer maps for the inference of a precompiled model,
   // both for prefill and decode.
   struct InferenceContext {
     absl::flat_hash_map<absl::string_view, ::litert::TensorBuffer>
@@ -165,7 +165,8 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
   // signatures for Mask, RoPE and KV cache update computation.
   struct NpuAuxiliaryContext {
     ::litert::CompiledModel npu_auxiliary_compiled_model;
-    NpuAuxiliaryContext(::litert::CompiledModel npu_auxiliary_compiled_model);
+    explicit NpuAuxiliaryContext(
+        ::litert::CompiledModel npu_auxiliary_compiled_model);
   };
 
  protected:
@@ -188,9 +189,7 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
         llm_inference_context_(std::move(llm_inference_context)),
         cache_update_inference_context_(
             std::move(cache_update_inference_context)),
-        prefill_signature_map_(std::move(prefill_signature_map)) {
-    executor_settings_.SetMaxNumTokens(1280);
-  }
+        prefill_signature_map_(std::move(prefill_signature_map)) {}
 
  private:
   // Prefill internal implementation, for one prefill call to the Interpreter
@@ -309,6 +308,6 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
   int next_input_token_id_ = -1;
 };
 
-}  // namespace odml::infra
+}  // namespace litert::lm
 
 #endif  // THIRD_PARTY_ODML_LITERT_LM_RUNTIME_EXECUTOR_LITERT_NPU_COMPILED_MODEL_EXECUTOR_H_

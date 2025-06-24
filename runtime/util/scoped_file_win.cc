@@ -36,8 +36,6 @@ std::wstring Utf8ToWideChar(absl::string_view utf8str) {
 absl::StatusOr<ScopedFile> OpenImpl(absl::string_view path,
                                     DWORD file_attribute_flag) {
   std::wstring ws_path = Utf8ToWideChar(path);
-  DWORD file_flags =
-      file_attribute_flag | FILE_FLAG_OVERLAPPED | FILE_FLAG_SEQUENTIAL_SCAN;
 
   DWORD share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
   DWORD access = GENERIC_READ;
@@ -45,7 +43,7 @@ absl::StatusOr<ScopedFile> OpenImpl(absl::string_view path,
     access |= GENERIC_WRITE;
   }
   HANDLE hfile = ::CreateFileW(ws_path.c_str(), access, share_mode, nullptr,
-                               OPEN_EXISTING, file_flags, nullptr);
+                               OPEN_EXISTING, file_attribute_flag, nullptr);
   RET_CHECK_NE(hfile, INVALID_HANDLE_VALUE) << "Failed to open: " << path;
   return ScopedFile(hfile);
 }

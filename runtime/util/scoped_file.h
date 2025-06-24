@@ -48,8 +48,11 @@ class ScopedFile {
     }
   }
 
-  ScopedFile(ScopedFile&& other) { file_ = other.Release(); }
+  ScopedFile(ScopedFile&& other) : file_(other.Release()) {}
   ScopedFile& operator=(ScopedFile&& other) {
+    if (IsValid()) {
+      CloseFile(file_);
+    }
     file_ = other.Release();
     return *this;
   }
@@ -63,6 +66,26 @@ class ScopedFile {
   // Returns the number of bytes of the file.
   static absl::StatusOr<size_t> GetSize(PlatformFile file);
   absl::StatusOr<size_t> GetSize() const { return GetSize(file_); }
+
+#if defined(_WIN32)
+  // Releases ownership of the operating system file HANDLE and returns the
+  // corresponding C file descriptor.
+  //
+  // Note: Currently, this function only works if the file can be re-opened in
+  // read/write mode.
+  //
+  // Warning: Files opened in asynchronous mode (`FILE_FLAG_OVERLAPPED`) are not
+  // supported. Windows' POSIX C implementation does not support such I/O
+  // operations. This function tries to detect such invalid use case and return
+  // an error but doesn't guarantee it.
+  //
+  // Warning: If successful, the returned file descriptor owns the file which
+  // means it will need to be closed using `_close`.
+  //
+  // Warning: While it is possible to get a HANDLE back from the file
+  // descriptor, **ownership will stay with the file descriptor**.
+  absl::StatusOr<int> ReleaseAsCFileDescriptor();
+#endif
 
  private:
   PlatformFile Release() {

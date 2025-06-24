@@ -12,8 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <fcntl.h>
+#include <io.h>
 #include <windows.h>
 
+#include <cerrno>
 #include <cstddef>
 
 #include "absl/status/status.h"  // from @com_google_absl
@@ -71,6 +74,60 @@ absl::StatusOr<size_t> ScopedFile::GetSizeImpl(HANDLE file) {
     return absl::UnknownError("Failed to get file size");
   }
   return static_cast<size_t>(size.QuadPart);
+}
+
+namespace {
+
+// Returns a string holding the error message corresponding to the code returned
+// by `GetLastError()`.
+//
+// TODO: Extract to a separate helper file for Windows utilities.
+std::string GetLastErrorString() {
+  const DWORD error = GetLastError();
+  LPSTR message_buffer = nullptr;
+  const DWORD chars_written = FormatMessageA(
+      FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+          FORMAT_MESSAGE_IGNORE_INSERTS,
+      NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+      reinterpret_cast<LPSTR>(&message_buffer), 0, NULL);
+  if (chars_written > 0 && message_buffer != nullptr) {
+    std::string error_message = message_buffer;
+    LocalFree(message_buffer);
+    // Remove trailing whitespace
+    while (!error_message.empty() && std::isspace(error_message.back())) {
+      error_message.pop_back();
+    }
+    return error_message;
+  }
+  // https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes#system-error-codes
+  return std::to_string(error);
+}
+
+}  // namespace
+
+absl::StatusOr<int> ScopedFile::ReleaseAsCFileDescriptor() {
+  if (file_ == kInvalidPlatformFile) {
+    return absl::InvalidArgumentError("File is not opened.");
+  }
+
+  // We test whether we can read the file in a synchronous manner by attempting
+  // a 0 byte read without specifying the "overlapped" parameter.
+  char buffer[1];
+  if (!ReadFile(file_, &buffer, /*nNumberOfBytesToRead=*/0,
+                /*lpNumberOfBytesRead=*/nullptr, /*lpOverlapped=*/nullptr)) {
+    return absl::FailedPreconditionError(
+        "Could not convert asynchronous handle to C file descriptor: " +
+        GetLastErrorString());
+  }
+
+  const int fd = _open_osfhandle(reinterpret_cast<intptr_t>(file_),
+                                 /*flags=*/_O_RDWR | _O_BINARY);
+  if (fd < 0) {
+    return absl::ErrnoToStatus(
+        errno, "Could not convert HANDLE to a C file descriptor");
+  }
+  Release();
+  return fd;
 }
 
 }  // namespace litert::lm

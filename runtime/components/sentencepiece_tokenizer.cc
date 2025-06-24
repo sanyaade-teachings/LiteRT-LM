@@ -56,12 +56,25 @@ absl::StatusOr<std::string> SentencePieceTokenizer::TokenIdsToText(
 
 // Returns BOS id.
 absl::StatusOr<int> SentencePieceTokenizer::BosId() const {
-  return processor_->bos_id();
+  auto id = processor_->bos_id();
+  // Some converted SPM would mark BOS as EOS or UNK. Reuse EosId().
+  if (id == -1) {
+    return EosId();
+  }
+  return id;
 };
 
 // Returns EOS id.
 absl::StatusOr<int> SentencePieceTokenizer::EosId() const {
-  return processor_->eos_id();
-};
+  auto id = processor_->eos_id();
+  // Some converted SPM would mark EOS as UNK.
+  if (id == -1) {
+    id = processor_->unk_id();
+  }
+  if (id == -1) {
+    return absl::InternalError("EOS id is not found.");
+  }
+  return id;
+}
 
 }  // namespace litert::lm

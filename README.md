@@ -22,15 +22,32 @@ the community feedback regarding Google AI Edge's Gemma 3n LiteRT preview. You
 want access on more platforms, more visibility into the underlying stack, and
 more flexibility. LiteRT-LM can help with all three.
 
+### 🚀 What's New
+
+*   ***June 24, 2025*** **: Run Gemma models with NPU Support (`v0.7.0`)**
+    Unlock significant performance gains! Our latest release leverages the power
+    of Neural Processing Units (NPUs) on devices with Qualcomm and MediaTek
+    chipsets to run the Gemma3 1B model with incredible efficiency.
+
+    **Note:** LiteRT-LM NPU acceleration is only available through an Early
+    Access Program. Please check out
+    [this page](https://ai.google.dev/edge/litert/next/npu) for more information
+    about how to sign it up.
+*   ***June 10, 2025*** **: The Debut of LiteRT-LM: A New Framework for
+    On-Device LLMs** We're proud to release an early preview (`v0.6.1`) of the
+    LiteRT-LM codebase! This foundational release enables you to run the latest
+    Gemma series models across a wide range of devices with initial support for
+    CPU execution and powerful GPU acceleration on Android.
+
 ### Supported Backends & Platforms
 
-Platform     | CPU Support | GPU Support
-:----------- | :---------: | :-----------:
-**Android**  | ✅           | ✅
-**macOS**    | ✅           | *Coming Soon*
-**Windows**  | ✅           | *Coming Soon*
-**Linux**    | ✅           | *Coming Soon*
-**Embedded** | ✅           | *Coming Soon*
+Platform     | CPU Support | GPU Support | NPU Support |
+:----------- | :---------: | :-----------: | :-----------:
+**Android**  | ✅           | ✅            | ✅ |
+**macOS**    | ✅           | *Coming Soon* | - |
+**Windows**  | ✅           | *Coming Soon* | - |
+**Linux**    | ✅           | *Coming Soon* | - |
+**Embedded** | ✅           | *Coming Soon* | - |
 
 ### Supported Models and Performance
 
@@ -46,17 +63,18 @@ Below are the performance numbers of running each model on various devices. Note
 that the benchmark is measured with 1024 tokens prefill and 256 tokens decode (
 with performance lock on Android devices).
 
-| Model | Device | Backend | Prefill (tokens/sec) | Decode (tokens/sec) |
-| :--- | :--- | :--- | :--- | :--- |
-| Gemma3-1B | MacBook Pro<br>(2023 M3) | CPU | 422.98 | 66.89 |
-| Gemma3-1B | Samsung S24<br>(Ultra) | CPU | 243.24 | 43.56 |
-| Gemma3-1B | Samsung S24<br>(Ultra) | GPU | 1876.5 | 44.57 |
-| Gemma3n-E2B | MacBook Pro<br>(2023 M3) | CPU | 232.5 | 27.6 |
-| Gemma3n-E2B | Samsung S24<br>(Ultra) | CPU | 110.5 | 16.1 |
-| Gemma3n-E2B | Samsung S24<br>(Ultra) | GPU | 816.4 | 15.6 |
-| Gemma3n-E4B | MacBook Pro<br>(2023 M3) | CPU | 170.1 | 20.1 |
-| Gemma3n-E4B | Samsung S24<br>(Ultra) | CPU | 73.5 | 9.2 |
-| Gemma3n-E4B | Samsung S24<br>(Ultra) | GPU | 548.0 | 9.4 |
+| Model | Device | Backend | Prefill (tokens/sec) | Decode (tokens/sec) | Context size |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Gemma3-1B | MacBook Pro<br>(2023 M3) | CPU | 422.98 | 66.89 | 4096 |
+| Gemma3-1B | Samsung S24<br>(Ultra) | CPU | 243.24 | 43.56 | 4096 |
+| Gemma3-1B | Samsung S24<br>(Ultra) | GPU | 1876.5 | 44.57 | 4096 |
+| Gemma3-1B | Samsung S24<br>(Ultra) | NPU | 5836.6 | 84.8 | 1280 |
+| Gemma3n-E2B | MacBook Pro<br>(2023 M3) | CPU | 232.5 | 27.6 | 4096 |
+| Gemma3n-E2B | Samsung S24<br>(Ultra) | CPU | 110.5 | 16.1 | 4096 |
+| Gemma3n-E2B | Samsung S24<br>(Ultra) | GPU | 816.4 | 15.6 | 4096 |
+| Gemma3n-E4B | MacBook Pro<br>(2023 M3) | CPU | 170.1 | 20.1 | 4096 |
+| Gemma3n-E4B | Samsung S24<br>(Ultra) | CPU | 73.5 | 9.2 | 4096 |
+| Gemma3n-E4B | Samsung S24<br>(Ultra) | GPU | 548.0 | 9.4 | 4096 |
 
 ## Quick Start
 
@@ -253,6 +271,10 @@ To be able to interact with your Android device, please make sure you've
 properly installed
 [Android Debug Bridge](https://developer.android.com/tools/adb) and have a
 connected device that can be accessed via `adb`.
+
+**Note:** If you are interested in trying out LiteRT-LM with NPU acceleration,
+please check out [this page](https://ai.google.dev/edge/litert/next/npu) for
+more information about how to sign it up for an Early Access Program.
 
 <details>
 <summary><strong>Develop in Linux</strong></summary>

@@ -2,11 +2,11 @@
 
 workspace(name = "litert_lm")
 
-# UPDATED = 2025-06-18
-LITERT_REF = "5caf8a4319b9a6f2fb64fde2d79d1c70ffd89e1f"
-LITERT_SHA256 = "f304067e30232c3d1af107f9bbe52d1a05f29f980c4f5116a918026908c3101d"
-TENSORFLOW_REF = "ee8fbba3e18b9991fac0e7c01dea07462bac0edb"
-TENSORFLOW_SHA256 = "8ba6928d66f3b6a7a17aeb9282d1a850c6982d4b673f364dafe6c35ad3ebe61d"
+# UPDATED = 2025-07-07
+LITERT_REF = "5ce4ae6f2699e05c0bb7874e9050e6c562c99cea"
+LITERT_SHA256 = "a75c6ea126bd21df30d70f7f31c7308889f224954a91c4f68e81eb13f691c951"
+TENSORFLOW_REF = "e2e1ae8fd027c9bdd6e75181e0d5aaaa6a7a12c6"
+TENSORFLOW_SHA256 = "727154195a63ddb98371bbde1f3dcb2333775a6a16db305850c1cfb5e6a5f88a"
 
 # buildifier: disable=load-on-top
 
@@ -35,9 +35,9 @@ http_archive(
 # Rust (for HuggingFace Tokenizers)
 http_archive(
     name = "rules_rust",
+    patches = ["@//:PATCH.rules_rust"],
     sha256 = "53c1bac7ec48f7ce48c4c1c6aa006f27515add2aeb05725937224e6e00ec7cea",
     url = "https://github.com/bazelbuild/rules_rust/releases/download/0.61.0/rules_rust-0.61.0.tar.gz",
-    patches = ["@//:PATCH.rules_rust"],
 )
 
 load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")

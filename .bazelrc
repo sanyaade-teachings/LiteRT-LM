@@ -386,11 +386,9 @@ build:avx_linux --copt=-mavx
 build:avx_linux --host_copt=-mavx
 build:avx_win --copt=/arch:AVX
 
-# Assume AVX2 x86_64 platforms for linux.
+# Assume AVX2 x86_64 platforms for linux and windows.
 build:linux --copt=-mavx2
-# Assume AVX x86_64 platforms for windows. AVX2 causes compilation errors on
-# github windows runners.
-build:windows --copt=/arch:AVX
+build:windows --copt=/arch:AVX2
 
 # Enable all targets in XLA
 build:cpu_cross --define=with_cross_compiler_support=true

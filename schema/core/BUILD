@@ -169,17 +169,11 @@ cc_library(
     srcs = ["litertlm_print.cc"],
     hdrs = ["litertlm_print.h"],
     deps = [
-        ":litertlm_header",
         ":litertlm_header_schema",
         ":litertlm_read",
-        ":litertlm_section",
         ":litertlm_utils",
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/status",
-        "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/strings:str_format",
-        "@flatbuffers",
     ],
 )
 

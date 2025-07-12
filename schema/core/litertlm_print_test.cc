@@ -27,6 +27,8 @@ TEST(LiteRTLMPrintTest, ProcessLiteRTLMFileTest) {
             std::string::npos);
   ASSERT_NE(output_ss.str().find("AnySectionDataType_LlmMetadataProto"),
             std::string::npos);
+  ASSERT_NE(output_ss.str().find("start of LlmMetadata"),
+            std::string::npos);
 }
 
 }  // namespace

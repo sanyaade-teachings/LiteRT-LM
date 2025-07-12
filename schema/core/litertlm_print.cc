@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <iostream>
 #include <ostream>
+#include <sstream>
 #include <string>
 
 #include "absl/log/absl_log.h"  // from @com_google_absl
@@ -158,6 +159,20 @@ absl::Status ProcessLiteRTLMFile(const std::string& litertlm_file,
       output_stream << "  Data Type:    "
                     << AnySectionDataTypeToString(sec_obj->data_type())
                     << "\n";  // Indent by 2 spaces
+      if (sec_obj->data_type() ==
+          AnySectionDataType::AnySectionDataType_LlmMetadataProto) {
+        output_stream << "  <<<<<<<< start of LlmMetadata\n";
+        using litert::lm::proto::LlmMetadata;
+        LlmMetadata llm_metadata;
+        absl::Status result =
+            ReadLlmMetadataFromSection(litertlm_file, i, &llm_metadata);
+        std::istringstream inputStream(llm_metadata.DebugString());
+        std::string line;
+        while (std::getline(inputStream, line)) {
+          output_stream << "    " << line << '\n';
+        }
+        output_stream << "  >>>>>>>> end of LlmMetadata\n";
+      }
       output_stream
           << "\n";  // Add a newline after each section for better separation
     }

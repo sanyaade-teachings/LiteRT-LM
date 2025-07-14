@@ -18,6 +18,9 @@ namespace schema {
 const char ANSI_BOLD[] = "\033[1m";
 const char ANSI_RESET[] = "\033[0m";
 
+// --- Indentation Constants ---
+const int INDENT_SPACES = 2;
+
 // --- Formatting Helper Functions ---
 void PrintHorizontalLine(std::ostream& os, char corner_left, char horizontal,
                          char corner_right, int width) {
@@ -43,7 +46,7 @@ void PrintBoxedTitle(std::ostream& os, const std::string& title,
 // Helper function to print KeyValuePair data with specified indentation.
 void PrintKeyValuePair(const KeyValuePair* kvp, std::ostream& output_stream,
                        int indent_level) {
-  std::string indent_str(indent_level * 2, ' ');  // 2 spaces per indent level
+  std::string indent_str(indent_level * INDENT_SPACES, ' ');
 
   if (!kvp) {
     output_stream << indent_str << "KeyValuePair: nullptr\n";
@@ -121,10 +124,11 @@ absl::Status ProcessLiteRTLMFile(const std::string& litertlm_file,
     // No "Iterating over..." line, directly print entries
     for (size_t i = 0; i < entries->size(); ++i) {
       const KeyValuePair* entry = entries->Get(i);
-      PrintKeyValuePair(entry, output_stream, 1);  // Indent by 2 spaces
+      PrintKeyValuePair(entry, output_stream, 1);
     }
   } else {
-    output_stream << "  SystemMetadata has no entries.\n";  // Indent
+    output_stream << std::string(INDENT_SPACES, ' ')
+                  << "SystemMetadata has no entries.\n";
   }
   output_stream << "\n";  // Add a newline after system metadata block
 
@@ -136,32 +140,34 @@ absl::Status ProcessLiteRTLMFile(const std::string& litertlm_file,
   output_stream << "\n";  // Add a newline after the sections title
 
   if (section_objects->size() == 0) {
-    output_stream << "  <None>\n";  // Indent
+    output_stream << std::string(INDENT_SPACES, ' ') << "<None>\n";
   } else {
     for (size_t i = 0; i < section_objects->size(); ++i) {
       auto sec_obj = section_objects->Get(i);
       output_stream << ANSI_BOLD << "Section " << i << ":" << ANSI_RESET
-                    << "\n";          // No indent for section header
-      output_stream << "  Items:\n";  // Indent by 2 spaces
+                    << "\n";
+      output_stream << std::string(INDENT_SPACES, ' ') << "Items:\n";
 
       const auto& items = sec_obj->items();
       if (items && items->size() > 0) {
         for (size_t j = 0; j < items->size(); ++j) {
           const KeyValuePair* item = items->Get(j);
-          PrintKeyValuePair(item, output_stream, 2);  // Indent by 4 spaces
+          PrintKeyValuePair(item, output_stream, 2);
         }
       }
 
-      output_stream << "  Begin Offset: " << sec_obj->begin_offset()
-                    << "\n";  // Indent by 2 spaces
-      output_stream << "  End Offset:   " << sec_obj->end_offset()
-                    << "\n";  // Indent by 2 spaces
-      output_stream << "  Data Type:    "
+      output_stream << std::string(INDENT_SPACES, ' ')
+                    << "Begin Offset: " << sec_obj->begin_offset() << "\n";
+      output_stream << std::string(INDENT_SPACES, ' ')
+                    << "End Offset:   " << sec_obj->end_offset() << "\n";
+      output_stream << std::string(INDENT_SPACES, ' ')
+                    << "Data Type:    "
                     << AnySectionDataTypeToString(sec_obj->data_type())
-                    << "\n";  // Indent by 2 spaces
+                    << "\n";
       if (sec_obj->data_type() ==
           AnySectionDataType::AnySectionDataType_LlmMetadataProto) {
-        output_stream << "  <<<<<<<< start of LlmMetadata\n";
+        output_stream << std::string(INDENT_SPACES, ' ')
+                      << "<<<<<<<< start of LlmMetadata\n";
         using litert::lm::proto::LlmMetadata;
         LlmMetadata llm_metadata;
         absl::Status result =
@@ -169,9 +175,10 @@ absl::Status ProcessLiteRTLMFile(const std::string& litertlm_file,
         std::istringstream inputStream(llm_metadata.DebugString());
         std::string line;
         while (std::getline(inputStream, line)) {
-          output_stream << "    " << line << '\n';
+          output_stream << std::string(INDENT_SPACES * 2, ' ') << line << '\n';
         }
-        output_stream << "  >>>>>>>> end of LlmMetadata\n";
+        output_stream << std::string(INDENT_SPACES, ' ')
+                      << ">>>>>>>> end of LlmMetadata\n";
       }
       output_stream
           << "\n";  // Add a newline after each section for better separation

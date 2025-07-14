@@ -139,9 +139,11 @@ std::ostream& operator<<(std::ostream& os,
 
 ExecutorAudioData::ExecutorAudioData(
     std::optional<::litert::TensorBuffer>&& embeddings,
-    std::optional<::litert::TensorBuffer>&& per_layer_embeddings)
+    std::optional<::litert::TensorBuffer>&& per_layer_embeddings,
+    int valid_tokens)
     : embeddings_(std::move(embeddings)),
-      per_layer_embeddings_(std::move(per_layer_embeddings)) {}
+      per_layer_embeddings_(std::move(per_layer_embeddings)),
+      valid_tokens_(valid_tokens) {}
 
 absl::StatusOr<const ::litert::TensorBuffer*>
 ExecutorAudioData::GetEmbeddingsPtr() const {
@@ -178,6 +180,8 @@ ExecutorAudioData::GetMutablePerLayerEmbeddingsPtr() {
       "ExecutorAudioData::per_layer_embeddings_ is not set.");
 }
 
+int ExecutorAudioData::GetValidTokens() const { return valid_tokens_; }
+
 void ExecutorAudioData::SetEmbeddings(
     std::optional<::litert::TensorBuffer>&& embeddings) {
   embeddings_ = std::move(embeddings);
@@ -186,6 +190,10 @@ void ExecutorAudioData::SetEmbeddings(
 void ExecutorAudioData::SetPerLayerEmbeddings(
     std::optional<::litert::TensorBuffer>&& per_layer_embeddings) {
   per_layer_embeddings_ = std::move(per_layer_embeddings);
+}
+
+void ExecutorAudioData::SetValidTokens(int valid_tokens) {
+  valid_tokens_ = valid_tokens;
 }
 
 std::ostream& operator<<(std::ostream& os,
@@ -197,6 +205,8 @@ std::ostream& operator<<(std::ostream& os,
   PrintOptionalTensorBufferFieldFromStatusOr(
       os, "PerLayerEmbeddings", audio_data.GetPerLayerEmbeddingsPtr(),
       kFieldIndent);
+  os << "\n";
+  os << kFieldIndent << "ValidTokens: " << audio_data.GetValidTokens();
   os << "\n"
      << "}";
   return os;

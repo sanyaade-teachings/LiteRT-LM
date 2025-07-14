@@ -148,9 +148,11 @@ class ExecutorAudioData {
   //   [audio_tokens_num, model_dimension].
   // per_layer_embeddings: Flattened audio per layer embeddings tensor with
   //   shape [stack_size, audio_tokens_num, per_layer_embedding_dimension].
+  // valid_tokens: The number of valid tokens in the audio embeddings.
   ExecutorAudioData(
       std::optional<::litert::TensorBuffer>&& embeddings,
-      std::optional<::litert::TensorBuffer>&& per_layer_embeddings);
+      std::optional<::litert::TensorBuffer>&& per_layer_embeddings,
+      int valid_tokens = -1);
 
   // Getters:
   absl::StatusOr<const ::litert::TensorBuffer*> GetEmbeddingsPtr() const;
@@ -158,15 +160,24 @@ class ExecutorAudioData {
   absl::StatusOr<const ::litert::TensorBuffer*> GetPerLayerEmbeddingsPtr()
       const;
   absl::StatusOr<::litert::TensorBuffer*> GetMutablePerLayerEmbeddingsPtr();
+  int GetValidTokens() const;
 
   // Setters:
   void SetEmbeddings(std::optional<::litert::TensorBuffer>&& embeddings);
   void SetPerLayerEmbeddings(
       std::optional<::litert::TensorBuffer>&& per_layer_embeddings);
+  void SetValidTokens(int valid_tokens);
 
  private:
   std::optional<::litert::TensorBuffer> embeddings_;
   std::optional<::litert::TensorBuffer> per_layer_embeddings_;
+
+  // The number of valid tokens in the audio embeddings. This is used to
+  // determine the number of audio tokens to be actually used.
+  // -1 means all the tokens are valid.
+  // TODO: b/431028796 - Remove this field once tensorbuffer can be sliced
+  // efficiently.
+  int valid_tokens_ = -1;
 };
 std::ostream& operator<<(std::ostream& os, const ExecutorAudioData& audio_data);
 

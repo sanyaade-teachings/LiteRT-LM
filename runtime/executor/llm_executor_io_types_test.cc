@@ -16,12 +16,10 @@
 
 #include <atomic>
 #include <cstdint>
-#include <memory>
 #include <optional>
 #include <sstream>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include <gtest/gtest.h>
 #include "absl/types/span.h"  // from @com_google_absl
@@ -152,15 +150,6 @@ TEST(LlmExecutorIoTypesTest, ExecutorPrefillParamsPrint) {
             "  CurrentStep: 10\n"
             "  WaitForCompletion: true\n"
             "  CancelFlag: nullptr\n"
-            "}");
-}
-
-TEST(LlmExecutorIoTypesTest, ExecutorDecodeParamsPrint) {
-  ExecutorDecodeParams params;
-  std::stringstream oss;
-  oss << params;  // Invoke operator<< for ExecutorPrefillParams
-  EXPECT_EQ(oss.str(),
-            "ExecutorDecodeParams: {\n"
             "}");
 }
 

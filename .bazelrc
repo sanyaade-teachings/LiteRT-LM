@@ -361,6 +361,9 @@ build:windows --strategy=Genrule=local
 build:windows --genrule_strategy=local
 build:windows --spawn_strategy=local
 
+# protobuf can't find its headers on windows when built locally with bazelisk.
+build:windows --host_copt=/Iexternal/com_google_protobuf/src
+
 # Use Git Bash for genrules
 build:windows --shell_executable="C:/Program Files/Git/bin/bash.exe"
 

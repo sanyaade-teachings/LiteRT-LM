@@ -2,11 +2,14 @@
 
 workspace(name = "litert_lm")
 
-# UPDATED = 2025-07-08
-LITERT_REF = "38543e4fd0985568836068c5f5654cf4b781f1ae"
-LITERT_SHA256 = "bd50b034fea8fbb3af8108be2ee8a7cb0ad4d30373bc02270666010355d0ba69"
-TENSORFLOW_REF = "e2e1ae8fd027c9bdd6e75181e0d5aaaa6a7a12c6"
-TENSORFLOW_SHA256 = "727154195a63ddb98371bbde1f3dcb2333775a6a16db305850c1cfb5e6a5f88a"
+# UPDATED = 2025-07-15
+LITERT_REF = "7871ba9f34685cfbc5af4896effe1595a1277cff"
+
+LITERT_SHA256 = "b80b3bcc3416efbcaf1035dcfe016c1b72b59fc2a38242749fd0f48e626c497d"
+
+TENSORFLOW_REF = "e559d09a6f97bb44dadb34c07b294c1a807b91f3"
+
+TENSORFLOW_SHA256 = "f974571f8811894cbf4d352fc99c3216c09aa62132557574a7788b03efdd9d83"
 
 # buildifier: disable=load-on-top
 
@@ -24,13 +27,6 @@ load("@rules_shell//shell:repositories.bzl", "rules_shell_dependencies", "rules_
 rules_shell_dependencies()
 
 rules_shell_toolchains()
-
-# Java rules
-http_archive(
-    name = "rules_java",
-    sha256 = "c73336802d0b4882e40770666ad055212df4ea62cfa6edf9cb0f9d29828a0934",
-    url = "https://github.com/bazelbuild/rules_java/releases/download/5.3.5/rules_java-5.3.5.tar.gz",
-)
 
 # Rust (for HuggingFace Tokenizers)
 http_archive(
@@ -73,6 +69,7 @@ crate_repositories()
 # TensorFlow
 http_archive(
     name = "org_tensorflow",
+    patches = ["@//:PATCH.tensorflow"],
     sha256 = TENSORFLOW_SHA256,
     strip_prefix = "tensorflow-" + TENSORFLOW_REF,
     url = "https://github.com/tensorflow/tensorflow/archive/" + TENSORFLOW_REF + ".tar.gz",

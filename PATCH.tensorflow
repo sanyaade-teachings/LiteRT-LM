@@ -1,0 +1,31 @@
+--- third_party/xla/third_party/protobuf/protobuf.patch	2025-07-07 18:23:30.000000000 -0700
++++ third_party/xla/third_party/protobuf/protobuf.patch	2025-07-15 08:57:45.421572640 -0700
+@@ -183,6 +183,28 @@
+      linkopts = LINK_OPTS,
+      strip_include_prefix = "/src",
+      visibility = [
++diff --git a/src/google/protobuf/compiler/java/context.h b/src/google/protobuf/compiler/java/context.h
++--- a/src/google/protobuf/compiler/java/context.h	(revision 5fda5abda3dee5f7a102c85860594bff8d8610bd)
+++++ b/src/google/protobuf/compiler/java/context.h	(date 1746939979902)
++@@ -12,6 +12,7 @@
++ #include <vector>
++ 
++ #include "absl/container/flat_hash_map.h"
+++#include "google/protobuf/compiler/java/field_common.h"
++ #include "google/protobuf/compiler/java/helpers.h"
++ #include "google/protobuf/compiler/java/options.h"
++ #include "google/protobuf/port.h"
++diff --git a/src/google/protobuf/compiler/java/message_serialization.h b/src/google/protobuf/compiler/java/message_serialization.h
++--- a/src/google/protobuf/compiler/java/message_serialization.h	(revision 5fda5abda3dee5f7a102c85860594bff8d8610bd)
+++++ b/src/google/protobuf/compiler/java/message_serialization.h	(date 1746939979902)
++@@ -13,6 +13,7 @@
++ #include <vector>
++ 
++ #include "absl/types/span.h"
+++#include "google/protobuf/compiler/java/field_common.h"
++ #include "google/protobuf/compiler/java/generator_common.h"
++ #include "google/protobuf/descriptor.h"
++ #include "google/protobuf/io/printer.h"
+ diff --git a/python/google/protobuf/__init__.py b/python/google/protobuf/__init__.py
+ --- a/python/google/protobuf/__init__.py	(revision 5fda5abda3dee5f7a102c85860594bff8d8610bd)
+ +++ b/python/google/protobuf/__init__.py	(date 1746939979902)

@@ -342,10 +342,6 @@ class LlmLiteRtNpuCompiledModelExecutor : public ::litert::lm::LlmExecutor {
   // Internal timestep.
   int current_step_ = 0;
 
-  // TODO: b/404625243 - To be implemented.
-  // The processed tokens.
-  std::vector<int> processed_tokens_;
-
   // The token served as the first input token to the model for next Prefill or
   // Decode.
   int next_input_token_id_ = -1;

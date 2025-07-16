@@ -936,7 +936,6 @@ LlmLiteRtNpuCompiledModelExecutor::GetLatencyStats() const {
 absl::Status LlmLiteRtNpuCompiledModelExecutor::Reset() {
   current_step_ = 0;
   next_input_token_id_ = -1;
-  processed_tokens_.clear();
   sampled_ids_.clear();
   latency_stats_ = {};
   return absl::OkStatus();

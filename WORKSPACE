@@ -4,11 +4,8 @@ workspace(name = "litert_lm")
 
 # UPDATED = 2025-07-15
 LITERT_REF = "7871ba9f34685cfbc5af4896effe1595a1277cff"
-
 LITERT_SHA256 = "b80b3bcc3416efbcaf1035dcfe016c1b72b59fc2a38242749fd0f48e626c497d"
-
 TENSORFLOW_REF = "e559d09a6f97bb44dadb34c07b294c1a807b91f3"
-
 TENSORFLOW_SHA256 = "f974571f8811894cbf4d352fc99c3216c09aa62132557574a7788b03efdd9d83"
 
 # buildifier: disable=load-on-top

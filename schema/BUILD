@@ -52,7 +52,6 @@ cc_binary(
         "//schema/core:litertlm_header",
         "//schema/core:litertlm_header_schema",
         "//schema/core:litertlm_section",
-        "@com_google_protobuf//:protobuf",
     ],
 )
 
@@ -74,7 +73,6 @@ cc_binary(
         "//schema/core:litertlm_header",
         "//schema/core:litertlm_header_schema",
         "//schema/core:litertlm_section",
-        "@com_google_protobuf//:protobuf",
     ],
 )
 
@@ -111,7 +109,6 @@ cc_test(
         "@flatbuffers",
         "//runtime/proto:llm_metadata_cc_proto",
         "//schema/core:litertlm_print",
-        "@com_google_protobuf//:protobuf",
         "@sentencepiece//:sentencepiece_processor",
         "@litert//tflite:framework",
         "@litert//tflite:framework_stable",
@@ -140,6 +137,5 @@ cc_library(
         "//schema/core:litertlm_print",
         "//schema/core:litertlm_section",
         "//schema/core:litertlm_utils",
-        "@com_google_protobuf//:protobuf",
     ],
 )

@@ -119,6 +119,23 @@ TEST(LiteRTLMReadTest, TFLiteRead) {
   ASSERT_EQ(model->GetModel()->subgraphs()->size(), 1);
 }
 
+// NB: This API is only available on non-Windows platforms.
+#if !defined(WIN32) && !defined(_WIN32) && !defined(__WIN32__) && \
+    !defined(__NT__) && !defined(_WIN64)
+TEST(LiteRTLMReadTest, TFLiteReadOwnedAllocation) {
+  const auto input_filename =
+      std::filesystem::path(::testing::SrcDir()) /
+      "litert_lm/schema/testdata/test_tok_tfl_llm.litertlm";
+
+  std::unique_ptr<tflite::FlatBufferModel> model;
+  absl::Status result =
+      ReadTFLiteFileFromSection(input_filename.string(), 1, &model);
+  ASSERT_TRUE(result.ok());
+  // Verify that buffer backing TFLite is still valid and reading data works.
+  ASSERT_EQ(model->GetModel()->subgraphs()->size(), 1);
+}
+#endif
+
 TEST(LiteRTLMReadTest, TFLiteReadBinaryData) {
   const auto input_filename =
       std::filesystem::path(::testing::SrcDir()) /

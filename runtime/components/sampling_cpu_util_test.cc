@@ -127,6 +127,21 @@ TEST(SamplingCpuUtilTest, TopKTopPSampling_BatchSize1) {
   EXPECT_THAT(sampled_scores, ElementsAre(1.0));
 }
 
+TEST(SamplingCpuUtilTest, TopKTopPSampling_BatchSize1_TopK) {
+  // Test that the sampler does return a sampled token from the top k
+  // instead of always returning the first or the last token.
+  const std::vector<float> logits = {-1.0e7f, 1.0f, -1e3f};
+  absl::BitGen rng;
+  std::vector<float> sampled_scores;
+  auto sampled_ids = TopKTopPSampling(
+      absl::MakeConstSpan(logits), /*k=*/3,
+      /*p=*/1.0,
+      /*temperature=*/1.0f, rng, /*batch_size=*/1, sampled_scores);
+  EXPECT_TRUE(sampled_ids.ok());
+  EXPECT_THAT((*sampled_ids), ElementsAre(1));
+  EXPECT_THAT(sampled_scores, ElementsAre(1.0));
+}
+
 TEST(SamplingCpuUtilTest, TopKTopPSampling_BatchSize2) {
   // Batch of 3, vocab size of 3. The sampled ids are 2, 1, 0.
   const std::vector<float> logits = {0.0, 0.0, 1.0, 0.0, 1.0,

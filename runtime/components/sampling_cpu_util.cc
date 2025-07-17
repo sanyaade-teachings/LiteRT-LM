@@ -226,6 +226,7 @@ absl::StatusOr<std::vector<int>> TopKTopPSampling(
         sampled_scores[b] = std::exp(
             (logits[b * vocab_size + sampled_ids[b]] - max_logit_values[b]) /
             temperature);
+        break;
       }
     }
   }

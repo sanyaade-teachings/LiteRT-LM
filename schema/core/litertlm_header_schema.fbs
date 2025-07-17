@@ -21,16 +21,16 @@
 namespace litert.lm.schema;
 
 // Structs for primitive types
-struct UInt8 { value: ubyte; }
-struct Int8 { value: byte; }
-struct UInt16 { value: ushort; }
-struct Int16 { value: short; }
-struct UInt32 { value: uint; }
-struct Int32 { value: int; }
-struct Float32 { value: float; }
-struct Bool { value: bool; }
-struct UInt64 { value: ulong; }
-struct Int64 { value: long; }
+table UInt8 { value: ubyte; }
+table Int8 { value: byte; }
+table UInt16 { value: ushort; }
+table Int16 { value: short; }
+table UInt32 { value: uint; }
+table Int32 { value: int; }
+table Float32 { value: float; }
+table Bool { value: bool; }
+table UInt64 { value: ulong; }
+table Int64 { value: long; }
 
 table StringValue { value: string; }
 

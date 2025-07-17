@@ -20,7 +20,7 @@ namespace schema {
 //                compatible manner.
 // PATCH version: increments on backward compatible bug fixes.
 constexpr uint32_t LITERTLM_MAJOR_VERSION = 1;
-constexpr uint32_t LITERTLM_MINOR_VERSION = 1;
+constexpr uint32_t LITERTLM_MINOR_VERSION = 2;
 constexpr uint32_t LITERTLM_PATCH_VERSION = 0;
 
 // Alias for a fully constructed KeyValuePair for LiteRTLM metadata.
@@ -79,14 +79,46 @@ template <typename T>
 KVPair CreateKeyValuePair(flatbuffers::FlatBufferBuilder& builder,
                           const std::string& key, const T& value) {
   auto key_offset = builder.CreateString(key);
-  typename ValueTypeTraits<T>::SchemaType value_obj(value);
-  auto value_offset = builder.CreateStruct(value_obj).Union();
+
+  flatbuffers::Offset<void> value_offset;
+  VData value_type;
+
+  if constexpr (std::is_same_v<T, uint8_t>) {
+    value_offset = CreateUInt8(builder, value).Union();
+    value_type = VData::VData_UInt8;
+  } else if constexpr (std::is_same_v<T, int8_t>) {
+    value_offset = CreateInt8(builder, value).Union();
+    value_type = VData::VData_Int8;
+  } else if constexpr (std::is_same_v<T, uint16_t>) {
+    value_offset = CreateUInt16(builder, value).Union();
+    value_type = VData::VData_UInt16;
+  } else if constexpr (std::is_same_v<T, int16_t>) {
+    value_offset = CreateInt16(builder, value).Union();
+    value_type = VData::VData_Int16;
+  } else if constexpr (std::is_same_v<T, uint32_t>) {
+    value_offset = CreateUInt32(builder, value).Union();
+    value_type = VData::VData_UInt32;
+  } else if constexpr (std::is_same_v<T, int32_t>) {
+    value_offset = CreateInt32(builder, value).Union();
+    value_type = VData::VData_Int32;
+  } else if constexpr (std::is_same_v<T, float>) {
+    value_offset = CreateFloat32(builder, value).Union();
+    value_type = VData::VData_Float32;
+  } else if constexpr (std::is_same_v<T, bool>) {
+    value_offset = CreateBool(builder, value).Union();
+    value_type = VData::VData_Bool;
+  } else if constexpr (std::is_same_v<T, uint64_t>) {
+    value_offset = CreateUInt64(builder, value).Union();
+    value_type = VData::VData_UInt64;
+  } else if constexpr (std::is_same_v<T, int64_t>) {
+    value_offset = CreateInt64(builder, value).Union();
+    value_type = VData::VData_Int64;
+  }
 
   KeyValuePairBuilder kvp_builder(builder);
   kvp_builder.add_key(key_offset);
   kvp_builder.add_value(value_offset);
-  kvp_builder.add_value_type(
-      VDataTraits<typename ValueTypeTraits<T>::SchemaType>::enum_value);
+  kvp_builder.add_value_type(value_type);
   return kvp_builder.Finish();
 }
 

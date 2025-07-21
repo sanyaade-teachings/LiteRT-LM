@@ -77,6 +77,7 @@ ABSL_FLAG(bool, multi_turns, false,
 namespace {
 
 using ::litert::lm::Backend;
+using ::litert::lm::Engine;
 using ::litert::lm::EngineSettings;
 using ::litert::lm::InferenceObservable;
 using ::litert::lm::InputText;
@@ -108,6 +109,70 @@ LiteRtLogSeverity AbslMinLogLevelToLiteRtLogSeverity(
     default:
       return LITERT_INFO;
   }
+}
+
+void RunBenchmark(litert::lm::Engine* llm,
+                  litert::lm::Engine::Session* session) {
+  const bool is_dummy_input =
+      absl::GetFlag(FLAGS_benchmark_prefill_tokens) > 0 ||
+      absl::GetFlag(FLAGS_benchmark_decode_tokens) > 0;
+  std::string input_prompt = absl::GetFlag(FLAGS_input_prompt);
+
+  if (absl::GetFlag(FLAGS_async)) {
+    if (is_dummy_input) {
+      ABSL_LOG(FATAL) << "Async mode does not support benchmarking with "
+                         "specified number of prefill or decode tokens. If you "
+                         "want to benchmark the model, please try again with "
+                         "--async=false.";
+    }
+    InferenceObservable observable;
+    absl::Status status =
+        session->GenerateContentStream({InputText(input_prompt)}, &observable);
+    ABSL_CHECK_OK(status);
+    ABSL_CHECK_OK(llm->WaitUntilDone(kWaitUntilDoneTimeout));
+  } else {
+    auto responses = session->GenerateContent({InputText(input_prompt)});
+    ABSL_CHECK_OK(responses);
+    if (!is_dummy_input) {
+      ABSL_LOG(INFO) << "Responses: " << *responses;
+    }
+  }
+
+  auto benchmark_info = session->GetBenchmarkInfo();
+  ABSL_LOG(INFO) << *benchmark_info;
+}
+
+void RunSingleTurn(litert::lm::Engine* llm,
+                   litert::lm::Engine::Session* session,
+                   std::string& input_prompt) {
+  if (absl::GetFlag(FLAGS_async)) {
+    InferenceObservable observable;
+    absl::Status status =
+        session->GenerateContentStream({InputText(input_prompt)}, &observable);
+    ABSL_CHECK_OK(status);
+    ABSL_CHECK_OK(llm->WaitUntilDone(kWaitUntilDoneTimeout));
+  } else {
+    auto responses = session->GenerateContent({InputText(input_prompt)});
+    ABSL_CHECK_OK(responses);
+    ABSL_LOG(INFO) << "Responses: " << *responses;
+  }
+}
+
+void RunMultiTurnConversation(litert::lm::Engine* llm,
+                              litert::lm::Engine::Session* session) {
+  if (absl::GetFlag(FLAGS_benchmark)) {
+    ABSL_LOG(FATAL) << "Benchmarking with multi-turns input is not supported.";
+  }
+
+  std::string input_prompt;
+  do {
+    std::cout << "Please enter the prompt (or press Enter to end): ";
+    std::getline(std::cin, input_prompt);
+    if (input_prompt.empty()) {
+      break;
+    }
+    RunSingleTurn(llm, session, input_prompt);
+  } while (true);
 }
 
 absl::Status MainHelper(int argc, char** argv) {
@@ -187,51 +252,13 @@ absl::Status MainHelper(int argc, char** argv) {
       (*llm)->CreateSession(session_config);
   ABSL_CHECK_OK(session) << "Failed to create session";
 
-  // When either prefill or decode tokens is set, the input prompt will be
-  // forced to be the specified value and generate a dummy input.
-  const bool is_dummy_input =
-      absl::GetFlag(FLAGS_benchmark_prefill_tokens) > 0 ||
-      absl::GetFlag(FLAGS_benchmark_decode_tokens) > 0;
-  std::string input_prompt = absl::GetFlag(FLAGS_input_prompt);
-  const bool is_multi_turns = absl::GetFlag(FLAGS_multi_turns);
-  if (is_multi_turns) {
-    if (absl::GetFlag(FLAGS_benchmark)) {
-      ABSL_LOG(FATAL) <<
-          "Benchmarking with multi-turns input is not supported.";
-    }
-  }
-  do {
-    if (is_multi_turns) {
-      std::cout << "Please enter the prompt (or press Enter to end): ";
-      std::getline(std::cin, input_prompt);
-      if (input_prompt.empty()) {
-        break;
-      }
-    }
-    if (absl::GetFlag(FLAGS_async)) {
-      if (is_dummy_input) {
-        ABSL_LOG(FATAL)
-            << "Async mode does not support benchmarking with "
-               "specified number of prefill or decode tokens. If you want to "
-               "benchmark the model, please try again with --async=false.";
-      }
-      InferenceObservable observable;
-      absl::Status status = (*session)->GenerateContentStream(
-          {InputText(input_prompt)}, &observable);
-      ABSL_CHECK_OK(status);
-      ABSL_CHECK_OK((*llm)->WaitUntilDone(kWaitUntilDoneTimeout));
-    } else {
-      auto responses = (*session)->GenerateContent({InputText(input_prompt)});
-      ABSL_CHECK_OK(responses);
-      if (!is_dummy_input) {
-        ABSL_LOG(INFO) << "Responses: " << *responses;
-      }
-    }
-  } while (is_multi_turns);
-
   if (absl::GetFlag(FLAGS_benchmark)) {
-    auto benchmark_info = (*session)->GetBenchmarkInfo();
-    ABSL_LOG(INFO) << *benchmark_info;
+    RunBenchmark(llm->get(), session->get());
+  } else if (absl::GetFlag(FLAGS_multi_turns)) {
+    RunMultiTurnConversation(llm->get(), session->get());
+  } else {
+    std::string input_prompt = absl::GetFlag(FLAGS_input_prompt);
+    RunSingleTurn(llm->get(), session->get(), input_prompt);
   }
 
   if (absl::GetFlag(FLAGS_report_peak_memory_footprint)) {

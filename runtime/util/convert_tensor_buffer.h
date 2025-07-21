@@ -16,6 +16,7 @@
 #define THIRD_PARTY_ODML_LITERT_LM_RUNTIME_UTIL_CONVERT_TENSOR_BUFFER_H_
 
 #include <cstdint>
+#include <cstring>
 #include <utility>
 #include <vector>
 
@@ -25,6 +26,7 @@
 #include "litert/cc/litert_element_type.h"  // from @litert
 #include "litert/cc/litert_expected.h"  // from @litert
 #include "litert/cc/litert_layout.h"  // from @litert
+#include "litert/cc/litert_macros.h"  // from @litert
 #include "litert/cc/litert_model.h"  // from @litert
 #include "litert/cc/litert_tensor_buffer.h"  // from @litert
 
@@ -229,6 +231,77 @@ template <typename T>
   return ReferTensorBufferAsSpan<T>(*mutable_tensor_buffer);
 }
 
+// TODO: b/431234598 - This copies data between GPU and CPU backends which
+// can be improved with a copy-and-rotate in TensorBuffer api.
+// Requires a read right lock on the input buffer.
+// Args:
+//   tensor_buffer: The input tensor buffer to drop tokens from.
+//   num_tokens_to_drop: The number of tokens to drop from the target dimension.
+//     It must be non-negative and less than the size of the target dimension.
+//   dimension: The target dimension to rotate. It must be a valid dimension
+//     index of the tensor buffer.
+//   reset_remainder_to_zero: If true, the remainder of the target dimension
+//     after rotation will be reset to zero.
+//     Otherwise the remainder will be left as is.
+template <typename T>
+::litert::Expected<void> DropTokensfromTensorBuffer(
+    ::litert::TensorBuffer& tensor_buffer, int num_tokens_to_drop = 0,
+    int dimension = 0, bool reset_remainder_to_zero = true) {
+  auto type = tensor_buffer.TensorType();
+  if (!type.HasValue() || type->ElementType() != ElementTypeFor<T>::kType) {
+    return ::litert::Unexpected(
+        kLiteRtStatusErrorInvalidArgument,
+        "Element type is not compatible to the target type.");
+  }
+  auto dimensions = type->Layout().Dimensions();
+  if (dimensions.size() <= dimension) {
+    return ::litert::Unexpected(kLiteRtStatusErrorInvalidArgument,
+                                "Target dimension is out of range.");
+  }
+  if (num_tokens_to_drop < 0) {
+    return ::litert::Unexpected(kLiteRtStatusErrorInvalidArgument,
+                                "num_tokens_to_drop is negative.");
+  }
+  int prev_dims_size = 1;
+  for (int i = 0; i < dimension; ++i) {
+    prev_dims_size *= dimensions[i];
+  }
+  int target_dims_size = dimensions[dimension];
+  int next_dims_size = 1;
+  for (int i = dimension + 1; i < dimensions.size(); ++i) {
+    next_dims_size *= dimensions[i];
+  }
+  if (num_tokens_to_drop > target_dims_size) {
+    return ::litert::Unexpected(
+        kLiteRtStatusErrorInvalidArgument,
+        "num_tokens_to_drop is larger than the target dimension.");
+  }
+  LITERT_ASSIGN_OR_RETURN(
+      auto lock_and_addr,
+      ::litert::TensorBufferScopedLock::Create(
+          tensor_buffer, TensorBuffer::LockMode::kReadWrite));
+  auto* target_ptr = static_cast<T*>(lock_and_addr.second);
+  for (int i = 0; i < prev_dims_size; ++i) {
+    for (int j = 0; j < target_dims_size - num_tokens_to_drop; ++j) {
+      int dst_offset =
+          i * next_dims_size * target_dims_size + j * next_dims_size;
+      int src_offset = i * next_dims_size * target_dims_size +
+                     (j + num_tokens_to_drop) * next_dims_size;
+      std::memcpy(target_ptr + dst_offset, target_ptr + src_offset,
+                  next_dims_size * sizeof(T));
+    }
+    if (reset_remainder_to_zero) {
+      int start_j_reset_addr = target_dims_size - num_tokens_to_drop;
+      int dst_offset = i * target_dims_size * next_dims_size +
+                       start_j_reset_addr * next_dims_size;
+      int total_elements_to_reset = next_dims_size * num_tokens_to_drop;
+      // Multiply with sizeof(T) to account for data size.
+      std::memset(target_ptr + dst_offset, 0,
+                  total_elements_to_reset * sizeof(T));
+    }
+  }
+  return ::litert::Expected<void>{};
+}
 }  // namespace litert::lm
 
 #endif  // THIRD_PARTY_ODML_LITERT_LM_RUNTIME_UTIL_CONVERT_TENSOR_BUFFER_H_

@@ -31,6 +31,7 @@ cc_library(
         "@litert//litert/cc:litert_element_type",
         "@litert//litert/cc:litert_expected",
         "@litert//litert/cc:litert_layout",
+        "@litert//litert/cc:litert_macros",
         "@litert//litert/cc:litert_model",
     ] + select({
         "//:litert_lm_link_capi_so": [

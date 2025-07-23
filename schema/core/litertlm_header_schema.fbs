@@ -31,6 +31,7 @@ table Float32 { value: float; }
 table Bool { value: bool; }
 table UInt64 { value: ulong; }
 table Int64 { value: long; }
+table Double { value: double; }
 
 table StringValue { value: string; }
 
@@ -47,6 +48,7 @@ union VData {
   StringValue,
   UInt64,
   Int64,
+  Double,
 }
 
 

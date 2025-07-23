@@ -1,5 +1,9 @@
 #include "schema/core/litertlm_export.h"
 
+// ****************************************************************************
+// DEPRECATED: This file is deprecated. Please use litertlm_writer.py instead.
+// ****************************************************************************
+
 #include <cstddef>
 #include <cstdint>
 #include <fstream>

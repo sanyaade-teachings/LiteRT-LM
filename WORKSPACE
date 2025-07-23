@@ -4,8 +4,11 @@ workspace(name = "litert_lm")
 
 # UPDATED = 2025-07-15
 LITERT_REF = "7871ba9f34685cfbc5af4896effe1595a1277cff"
+
 LITERT_SHA256 = "b80b3bcc3416efbcaf1035dcfe016c1b72b59fc2a38242749fd0f48e626c497d"
+
 TENSORFLOW_REF = "e559d09a6f97bb44dadb34c07b294c1a807b91f3"
+
 TENSORFLOW_SHA256 = "f974571f8811894cbf4d352fc99c3216c09aa62132557574a7788b03efdd9d83"
 
 # buildifier: disable=load-on-top
@@ -270,6 +273,15 @@ http_archive(
     sha256 = "3e0b9ec325a326b0a2cef5cf164ee94a74ac372c5881ae5af634036db0441823",
     strip_prefix = "tokenizers-cpp-0.1.1",
     url = "https://github.com/mlc-ai/tokenizers-cpp/archive/refs/tags/v0.1.1.tar.gz",
+)
+
+http_archive(
+    name = "absl_py",
+    sha256 = "8a3d0830e4eb4f66c4fa907c06edf6ce1c719ced811a12e26d9d3162f8471758",
+    strip_prefix = "abseil-py-2.1.0",
+    urls = [
+        "https://github.com/abseil/abseil-py/archive/refs/tags/v2.1.0.tar.gz",
+    ],
 )
 
 # Android rules. Need latest rules_android_ndk to use NDK 26+.

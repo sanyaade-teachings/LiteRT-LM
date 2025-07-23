@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@flatbuffers//:build_defs.bzl", "flatbuffer_cc_library")
+load("@flatbuffers//:build_defs.bzl", "flatbuffer_cc_library", "flatbuffer_py_library")
 
 package(
     default_hdrs_check = "strict",
@@ -192,4 +192,9 @@ cc_test(
         "@flatbuffers",
         "//runtime/proto:llm_metadata_cc_proto",
     ],
+)
+
+flatbuffer_py_library(
+    name = "litertlm_header_schema_py",
+    srcs = ["litertlm_header_schema.fbs"],
 )

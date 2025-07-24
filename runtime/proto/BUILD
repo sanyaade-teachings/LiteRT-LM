@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
+load("@com_google_protobuf//bazel:py_proto_library.bzl", "py_proto_library")
+
 package(
     default_hdrs_check = "strict",
     default_visibility = [
@@ -41,6 +45,11 @@ cc_proto_library(
     deps = [":sampler_params_proto"],
 )
 
+py_proto_library(
+    name = "sampler_params_py_pb2",
+    deps = [":sampler_params_proto"],
+)
+
 proto_library(
     name = "llm_metadata_proto",
     srcs = ["llm_metadata.proto"],
@@ -49,5 +58,10 @@ proto_library(
 
 cc_proto_library(
     name = "llm_metadata_cc_proto",
+    deps = [":llm_metadata_proto"],
+)
+
+py_proto_library(
+    name = "llm_metadata_py_pb2",
     deps = [":llm_metadata_proto"],
 )

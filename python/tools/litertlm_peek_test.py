@@ -47,54 +47,52 @@ class LitertlmPeekPyTest(absltest.TestCase):
     self.assertIn("LlmMetadataProto", stdout)
     self.assertIn("<<<<<<<< start of LlmMetadata", stdout)
 
+  def test_process_litertlm_file_hf_tokenizer(self):
+    """Tests the process_litertlm_file function directly."""
+    test_data_path = os.path.join(
+        os.environ.get("TEST_SRCDIR", ""),
+        "litert_lm/schema/testdata/test_hf_tokenizer.litertlm",
+    )
 
-def test_process_litertlm_file_hf_tokenizer(self):
-  """Tests the process_litertlm_file function directly."""
-  test_data_path = os.path.join(
-      os.environ.get("TEST_SRCDIR", ""),
-      "schema/testdata/test_hf_tokenizer.litertlm",
-  )
+    # Use an in-memory stream to capture the output.
+    output_stream = io.StringIO()
 
-  # Use an in-memory stream to capture the output.
-  output_stream = io.StringIO()
+    # Call the function directly.
+    litertlm_peek.peek_litertlm_file(test_data_path, output_stream)
 
-  # Call the function directly.
-  litertlm_peek.peek_litertlm_file(test_data_path, output_stream)
+    # Get the output and perform assertions.
+    stdout = output_stream.getvalue()
+    self.assertNotEmpty(stdout)
 
-  # Get the output and perform assertions.
-  stdout = output_stream.getvalue()
-  self.assertNotEmpty(stdout)
+    # Assert that the output contains expected strings.
+    self.assertIn("LiteRT-LM Version:", stdout)
+    self.assertIn("System Metadata", stdout)
+    self.assertIn("Sections", stdout)
+    self.assertIn("HF_Tokenizer_Zlib", stdout)
 
-  # Assert that the output contains expected strings.
-  self.assertIn("LiteRT-LM Version:", stdout)
-  self.assertIn("System Metadata", stdout)
-  self.assertIn("Sections", stdout)
-  self.assertIn("HF_Tokenizer_Zlib", stdout)
+  def test_process_litertlm_file_tokenizer_tflite(self):
+    """Tests the process_litertlm_file function directly."""
+    test_data_path = os.path.join(
+        os.environ.get("TEST_SRCDIR", ""),
+        "litert_lm/schema/testdata/test_tokenizer_tflite.litertlm",
+    )
 
+    # Use an in-memory stream to capture the output.
+    output_stream = io.StringIO()
 
-def test_process_litertlm_file_tokenizer_tflite(self):
-  """Tests the process_litertlm_file function directly."""
-  test_data_path = os.path.join(
-      os.environ.get("TEST_SRCDIR", ""),
-      "schema/testdata/test_tokenizer_tflite.litertlm",
-  )
+    # Call the function directly.
+    litertlm_peek.peek_litertlm_file(test_data_path, output_stream)
 
-  # Use an in-memory stream to capture the output.
-  output_stream = io.StringIO()
+    # Get the output and perform assertions.
+    stdout = output_stream.getvalue()
+    self.assertNotEmpty(stdout)
 
-  # Call the function directly.
-  litertlm_peek.peek_litertlm_file(test_data_path, output_stream)
-
-  # Get the output and perform assertions.
-  stdout = output_stream.getvalue()
-  self.assertNotEmpty(stdout)
-
-  # Assert that the output contains expected strings.
-  self.assertIn("LiteRT-LM Version:", stdout)
-  self.assertIn("System Metadata", stdout)
-  self.assertIn("Sections", stdout)
-  self.assertIn("SP_Tokenizer", stdout)
-  self.assertIn("TFLiteModel", stdout)
+    # Assert that the output contains expected strings.
+    self.assertIn("LiteRT-LM Version:", stdout)
+    self.assertIn("System Metadata", stdout)
+    self.assertIn("Sections", stdout)
+    self.assertIn("SP_Tokenizer", stdout)
+    self.assertIn("TFLiteModel", stdout)
 
 
 if __name__ == "__main__":

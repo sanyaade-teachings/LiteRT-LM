@@ -19,7 +19,7 @@ structure with a header and data sections, and writes the final binary file
 to disk.
 """
 
-from typing import List
+from typing import Dict, List, Tuple
 import zlib
 import flatbuffers
 from google.protobuf import text_format
@@ -87,11 +87,27 @@ def create_key_value_pair(builder, key, value):
   return schema.KeyValuePairEnd(builder)
 
 
-def parse_metadata_string(metadata_str):
-  """Parses the section_metadata string into a dictionary."""
-  metadata_map = {}
+def parse_metadata_string(
+    metadata_str: str,
+) -> List[Tuple[str, Dict[str, object]]]:
+  """Parses the section_metadata string into a dictionary.
+
+  Args:
+    metadata_str: A string containing metadata for each section. The
+      format is:
+      "section_name1:key1=value1,key2=value2;section_name2:key3=value3"
+
+  Returns:
+    A list of tuples, where each tuple contains:
+      - The section name (str).
+      - A dictionary containing the key-value pairs for that section (dict).
+
+  Raises:
+    ValueError: If the metadata string is not in the correct format.
+  """
+  metadata_keyvaluepairs = []
   if not metadata_str:
-    return metadata_map
+    return metadata_keyvaluepairs
 
   for section_part in metadata_str.split(";"):
     if not section_part:
@@ -100,15 +116,17 @@ def parse_metadata_string(metadata_str):
     if len(parts) != 2:
       raise ValueError(f"Invalid section metadata format: {section_part}")
     section_name, kv_pairs_str = parts
-    kv_map = {}
+    kv_dict = {}
     if kv_pairs_str:
       for kv_str in kv_pairs_str.split(","):
         if "=" not in kv_str:
           raise ValueError(f"Invalid key-value pair: {kv_str}")
         key, value_str = kv_str.split("=", 1)
-        kv_map[key] = _parse_metadata_value(value_str)
-    metadata_map[section_name] = kv_map
-  return metadata_map
+        if key in kv_dict:
+          raise ValueError(f"Duplicate key in section metadata: {key}")
+        kv_dict[key] = _parse_metadata_value(value_str)
+    metadata_keyvaluepairs.append((section_name, kv_dict))
+  return metadata_keyvaluepairs
 
 
 def write_padding(f, block_size):
@@ -143,7 +161,7 @@ def litertlm_write(
   if not input_files:
     raise ValueError("At least one input file must be provided.")
 
-  metadata_map = parse_metadata_string(section_metadata_str)
+  metadata_keyvaluepairs = parse_metadata_string(section_metadata_str)
 
   with open(output_path, "wb") as f:
     # 0. Write magic bytes and version
@@ -210,8 +228,14 @@ def litertlm_write(
     for i, (start, end) in enumerate(section_offsets):
       section_name = section_names[i]
       section_kv_pairs = []
-      if section_name in metadata_map:
-        for key, value in metadata_map[section_name].items():
+      if metadata_keyvaluepairs and i < len(metadata_keyvaluepairs):
+        meta_section_name, kv_dict = metadata_keyvaluepairs[i]
+        if meta_section_name != section_name:
+          raise ValueError(
+              f"Metadata section name '{meta_section_name}' does not match"
+              f" input file section name '{section_name}' at index {i}."
+          )
+        for key, value in kv_dict.items():
           section_kv_pairs.append(create_key_value_pair(builder, key, value))
 
       schema.SectionObjectStartItemsVector(builder, len(section_kv_pairs))

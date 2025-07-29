@@ -25,7 +25,7 @@ class LitertlmPeekPyTest(absltest.TestCase):
     """Tests the process_litertlm_file function directly."""
     test_data_path = os.path.join(
         os.environ.get("TEST_SRCDIR", ""),
-        "schema/testdata/test_tok_tfl_llm.litertlm",
+        "litert_lm/schema/testdata/test_tok_tfl_llm.litertlm",
     )
 
     # Use an in-memory stream to capture the output.

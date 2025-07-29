@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@org_tensorflow//tensorflow:pytype.default.bzl", "pytype_strict_binary")
-load("@org_tensorflow//tensorflow:strict.default.bzl", "py_strict_library", "py_strict_test")
+load("@org_tensorflow//tensorflow:pytype.default.bzl", "pytype_strict_binary", "pytype_strict_library")
+load("@org_tensorflow//tensorflow:strict.default.bzl", "py_strict_test")
 
 package(
     default_hdrs_check = "strict",
@@ -24,7 +24,7 @@ package(
 
 licenses(["notice"])
 
-py_strict_library(
+pytype_strict_library(
     name = "litertlm_core",
     srcs = ["litertlm_core.py"],
     deps = [
@@ -32,7 +32,7 @@ py_strict_library(
     ],
 )
 
-py_strict_library(
+pytype_strict_library(
     name = "litertlm_writer",
     srcs = ["litertlm_writer.py"],
     deps = [
@@ -57,7 +57,7 @@ pytype_strict_binary(
     ],
 )
 
-py_strict_library(
+pytype_strict_library(
     name = "litertlm_peek",
     srcs = ["litertlm_peek.py"],
     deps = [
@@ -76,4 +76,36 @@ pytype_strict_binary(
         "notap",
     ],
     deps = [":litertlm_peek"],
+)
+
+py_test(
+    name = "litertlm_peek_test",
+    srcs = ["litertlm_peek_test.py"],
+    data = ["//schema:testdata"],
+    main = "litertlm_peek_test.py",
+    deps = [
+        ":litertlm_peek",
+        "@absl_py//absl/testing:absltest",
+    ],
+)
+
+py_test(
+    name = "litertlm_writer_test",
+    srcs = ["litertlm_writer_test.py"],
+    deps = [
+        ":litertlm_peek",
+        ":litertlm_writer",
+        "@absl_py//absl/testing:absltest",
+    ],
+)
+
+py_test(
+    name = "litertlm_core_test",
+    srcs = ["litertlm_core_test.py"],
+    deps = [
+        ":litertlm_core",
+        "//schema/core:litertlm_header_schema_py",
+        "@absl_py//absl/testing:absltest",
+        "@absl_py//absl/testing:parameterized",
+    ],
 )

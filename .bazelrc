@@ -319,9 +319,7 @@ build:windows --cxxopt=/std:c++20
 build:windows --host_cxxopt=/std:c++20
 
 # TensorFlow configuration for Windows build
-build:windows --repo_env=HERMETIC_PYTHON_VERSION=3.11
-build:windows --action_env=PYTHON_BIN_PATH="C:/Program Files/Python311/python.exe"
-build:windows --python_path="C:/Program Files/Python311/python.exe"
+build:windows --repo_env=HERMETIC_PYTHON_VERSION=3.13
 
 # On Windows, set /std:c11 and /experimental:c11atomics for pthreadpool.
 build:windows --conlyopt=/std:c11

@@ -38,7 +38,7 @@ class ZipReadOnlyMemFile {
   // Constructs an in-memory read-only zip file from a buffer. Does not copy or
   // take ownership over the provided buffer: the caller is responsible for
   // ensuring the buffer outlives this object.
-  ZipReadOnlyMemFile(const char* buffer, size_t size);
+  explicit ZipReadOnlyMemFile(absl::string_view data);
   // Provides access to the `zlib_filefunc64_def` implementation for the
   // in-memory zip file.
   zlib_filefunc64_def& GetFileFunc64Def();

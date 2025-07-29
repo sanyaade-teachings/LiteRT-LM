@@ -15,7 +15,6 @@ limitations under the License.
 
 #include "runtime/util/zip_utils.h"
 
-#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <string>
@@ -29,7 +28,7 @@ limitations under the License.
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "minizip/ioapi.h"  // from @minizip
 #include "minizip/unzip.h"  // from @minizip
-#include "runtime/util/status_macros.h"
+#include "runtime/util/status_macros.h"  // IWYU pragma: keep
 #include "runtime/util/zip_readonly_mem_file.h"
 #include "zlib.h"  // from @zlib
 
@@ -107,11 +106,10 @@ absl::StatusOr<ZipFileInfo> GetCurrentZipFileInfo(const unzFile& zf) {
 
 }  // namespace
 
-absl::Status ExtractFilesfromZipFile(
-    const char* buffer_data, const size_t buffer_size,
-    absl::flat_hash_map<std::string, absl::string_view>* files) {
+absl::StatusOr<absl::flat_hash_map<std::string, OffsetAndSize>>
+ExtractFilesfromZipFile(absl::string_view data) {
   // Create in-memory read-only zip file.
-  ZipReadOnlyMemFile mem_file = ZipReadOnlyMemFile(buffer_data, buffer_size);
+  ZipReadOnlyMemFile mem_file = ZipReadOnlyMemFile(data);
   // Open zip.
   unzFile zf = unzOpen2_64(/*path=*/nullptr, &mem_file.GetFileFunc64Def());
   if (zf == nullptr) {
@@ -129,13 +127,16 @@ absl::Status ExtractFilesfromZipFile(
   }
 
   // Browse through files in archive.
+  absl::flat_hash_map<std::string, OffsetAndSize> files;
   if (global_info.number_entry > 0) {
     int error = unzGoToFirstFile(zf);
     while (error == UNZ_OK) {
       ASSIGN_OR_RETURN(auto zip_file_info, GetCurrentZipFileInfo(zf));
       // Store result in map.
-      (*files)[zip_file_info.name] = absl::string_view(
-          buffer_data + zip_file_info.position, zip_file_info.size);
+      files[zip_file_info.name] = OffsetAndSize{
+          .offset = static_cast<size_t>(zip_file_info.position),
+          .size = static_cast<size_t>(zip_file_info.size),
+      };
       error = unzGoToNextFile(zf);
     }
     if (error != UNZ_END_OF_LIST_OF_FILE) {
@@ -149,10 +150,10 @@ absl::Status ExtractFilesfromZipFile(
   if (unzClose(zf) != UNZ_OK) {
     return absl::UnknownError("Unable to close zip archive.");
   }
-  return absl::OkStatus();
+  return files;
 }
 
-void SetExternalFile(const absl::string_view file_content,
+void SetExternalFile(absl::string_view file_content,
                      proto::ExternalFile* model_file, bool is_copy) {
   if (is_copy) {
     std::string str_content{file_content};

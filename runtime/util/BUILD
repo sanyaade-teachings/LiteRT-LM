@@ -310,8 +310,6 @@ cc_library(
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/strings:str_format",
-        "@litert//litert/cc:litert_macros",
     ],
 )
 
@@ -352,7 +350,6 @@ cc_library(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings:string_view",
         "@minizip//:zlib_minizip",
-        "@litert//litert/cc:litert_macros",
         "@zlib//:zlib",
     ],
 )

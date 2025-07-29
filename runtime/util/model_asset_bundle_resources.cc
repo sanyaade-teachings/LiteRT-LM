@@ -29,7 +29,7 @@ limitations under the License.
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "runtime/util/memory_mapped_file.h"
 #include "runtime/util/scoped_file.h"
-#include "runtime/util/status_macros.h"
+#include "runtime/util/status_macros.h"  // IWYU pragma: keep
 #include "runtime/util/zip_utils.h"
 
 namespace litert::lm {
@@ -51,11 +51,16 @@ ModelAssetBundleResources::Create(
       reinterpret_cast<const char*>(mapped_model_asset_bundle_file->data()),
       mapped_model_asset_bundle_file->length());
 
-  absl::flat_hash_map<std::string, absl::string_view> files;
-  RETURN_IF_ERROR(ExtractFilesfromZipFile(data.data(), data.size(), &files));
+  ASSIGN_OR_RETURN(auto files, ExtractFilesfromZipFile(data));
+  absl::flat_hash_map<std::string, absl::string_view> files_as_string_views;
+  for (const auto& [name, offset_and_size] : files) {
+    files_as_string_views[name] =
+        data.substr(offset_and_size.offset, offset_and_size.size);
+  }
 
   return absl::WrapUnique(new ModelAssetBundleResources(
-      tag, std::move(mapped_model_asset_bundle_file), std::move(files)));
+      tag, std::move(mapped_model_asset_bundle_file),
+      std::move(files_as_string_views)));
 }
 
 // static

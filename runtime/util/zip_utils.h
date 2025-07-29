@@ -16,28 +16,33 @@ limitations under the License.
 #ifndef THIRD_PARTY_MEDIAPIPE_TASKS_CC_METADATA_UTILS_ZIP_UTILS_H_
 #define THIRD_PARTY_MEDIAPIPE_TASKS_CC_METADATA_UTILS_ZIP_UTILS_H_
 
+#include <cstddef>
 #include <string>
 
 #include "absl/container/flat_hash_map.h"  // from @com_google_absl
-#include "absl/status/status.h"  // from @com_google_absl
+#include "absl/status/statusor.h"  // from @com_google_absl
+#include "absl/strings/string_view.h"  // from @com_google_absl
 #include "runtime/util/external_file.pb.h"
 
 namespace litert::lm {
 
-// Extract files from the zip file.
-// Input: Pointer and length of the zip file in memory.
-// Outputs: A map with the filename as key and a pointer to the file contents
-// as value. The file contents returned by this function are only guaranteed to
-// stay valid while buffer_data is alive.
-absl::Status ExtractFilesfromZipFile(
-    const char* buffer_data, const size_t buffer_size,
-    absl::flat_hash_map<std::string, absl::string_view>* files);
+struct OffsetAndSize {
+  size_t offset;
+  size_t size;
+};
+
+// Extract files from the zip file `data`.
+// Return a map with the filename as key and pointers to the file contents
+// as value. The map does not own the file contents, and the pointers returned
+// by this function are only guaranteed to stay valid while `data` is alive.
+absl::StatusOr<absl::flat_hash_map<std::string, OffsetAndSize>>
+ExtractFilesfromZipFile(absl::string_view data);
 
 // Set the ExternalFile object by file_content in memory. By default,
 // `is_copy=false` which means to set `file_pointer_meta` in ExternalFile which
 // is the pointer points to location of a file in memory. Otherwise, if
 // `is_copy=true`, copy the memory into `file_content` in ExternalFile.
-void SetExternalFile(const absl::string_view& file_content,
+void SetExternalFile(absl::string_view file_content,
                      proto::ExternalFile* model_file, bool is_copy = false);
 
 }  // namespace litert::lm

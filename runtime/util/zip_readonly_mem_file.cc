@@ -24,8 +24,8 @@ limitations under the License.
 
 namespace litert::lm {
 
-ZipReadOnlyMemFile::ZipReadOnlyMemFile(const char* buffer, size_t size)
-    : data_(buffer, size), offset_(0) {
+ZipReadOnlyMemFile::ZipReadOnlyMemFile(absl::string_view data)
+    : data_(data), offset_(0) {
   zlib_filefunc64_def_.zopen64_file = OpenFile;
   zlib_filefunc64_def_.zread_file = ReadFile;
   zlib_filefunc64_def_.zwrite_file = WriteFile;
